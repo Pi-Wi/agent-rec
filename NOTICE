@@ -1,0 +1,24 @@
+agentrec
+========
+
+Copyright (c) 2024 agentrec contributors.
+
+This project is licensed under the MIT License (see LICENSE).
+
+Third-party acknowledgements
+-----------------------------
+
+**baml_vcr** (https://github.com/BoundaryML/baml_vcr)
+  MIT License — Copyright (c) BoundaryML contributors
+
+  The streaming chunk capture and replay pattern in agentrec — specifically
+  the idea of recording each SSE byte frame as an ordered list of chunks with
+  relative timestamps and re-emitting them in the same order during replay —
+  draws inspiration from baml_vcr's approach.
+
+  agentrec's interception mechanism is deliberately different: instead of
+  patching a specific framework's client or collector (as baml_vcr does),
+  agentrec wraps httpx's AsyncBaseTransport so that interception sits below
+  any SDK abstraction (OpenAI, Anthropic, LangChain, etc.) and requires no
+  framework-specific code.  Only the streaming-chunk pattern was taken as
+  inspiration; no source code was copied.
