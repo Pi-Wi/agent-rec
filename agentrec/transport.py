@@ -30,7 +30,7 @@ from __future__ import annotations
 import asyncio
 import datetime as _dt
 import time
-from typing import AsyncIterator, Callable, Coroutine, List, Optional, Union
+from typing import AsyncIterator, Callable, Coroutine, Dict, List, Optional, Union
 
 import httpx
 
@@ -44,6 +44,12 @@ _EPHEMERAL_EXTENSIONS = frozenset({"network_stream", "trailers"})
 # A key is either a fixed interaction id or a function of the request.
 Keyer = Callable[[httpx.Request], str]
 KeyLike = Union[str, Keyer, None]
+
+# Extra metadata merged into a recorded interaction after fingerprint stamping.
+# A dict applies to every request; a callable derives it per request.  Used by
+# the migration runner to pin the baseline's semantic_key and record lineage
+# (``migrated_from``) on cross-model cassettes.
+ExtraMetadata = Union[Dict[str, object], Callable[[httpx.Request], Dict[str, object]], None]
 
 
 def _as_keyer(key: KeyLike) -> Keyer:
@@ -141,10 +147,12 @@ class RecordingTransport(httpx.AsyncBaseTransport):
         inner: httpx.AsyncBaseTransport,
         store: InteractionStore,
         key: KeyLike = None,
+        extra_metadata: ExtraMetadata = None,
     ) -> None:
         self._inner = inner
         self._store = store
         self._keyer = _as_keyer(key)
+        self._extra_metadata = extra_metadata
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         # Ensure the request body is buffered so the inner transport can read it
@@ -178,6 +186,13 @@ class RecordingTransport(httpx.AsyncBaseTransport):
             },
             metadata=fp.as_metadata(),
         )
+        if self._extra_metadata is not None:
+            extra = (
+                self._extra_metadata(request)
+                if callable(self._extra_metadata)
+                else self._extra_metadata
+            )
+            interaction.metadata.update(extra)
 
         async def on_chunk(data: bytes, offset: float) -> None:
             interaction.chunks.append(CapturedChunk(data=data, timestamp_offset=offset))
@@ -239,10 +254,11 @@ class AutoTransport(httpx.AsyncBaseTransport):
         store: InteractionStore,
         key: KeyLike = None,
         simulate_timing: bool = False,
+        extra_metadata: ExtraMetadata = None,
     ) -> None:
         self._store = store
         self._keyer = _as_keyer(key)
-        self._record = RecordingTransport(inner, store, self._keyer)
+        self._record = RecordingTransport(inner, store, self._keyer, extra_metadata)
         self._replay = ReplayTransport(store, self._keyer, simulate_timing)
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:

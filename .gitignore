@@ -8,3 +8,5 @@ dist/
 venv/
 .venv/
 corpus/
+tests/
+examples/

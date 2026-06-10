@@ -29,6 +29,8 @@ from typing import Optional
 
 import httpx
 
+from .capture import CapturedInteraction
+
 # Fields that do not change the *meaning* of a request, so they are excluded
 # from the semantic key.  ``model`` is handled separately (kept out of the
 # semantic key but folded into the cassette id).
@@ -113,6 +115,17 @@ def fingerprint(request: httpx.Request) -> Fingerprint:
         semantic_key=semantic_key[:32],
         cassette_id=cassette_id,
     )
+
+
+def fingerprint_of(interaction: CapturedInteraction) -> Fingerprint:
+    """Fingerprint a *stored* interaction by rebuilding its request.
+
+    Lets corpus tooling (migration report, annotate) derive provider, model
+    and semantic_key even for legacy cassettes recorded before metadata
+    stamping existed.
+    """
+    req = interaction.request
+    return fingerprint(httpx.Request(req.method, req.url, content=req.content))
 
 
 def default_key(request: httpx.Request) -> str:

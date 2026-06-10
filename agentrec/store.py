@@ -28,6 +28,14 @@ class InteractionStore(ABC):
     async def load(self, interaction_id: str) -> CapturedInteraction:
         ...
 
+    async def discard(self, interaction_id: str) -> None:
+        """Remove a recording if present (no error when absent).
+
+        Lets tooling un-cache a recording that should not be replayed — e.g.
+        the migration runner discards a failed (non-200) target response so a
+        re-run retries the live call instead of replaying the failure.
+        """
+
     async def has(self, interaction_id: str) -> bool:
         """Whether a recording exists. Drives auto mode (replay-or-record).
 
@@ -64,6 +72,9 @@ class InMemoryStore(InteractionStore):
 
     async def has(self, interaction_id: str) -> bool:
         return interaction_id in self._data
+
+    async def discard(self, interaction_id: str) -> None:
+        self._data.pop(interaction_id, None)
 
 
 # ---------------------------------------------------------------------------
@@ -174,13 +185,41 @@ def _decode_extensions(ext: dict) -> dict:
     return out
 
 
+def _build_summary(
+    interaction: CapturedInteraction, *, scrub: Optional[Scrubber] = None
+) -> dict:
+    """Derived, human-readable summary block — empty dict when undecodable.
+
+    Purely a convenience layer: it is written first in the cassette so the
+    file opens with the prompt and answer in plain text, and it is ignored on
+    load (raw chunks stay the replay source of truth).  Never allowed to make
+    a save fail.
+    """
+    try:
+        from .providers import build_summary
+
+        summary = build_summary(interaction)
+    except Exception:
+        return {}
+    if scrub:
+        for key in ("prompt", "response"):
+            if isinstance(summary.get(key), str):
+                summary[key] = scrub(summary[key])
+    return summary
+
+
 def _interaction_to_dict(
     interaction: CapturedInteraction, *, scrub: Optional[Scrubber] = None
 ) -> dict:
     req = interaction.request
-    return {
-        # Provenance first so a cassette opens with provider/model/semantic_key
-        # visible — the fields a migration report will group and compare on.
+    out: dict = {}
+    summary = _build_summary(interaction, scrub=scrub)
+    if summary:
+        # Readability first: a cassette opens with the decoded prompt/response.
+        out["summary"] = summary
+    out.update({
+        # Provenance next so provider/model/semantic_key stay visible — the
+        # fields a migration report groups and compares on.
         "metadata": interaction.metadata,
         "request": {
             "method": req.method,
@@ -195,7 +234,8 @@ def _interaction_to_dict(
             {"data": _encode_blob(c.data), "timestamp_offset": c.timestamp_offset}
             for c in interaction.chunks
         ],
-    }
+    })
+    return out
 
 
 def _interaction_from_dict(d: dict) -> CapturedInteraction:
@@ -278,6 +318,12 @@ class FileStore(InteractionStore):
 
     async def has(self, interaction_id: str) -> bool:
         return self._path(interaction_id).exists()
+
+    async def discard(self, interaction_id: str) -> None:
+        try:
+            self._path(interaction_id).unlink()
+        except FileNotFoundError:
+            pass
 
     def ids(self) -> List[str]:
         """Sorted interaction ids currently on disk."""
