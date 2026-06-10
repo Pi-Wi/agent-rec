@@ -5,17 +5,32 @@ build-backend = "hatchling.build"
 [project]
 name = "agentrec"
 version = "0.1.0"
-description = "Framework-agnostic record/replay for streaming LLM API interactions"
+description = "Framework-agnostic record/replay for LLM API interactions (streaming and non-streaming)"
+readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
+keywords = ["llm", "openai", "anthropic", "httpx", "record", "replay", "vcr", "testing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Libraries",
+]
+# Core is provider-neutral: capture happens at the httpx transport, so the only
+# runtime dependency is httpx.  The provider SDKs are dev-only (tests/examples).
 dependencies = [
     "httpx>=0.27",
-    "openai>=1.30",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "python-dotenv>=1.0",
+    "openai>=1.30",
+    "anthropic>=0.40",
 ]
 
 [tool.pytest.ini_options]

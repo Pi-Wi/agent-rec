@@ -1,8 +1,9 @@
 """
-httpx transport wrappers for recording and replaying streaming LLM responses.
+httpx transport wrappers for recording and replaying LLM responses (streaming and non-streaming).
 
 RecordingTransport  — pass-through that tees SSE chunks into a store.
 ReplayTransport     — offline transport that re-emits stored chunks in order.
+AutoTransport       — per request: replay if a recording exists, else record.
 
 Design notes
 ------------
@@ -15,20 +16,44 @@ Design notes
   whether the stream is exhausted normally or abandoned (break / exception).
   _TeeStream.aclose() then closes the underlying source; the _done flag
   prevents double-finalisation.
+
+Keying
+------
+Each transport takes a ``key`` that resolves an interaction id from the
+request.  Pass a string for a fixed id (one cassette), or a callable for
+per-request keying.  The default (``key=None``) derives a stable id from the
+request fingerprint, so a single transport handles many distinct calls and the
+same call replays deterministically — see :mod:`agentrec.keying`.
 """
 from __future__ import annotations
 
 import asyncio
+import datetime as _dt
 import time
-from typing import AsyncIterator, Callable, Coroutine, List
+from typing import AsyncIterator, Callable, Coroutine, List, Optional, Union
 
 import httpx
 
 from .capture import CapturedChunk, CapturedInteraction, CapturedRequest
+from .keying import default_key, fingerprint
 from .store import InteractionStore
 
 # Keys that reference live network objects and cannot be stored.
 _EPHEMERAL_EXTENSIONS = frozenset({"network_stream", "trailers"})
+
+# A key is either a fixed interaction id or a function of the request.
+Keyer = Callable[[httpx.Request], str]
+KeyLike = Union[str, Keyer, None]
+
+
+def _as_keyer(key: KeyLike) -> Keyer:
+    """Normalise ``key`` to a ``request -> id`` callable."""
+    if key is None:
+        return default_key
+    if callable(key):
+        return key
+    fixed = key
+    return lambda _request: fixed
 
 
 class _TeeStream(httpx.AsyncByteStream):
@@ -96,27 +121,42 @@ class _ReplayStream(httpx.AsyncByteStream):
         pass
 
 
+def _replay_response(interaction: CapturedInteraction, simulate_timing: bool) -> httpx.Response:
+    return httpx.Response(
+        status_code=interaction.response_status,
+        headers=interaction.response_headers,
+        stream=_ReplayStream(interaction.chunks, simulate_timing),
+        extensions=interaction.response_extensions,
+    )
+
+
 class RecordingTransport(httpx.AsyncBaseTransport):
     """
     Delegates to *inner* for real network access and tees the streaming
-    response into *store* under *interaction_id*.
+    response into *store* under the resolved key.
     """
 
     def __init__(
         self,
         inner: httpx.AsyncBaseTransport,
         store: InteractionStore,
-        interaction_id: str,
+        key: KeyLike = None,
     ) -> None:
         self._inner = inner
         self._store = store
-        self._interaction_id = interaction_id
+        self._keyer = _as_keyer(key)
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         # Ensure the request body is buffered so the inner transport can read it
         # even after we peek at it.  aread() caches to request._content and
         # resets request.stream to a replayable ByteStream.
         await request.aread()
+
+        interaction_id = self._keyer(request)
+        # Fingerprint the request once: provenance for the corpus (provider,
+        # model, semantic_key) so a later migration report can group the same
+        # logical call across models without re-parsing every body.
+        fp = fingerprint(request)
 
         captured_req = CapturedRequest(
             method=request.method,
@@ -136,13 +176,15 @@ class RecordingTransport(httpx.AsyncBaseTransport):
                 for k, v in (response.extensions or {}).items()
                 if k not in _EPHEMERAL_EXTENSIONS
             },
+            metadata=fp.as_metadata(),
         )
 
         async def on_chunk(data: bytes, offset: float) -> None:
             interaction.chunks.append(CapturedChunk(data=data, timestamp_offset=offset))
 
         async def on_done() -> None:
-            await self._store.save(self._interaction_id, interaction)
+            interaction.metadata["recorded_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
+            await self._store.save(interaction_id, interaction)
 
         return httpx.Response(
             status_code=response.status_code,
@@ -160,28 +202,54 @@ class ReplayTransport(httpx.AsyncBaseTransport):
     Fully offline transport.  Every request is answered from the store;
     no sockets are opened.
 
-    Raises KeyError (from the store) if no recording exists for interaction_id,
-    giving a clear signal that the record phase must run first.
+    Raises KeyError (from the store) if no recording exists for the resolved
+    key, giving a clear signal that the record phase must run first.
     """
 
     def __init__(
         self,
         store: InteractionStore,
-        interaction_id: str,
+        key: KeyLike = None,
         simulate_timing: bool = False,
     ) -> None:
         self._store = store
-        self._interaction_id = interaction_id
+        self._keyer = _as_keyer(key)
         self._simulate_timing = simulate_timing
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        interaction = await self._store.load(self._interaction_id)
-        return httpx.Response(
-            status_code=interaction.response_status,
-            headers=interaction.response_headers,
-            stream=_ReplayStream(interaction.chunks, self._simulate_timing),
-            extensions=interaction.response_extensions,
-        )
+        # Read the body so the keyer can fingerprint it (no-op for a fixed key).
+        await request.aread()
+        interaction = await self._store.load(self._keyer(request))
+        return _replay_response(interaction, self._simulate_timing)
 
     async def aclose(self) -> None:
         pass
+
+
+class AutoTransport(httpx.AsyncBaseTransport):
+    """
+    Cassette semantics: replay when a recording exists for the request, else
+    record it through *inner*.  With the default keyer this gives true
+    record-once / replay-thereafter behaviour keyed on the request itself.
+    """
+
+    def __init__(
+        self,
+        inner: httpx.AsyncBaseTransport,
+        store: InteractionStore,
+        key: KeyLike = None,
+        simulate_timing: bool = False,
+    ) -> None:
+        self._store = store
+        self._keyer = _as_keyer(key)
+        self._record = RecordingTransport(inner, store, self._keyer)
+        self._replay = ReplayTransport(store, self._keyer, simulate_timing)
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        await request.aread()
+        if await self._store.has(self._keyer(request)):
+            return await self._replay.handle_async_request(request)
+        return await self._record.handle_async_request(request)
+
+    async def aclose(self) -> None:
+        await self._record.aclose()

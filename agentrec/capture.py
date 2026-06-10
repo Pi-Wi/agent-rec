@@ -7,12 +7,12 @@ CapturedInteraction without knowing about each other.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 @dataclass
 class CapturedChunk:
-    """One raw byte frame from a streaming response body."""
+    """One raw byte frame from an HTTP response body."""
 
     data: bytes
     # Seconds elapsed since the first chunk arrived.  Stored so replay can
@@ -31,7 +31,7 @@ class CapturedRequest:
 
 @dataclass
 class CapturedInteraction:
-    """Complete record of one request/streaming-response exchange."""
+    """Complete record of one request/response exchange."""
 
     request: CapturedRequest
     response_status: int
@@ -39,3 +39,8 @@ class CapturedInteraction:
     # extensions minus transport-specific keys like "network_stream"
     response_extensions: dict
     chunks: List[CapturedChunk] = field(default_factory=list)
+    # Provenance for the corpus: provider, model, semantic_key, recorded_at.
+    # Free-form so new fields (e.g. a future migration-report needs) drop in
+    # without a schema change.  Populated by RecordingTransport; empty when an
+    # interaction is hand-built or loaded from a pre-metadata cassette.
+    metadata: Dict[str, Any] = field(default_factory=dict)

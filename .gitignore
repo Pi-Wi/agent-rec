@@ -4,3 +4,7 @@
 .pytest_cache/
 *.egg-info/
 dist/
+.env
+venv/
+.venv/
+corpus/
