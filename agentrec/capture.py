@@ -1,8 +1,8 @@
 """
 Storage-agnostic data structures for a captured HTTP interaction.
 
-Both the cassette (YAML) and corpus (Parquet) serialisers will consume
-CapturedInteraction without knowing about each other.
+Storage backends (the JSON-cassette FileStore today, others later) consume
+CapturedInteraction without the transports knowing about them.
 """
 from __future__ import annotations
 

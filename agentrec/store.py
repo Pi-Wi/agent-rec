@@ -81,13 +81,17 @@ class InMemoryStore(InteractionStore):
 # On-disk store
 # ---------------------------------------------------------------------------
 
-# Request headers that must never be written to a shareable corpus.  Replay
-# answers from the stored *response* and ignores the request, so redacting
-# these costs nothing and keeps the API key out of the cassette files.
-_REDACTED_REQUEST_HEADERS = frozenset(
-    {b"authorization", b"api-key", b"x-api-key", b"cookie", b"set-cookie"}
+# Headers that must never be written to a shareable corpus.  Request auth
+# headers are ignored by replay entirely, and response Set-Cookie values
+# (e.g. CDN session cookies) are not consumed by any SDK, so redacting both
+# costs nothing and keeps secrets out of the cassette files.
+_REDACTED_HEADERS = frozenset(
+    {b"authorization", b"proxy-authorization", b"api-key", b"x-api-key", b"cookie", b"set-cookie"}
 )
 _REDACTED_VALUE = b"[REDACTED]"
+
+# Characters allowed in a cassette filename; everything else becomes "_".
+_UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]")
 
 Scrubber = Callable[[str], str]
 
@@ -142,12 +146,10 @@ def _decode_blob(value) -> bytes:
     return base64.b64decode(value["__b64__"])
 
 
-def _encode_headers(
-    headers: List[Tuple[bytes, bytes]], *, redact: bool = False
-) -> list:
+def _encode_headers(headers: List[Tuple[bytes, bytes]]) -> list:
     out = []
     for name, value in headers:
-        if redact and name.lower() in _REDACTED_REQUEST_HEADERS:
+        if name.lower() in _REDACTED_HEADERS:
             value = _REDACTED_VALUE
         out.append([_encode_blob(name), _encode_blob(value)])
     return out
@@ -224,7 +226,7 @@ def _interaction_to_dict(
         "request": {
             "method": req.method,
             "url": req.url,
-            "headers": _encode_headers(req.headers, redact=True),
+            "headers": _encode_headers(req.headers),
             "content": _encode_blob(req.content, scrub=scrub),
         },
         "response_status": interaction.response_status,
@@ -288,7 +290,10 @@ class FileStore(InteractionStore):
             self._scrub = None
 
     def _path(self, interaction_id: str) -> Path:
-        safe = interaction_id.replace("/", "_").replace("\\", "_")
+        # Sanitize anything that could escape the corpus dir or trip up a
+        # filesystem: path separators, colons (NTFS streams / drive-relative
+        # paths on Windows) and other reserved characters.
+        safe = _UNSAFE_FILENAME_CHARS.sub("_", interaction_id) or "x"
         return self.root / f"{safe}.json"
 
     async def save(self, interaction_id: str, interaction: CapturedInteraction) -> None:

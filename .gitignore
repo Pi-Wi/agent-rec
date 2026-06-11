@@ -8,5 +8,4 @@ dist/
 venv/
 .venv/
 corpus/
-tests/
-examples/
+migration-report__*

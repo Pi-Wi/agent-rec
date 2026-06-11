@@ -22,6 +22,7 @@ runner turns into a clearly-reasoned skipped row rather than a crash.
 from __future__ import annotations
 
 import os
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
@@ -91,7 +92,8 @@ def sse_data_lines(payload: bytes) -> List[str]:
     """
     text = payload.decode("utf-8", "replace")
     out: List[str] = []
-    for frame in text.split("\n\n"):
+    # The SSE spec allows CRLF as well as LF between lines/frames.
+    for frame in re.split(r"\r?\n\r?\n", text):
         datas = [
             line[5:].lstrip()
             for line in frame.splitlines()

@@ -118,6 +118,8 @@ class cassette:
         key: KeyLike = None,
         simulate_timing: bool = False,
     ) -> None:
+        if mode not in ("auto", "record", "replay"):
+            raise ValueError(f"unknown mode {mode!r}; expected auto|record|replay")
         if id is not None and key is not None:
             raise ValueError("pass either id or key, not both")
         self._scope = _Scope(
