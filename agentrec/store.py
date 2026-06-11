@@ -5,11 +5,15 @@ InMemoryStore — volatile, single-process.
 FileStore     — one JSON file per interaction, so a corpus persists on disk
                 and grows across runs.
 
-Both satisfy the same interface without touching the transport code.
+Both satisfy the same interface without touching the transport code.  The
+async methods are the primary interface (the async transports use them); the
+``*_sync`` mirror serves the sync transports.  Both built-in stores are
+natively synchronous, so each async method simply delegates to its sync twin.
 """
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import re
 from abc import ABC, abstractmethod
@@ -48,6 +52,35 @@ class InteractionStore(ABC):
         except KeyError:
             return False
 
+    # --- Sync mirror (used by the sync transports) -------------------------
+    # A custom store that is natively async (e.g. a DB driver) may leave these
+    # unimplemented; the sync transports then fail with a clear message.
+
+    def save_sync(self, interaction_id: str, interaction: CapturedInteraction) -> None:
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement the sync store interface; "
+            "use the async transports with this store"
+        )
+
+    def load_sync(self, interaction_id: str) -> CapturedInteraction:
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement the sync store interface; "
+            "use the async transports with this store"
+        )
+
+    def discard_sync(self, interaction_id: str) -> None:
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement the sync store interface; "
+            "use the async transports with this store"
+        )
+
+    def has_sync(self, interaction_id: str) -> bool:
+        try:
+            self.load_sync(interaction_id)
+            return True
+        except KeyError:
+            return False
+
 
 class InMemoryStore(InteractionStore):
     """Volatile, single-process store — the first implementation."""
@@ -55,10 +88,10 @@ class InMemoryStore(InteractionStore):
     def __init__(self) -> None:
         self._data: Dict[str, CapturedInteraction] = {}
 
-    async def save(self, interaction_id: str, interaction: CapturedInteraction) -> None:
+    def save_sync(self, interaction_id: str, interaction: CapturedInteraction) -> None:
         self._data[interaction_id] = interaction
 
-    async def load(self, interaction_id: str) -> CapturedInteraction:
+    def load_sync(self, interaction_id: str) -> CapturedInteraction:
         try:
             return self._data[interaction_id]
         except KeyError:
@@ -67,14 +100,26 @@ class InMemoryStore(InteractionStore):
                 "Run the record phase before replaying."
             ) from None
 
+    def discard_sync(self, interaction_id: str) -> None:
+        self._data.pop(interaction_id, None)
+
+    def has_sync(self, interaction_id: str) -> bool:
+        return interaction_id in self._data
+
+    async def save(self, interaction_id: str, interaction: CapturedInteraction) -> None:
+        self.save_sync(interaction_id, interaction)
+
+    async def load(self, interaction_id: str) -> CapturedInteraction:
+        return self.load_sync(interaction_id)
+
     def __contains__(self, interaction_id: str) -> bool:
         return interaction_id in self._data
 
     async def has(self, interaction_id: str) -> bool:
-        return interaction_id in self._data
+        return self.has_sync(interaction_id)
 
     async def discard(self, interaction_id: str) -> None:
-        self._data.pop(interaction_id, None)
+        self.discard_sync(interaction_id)
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +129,9 @@ class InMemoryStore(InteractionStore):
 # Headers that must never be written to a shareable corpus.  Request auth
 # headers are ignored by replay entirely, and response Set-Cookie values
 # (e.g. CDN session cookies) are not consumed by any SDK, so redacting both
-# costs nothing and keeps secrets out of the cassette files.
+# costs nothing and keeps secrets out of the cassette files.  Note the
+# (deliberate) replay divergence: a replayed response carries the literal
+# value "[REDACTED]" for these headers, not what the server originally sent.
 _REDACTED_HEADERS = frozenset(
     {b"authorization", b"proxy-authorization", b"api-key", b"x-api-key", b"cookie", b"set-cookie"}
 )
@@ -96,13 +143,38 @@ _UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]")
 Scrubber = Callable[[str], str]
 
 # Secrets that may end up in a *request body* (e.g. a prompt that pastes an API
-# key or password).  Applied to the request content before it is written, so
-# the on-disk corpus stays shareable.  Order matters: more specific patterns
-# (anthropic) run before the broader sk- rule.
+# key or password).  Applied to the request content before it is written.
+#
+# This is a BEST-EFFORT safety net, not a guarantee: it catches well-known key
+# shapes, but a bare hex token, a custom auth scheme, or a secret format not
+# listed here will pass through untouched.  Review cassettes before sharing a
+# corpus, and pass ``secret_patterns=[...]`` to add organisation-specific
+# shapes.  Order matters: more specific patterns (anthropic) run before the
+# broader sk- rule.
 DEFAULT_SECRET_PATTERNS: List[Tuple[re.Pattern, str]] = [
     (re.compile(r"sk-ant-[A-Za-z0-9_\-]{16,}"), "[REDACTED-ANTHROPIC-KEY]"),
     (re.compile(r"sk-[A-Za-z0-9_\-]{16,}"), "[REDACTED-OPENAI-KEY]"),
     (re.compile(r"AKIA[0-9A-Z]{16}"), "[REDACTED-AWS-KEY]"),
+    (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}"), "[REDACTED-GITHUB-TOKEN]"),
+    (re.compile(r"\bAIza[0-9A-Za-z_\-]{30,}"), "[REDACTED-GOOGLE-KEY]"),
+    (re.compile(r"\bya29\.[0-9A-Za-z_\-]{20,}"), "[REDACTED-GOOGLE-TOKEN]"),
+    (re.compile(r"\bxox[baprs]-[A-Za-z0-9\-]{10,}"), "[REDACTED-SLACK-TOKEN]"),
+    # JWTs: three base64url segments, the first two starting with the {"...
+    # header/payload marker "eyJ".
+    (
+        re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]+"),
+        "[REDACTED-JWT]",
+    ),
+    # PEM private-key blocks (multi-line; pasted into a prompt verbatim).
+    (
+        re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----"),
+        "[REDACTED-PRIVATE-KEY]",
+    ),
+    # URL credentials: scheme://user:password@host
+    (
+        re.compile(r"\b([a-z][a-z0-9+.\-]*://[^/\s:@\"']+):[^@\s\"']+@"),
+        r"\1:[REDACTED]@",
+    ),
     (re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._\-]+"), "Bearer [REDACTED]"),
     # JSON-style secret fields: "password": "...", "api_key": "...", "token": "...".
     # The \\? allows escaped quotes, so it also catches a JSON blob that was
@@ -119,7 +191,7 @@ DEFAULT_SECRET_PATTERNS: List[Tuple[re.Pattern, str]] = [
 def scrub_secrets(
     text: str, patterns: Optional[List[Tuple[re.Pattern, str]]] = None
 ) -> str:
-    """Redact known secret shapes from *text*."""
+    """Redact known secret shapes from *text* (best-effort; see pattern notes)."""
     for pattern, replacement in (patterns or DEFAULT_SECRET_PATTERNS):
         text = pattern.sub(replacement, text)
     return text
@@ -211,7 +283,10 @@ def _build_summary(
 
 
 def _interaction_to_dict(
-    interaction: CapturedInteraction, *, scrub: Optional[Scrubber] = None
+    interaction: CapturedInteraction,
+    *,
+    scrub: Optional[Scrubber] = None,
+    scrub_response: Optional[Scrubber] = None,
 ) -> dict:
     req = interaction.request
     out: dict = {}
@@ -232,8 +307,10 @@ def _interaction_to_dict(
         "response_status": interaction.response_status,
         "response_headers": _encode_headers(interaction.response_headers),
         "response_extensions": _encode_extensions(interaction.response_extensions),
+        # Raw chunks are the replay source of truth; they are only scrubbed
+        # when the caller opts in (it alters the bytes replay will serve).
         "chunks": [
-            {"data": _encode_blob(c.data), "timestamp_offset": c.timestamp_offset}
+            {"data": _encode_blob(c.data, scrub=scrub_response), "timestamp_offset": c.timestamp_offset}
             for c in interaction.chunks
         ],
     })
@@ -270,9 +347,20 @@ class FileStore(InteractionStore):
 
     Content (request body, SSE chunks, headers) is stored as plain UTF-8 text so
     a cassette can be read and verified by eye; only genuinely binary fragments
-    fall back to base64.  By default known secret shapes are scrubbed from the
-    request body before writing — pass ``scrub_request_body=False`` to disable,
-    or ``secret_patterns=[...]`` to supply your own.
+    fall back to base64.
+
+    Secret handling (best-effort — review cassettes before sharing a corpus):
+
+    * Auth headers are always redacted (exact-name match, reliable).
+    * Known secret *shapes* are scrubbed from the request body and from the
+      derived summary by default — pass ``scrub_request_body=False`` to
+      disable, or ``secret_patterns=[...]`` to supply your own.  Shapes not in
+      the pattern list pass through untouched.
+    * Raw response chunks are stored **verbatim** by default (they are the
+      bytes replay serves).  A response that echoes a secret therefore lands
+      on disk unless you opt in with ``scrub_response_body=True`` — which
+      scrubs each chunk's text best-effort (a secret split across two chunks,
+      or inside a compressed body, is not caught).
     """
 
     def __init__(
@@ -280,26 +368,34 @@ class FileStore(InteractionStore):
         root: str | Path,
         *,
         scrub_request_body: bool = True,
+        scrub_response_body: bool = False,
         secret_patterns: Optional[List[Tuple[re.Pattern, str]]] = None,
     ) -> None:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
-        if scrub_request_body:
-            self._scrub: Optional[Scrubber] = lambda t: scrub_secrets(t, secret_patterns)
-        else:
-            self._scrub = None
+        scrubber: Scrubber = lambda t: scrub_secrets(t, secret_patterns)
+        self._scrub: Optional[Scrubber] = scrubber if scrub_request_body else None
+        self._scrub_response: Optional[Scrubber] = scrubber if scrub_response_body else None
 
     def _path(self, interaction_id: str) -> Path:
         # Sanitize anything that could escape the corpus dir or trip up a
         # filesystem: path separators, colons (NTFS streams / drive-relative
         # paths on Windows) and other reserved characters.
         safe = _UNSAFE_FILENAME_CHARS.sub("_", interaction_id) or "x"
+        if safe != interaction_id:
+            # Sanitization is lossy ("a/b" and "a_b" would collide on the same
+            # file); a short digest of the original id keeps distinct ids
+            # distinct on disk.
+            digest = hashlib.sha256(interaction_id.encode("utf-8")).hexdigest()[:8]
+            safe = f"{safe}-{digest}"
         return self.root / f"{safe}.json"
 
-    async def save(self, interaction_id: str, interaction: CapturedInteraction) -> None:
+    def save_sync(self, interaction_id: str, interaction: CapturedInteraction) -> None:
         path = self._path(interaction_id)
         text = json.dumps(
-            _interaction_to_dict(interaction, scrub=self._scrub),
+            _interaction_to_dict(
+                interaction, scrub=self._scrub, scrub_response=self._scrub_response
+            ),
             indent=2,
             ensure_ascii=False,
         )
@@ -307,7 +403,7 @@ class FileStore(InteractionStore):
         tmp.write_text(text, encoding="utf-8")
         tmp.replace(path)
 
-    async def load(self, interaction_id: str) -> CapturedInteraction:
+    def load_sync(self, interaction_id: str) -> CapturedInteraction:
         path = self._path(interaction_id)
         try:
             text = path.read_text(encoding="utf-8")
@@ -318,17 +414,29 @@ class FileStore(InteractionStore):
             ) from None
         return _interaction_from_dict(json.loads(text))
 
-    def __contains__(self, interaction_id: str) -> bool:
-        return self._path(interaction_id).exists()
-
-    async def has(self, interaction_id: str) -> bool:
-        return self._path(interaction_id).exists()
-
-    async def discard(self, interaction_id: str) -> None:
+    def discard_sync(self, interaction_id: str) -> None:
         try:
             self._path(interaction_id).unlink()
         except FileNotFoundError:
             pass
+
+    def has_sync(self, interaction_id: str) -> bool:
+        return self._path(interaction_id).exists()
+
+    async def save(self, interaction_id: str, interaction: CapturedInteraction) -> None:
+        self.save_sync(interaction_id, interaction)
+
+    async def load(self, interaction_id: str) -> CapturedInteraction:
+        return self.load_sync(interaction_id)
+
+    def __contains__(self, interaction_id: str) -> bool:
+        return self._path(interaction_id).exists()
+
+    async def has(self, interaction_id: str) -> bool:
+        return self.has_sync(interaction_id)
+
+    async def discard(self, interaction_id: str) -> None:
+        self.discard_sync(interaction_id)
 
     def ids(self) -> List[str]:
         """Sorted interaction ids currently on disk."""

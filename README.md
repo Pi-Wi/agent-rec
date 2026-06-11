@@ -48,6 +48,10 @@ parser re-runs on replay. `cassette` also works as an async context manager,
 and the same client plugs into the Anthropic SDK unchanged:
 `AsyncAnthropic(http_client=http)`.
 
+Synchronous SDKs use the same seam: build `agentrec.sync_client()`, hand it
+to `OpenAI(http_client=...)` / `Anthropic(http_client=...)`, and use
+`cassette` as a plain `with` block or decorator on a sync function.
+
 Prefer wiring httpx yourself? Use the transports directly:
 
 ```python
@@ -61,8 +65,9 @@ httpx.AsyncClient(transport=ReplayTransport(store))   # offline; cannot touch th
 ## Model-migration report
 
 Every recording carries provenance: `provider`, `model`, and a
-`semantic_key` — a hash of the request *without* the model, so the same
-prompt recorded against different models groups together. The migration
+`semantic_key` — a hash of the provider-neutral conversation (system +
+messages), so the same prompt recorded against different models, different
+providers, or different sampling parameters groups together. The migration
 runner re-asks every corpus prompt of a **target model** (cross-provider
 translation included: an OpenAI-recorded prompt can be re-asked of Claude),
 caches the answers back into the corpus, and scores baseline vs. target:
@@ -107,12 +112,25 @@ agentrec/
   live — the recorder never holds back the stream.
 - **Raw bytes, no parsing:** cassettes store the original byte frames; the SDK
   parser re-runs on replay, so one codebase covers every provider.
-- **Replay can't leak:** `ReplayTransport` has no inner transport, so it
-  cannot accidentally hit the network.
+- **Replay mode can't leak:** `ReplayTransport` (`mode="replay"`) has no inner
+  transport, so it cannot accidentally hit the network — use it when you need
+  a hard offline guarantee (CI). Note that `mode="auto"` *does* make a live
+  call (and records it) whenever a request has no recording yet — e.g. after
+  a prompt edit changes the fingerprint.
+- **Failures aren't cached:** non-2xx responses are never recorded by default,
+  so a transient 429/500 can't be replayed forever as the answer
+  (`record_errors=True` opts in deliberately).
 - **Request-derived keys:** interactions are keyed by a fingerprint
   (method + path + model + normalised body), so identical calls replay
-  deterministically. `FileStore` redacts auth headers and scrubs
-  secret-shaped strings from request bodies before anything touches disk.
+  deterministically. The `semantic_key` that groups prompts for the migration
+  report is derived from the provider-neutral conversation instead — same
+  prompt against OpenAI or Anthropic, at any temperature, groups together.
+- **Best-effort secret hygiene:** `FileStore` always redacts auth headers, and
+  scrubs *known* secret shapes from request bodies and summaries before
+  anything touches disk. This is a safety net, not a guarantee — response
+  bodies are stored verbatim unless you opt in via `scrub_response_body=True`,
+  and unknown secret formats pass through. Review cassettes before sharing a
+  corpus; extend `secret_patterns=[...]` with your organisation's shapes.
 
 Any SDK that accepts an httpx client works. Non-httpx SDKs (boto3/Bedrock,
 some Vertex paths) never route through the transport, so they need a

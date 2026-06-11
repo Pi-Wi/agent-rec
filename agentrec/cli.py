@@ -143,6 +143,12 @@ async def _run_report_command(args: argparse.Namespace, *, offline: bool) -> int
     print(render_console(report))
     for path in written:
         print(f"Report written: {path}")
+    if not report.ok_rows:
+        print(
+            "warning: no prompts were actually compared (all rows skipped or "
+            "errored) — with --strict this counts as a failure",
+            file=sys.stderr,
+        )
     if args.strict and not report.all_passed:
         return 1
     return 0

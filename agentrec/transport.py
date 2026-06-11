@@ -5,6 +5,11 @@ RecordingTransport  — pass-through that tees SSE chunks into a store.
 ReplayTransport     — offline transport that re-emits stored chunks in order.
 AutoTransport       — per request: replay if a recording exists, else record.
 
+Sync variants (``SyncRecordingTransport`` / ``SyncReplayTransport`` /
+``SyncAutoTransport``) mirror the async ones for SDKs built on ``httpx.Client``.
+They require a store implementing the sync store interface (both built-in
+stores do).
+
 Design notes
 ------------
 * We capture raw bytes at the transport layer, deliberately below any SDK
@@ -12,10 +17,17 @@ Design notes
   Anthropic SSE look identical here — both are byte streams).
 * The tee never buffers the full response before yielding to the caller.
   Chunks flow to the caller AND to the store concurrently, one at a time.
+  (The *recorder* does hold all chunks in memory until the stream ends —
+  the store write is a single commit — so a pathologically large response
+  costs its full size in memory once.)
 * on_done() fires in the finally-block of the async generator so it runs
   whether the stream is exhausted normally or abandoned (break / exception).
   _TeeStream.aclose() then closes the underlying source; the _done flag
   prevents double-finalisation.
+* Error responses (status >= 400) are NOT recorded by default: a cached 429
+  or 500 would be replayed forever in auto mode, masking later successes.
+  Pass ``record_errors=True`` to capture them deliberately (e.g. to test an
+  SDK's error handling against a recorded 4xx).
 
 Keying
 ------
@@ -30,7 +42,7 @@ from __future__ import annotations
 import asyncio
 import datetime as _dt
 import time
-from typing import AsyncIterator, Callable, Coroutine, Dict, List, Optional, Union
+from typing import AsyncIterator, Callable, Coroutine, Dict, Iterator, List, Optional, Union
 
 import httpx
 
@@ -62,6 +74,43 @@ def _as_keyer(key: KeyLike) -> Keyer:
     return lambda _request: fixed
 
 
+def _is_recordable(status_code: int) -> bool:
+    """Whether a response status is worth persisting (2xx/3xx)."""
+    return 200 <= status_code < 400
+
+
+def _build_interaction(
+    request: httpx.Request,
+    response_status: int,
+    response_headers,
+    response_extensions: Optional[dict],
+    extra_metadata: ExtraMetadata,
+) -> CapturedInteraction:
+    """Capture request + response envelope; shared by both recording transports."""
+    # Fingerprint once: provenance for the corpus (provider, model,
+    # semantic_key) so a later migration report can group the same logical
+    # call across models without re-parsing every body.
+    fp = fingerprint(request)
+    interaction = CapturedInteraction(
+        request=CapturedRequest(
+            method=request.method,
+            url=str(request.url),
+            headers=list(request.headers.raw),
+            content=request.content,
+        ),
+        response_status=response_status,
+        response_headers=list(response_headers.raw),
+        response_extensions={
+            k: v for k, v in (response_extensions or {}).items() if k not in _EPHEMERAL_EXTENSIONS
+        },
+        metadata=fp.as_metadata(),
+    )
+    if extra_metadata is not None:
+        extra = extra_metadata(request) if callable(extra_metadata) else extra_metadata
+        interaction.metadata.update(extra)
+    return interaction
+
+
 class _TeeStream(httpx.AsyncByteStream):
     """
     Wraps a real network byte stream.  Each chunk is forwarded to the caller
@@ -80,6 +129,7 @@ class _TeeStream(httpx.AsyncByteStream):
         self._on_done = on_done
         self._start = time.monotonic()
         self._done = False
+        self._source_closed = False
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         try:
@@ -90,7 +140,11 @@ class _TeeStream(httpx.AsyncByteStream):
             await self._finalize()
 
     async def aclose(self) -> None:
-        await self._source.aclose()
+        # Guarded: httpx calls aclose() after iteration too, and not every
+        # inner stream tolerates a double close.
+        if not self._source_closed:
+            self._source_closed = True
+            await self._source.aclose()
         await self._finalize()
 
     async def _finalize(self) -> None:
@@ -140,6 +194,10 @@ class RecordingTransport(httpx.AsyncBaseTransport):
     """
     Delegates to *inner* for real network access and tees the streaming
     response into *store* under the resolved key.
+
+    Error responses (status >= 400) pass through unrecorded unless
+    ``record_errors=True`` — a cached failure would otherwise be replayed
+    forever in auto mode.
     """
 
     def __init__(
@@ -148,51 +206,32 @@ class RecordingTransport(httpx.AsyncBaseTransport):
         store: InteractionStore,
         key: KeyLike = None,
         extra_metadata: ExtraMetadata = None,
+        record_errors: bool = False,
     ) -> None:
         self._inner = inner
         self._store = store
         self._keyer = _as_keyer(key)
         self._extra_metadata = extra_metadata
+        self._record_errors = record_errors
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         # Ensure the request body is buffered so the inner transport can read it
         # even after we peek at it.  aread() caches to request._content and
         # resets request.stream to a replayable ByteStream.
         await request.aread()
-
         interaction_id = self._keyer(request)
-        # Fingerprint the request once: provenance for the corpus (provider,
-        # model, semantic_key) so a later migration report can group the same
-        # logical call across models without re-parsing every body.
-        fp = fingerprint(request)
-
-        captured_req = CapturedRequest(
-            method=request.method,
-            url=str(request.url),
-            headers=list(request.headers.raw),
-            content=request.content,
-        )
 
         response = await self._inner.handle_async_request(request)
+        if not self._record_errors and not _is_recordable(response.status_code):
+            return response  # pass the failure through untouched, never cache it
 
-        interaction = CapturedInteraction(
-            request=captured_req,
-            response_status=response.status_code,
-            response_headers=list(response.headers.raw),
-            response_extensions={
-                k: v
-                for k, v in (response.extensions or {}).items()
-                if k not in _EPHEMERAL_EXTENSIONS
-            },
-            metadata=fp.as_metadata(),
+        interaction = _build_interaction(
+            request,
+            response.status_code,
+            response.headers,
+            response.extensions,
+            self._extra_metadata,
         )
-        if self._extra_metadata is not None:
-            extra = (
-                self._extra_metadata(request)
-                if callable(self._extra_metadata)
-                else self._extra_metadata
-            )
-            interaction.metadata.update(extra)
 
         async def on_chunk(data: bytes, offset: float) -> None:
             interaction.chunks.append(CapturedChunk(data=data, timestamp_offset=offset))
@@ -255,10 +294,11 @@ class AutoTransport(httpx.AsyncBaseTransport):
         key: KeyLike = None,
         simulate_timing: bool = False,
         extra_metadata: ExtraMetadata = None,
+        record_errors: bool = False,
     ) -> None:
         self._store = store
         self._keyer = _as_keyer(key)
-        self._record = RecordingTransport(inner, store, self._keyer, extra_metadata)
+        self._record = RecordingTransport(inner, store, self._keyer, extra_metadata, record_errors)
         self._replay = ReplayTransport(store, self._keyer, simulate_timing)
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
@@ -269,3 +309,179 @@ class AutoTransport(httpx.AsyncBaseTransport):
 
     async def aclose(self) -> None:
         await self._record.aclose()
+
+
+# ---------------------------------------------------------------------------
+# Sync mirrors — same behaviour, for SDKs built on httpx.Client
+# ---------------------------------------------------------------------------
+
+
+class _SyncTeeStream(httpx.SyncByteStream):
+    """Sync twin of :class:`_TeeStream`; see that class for the contract."""
+
+    def __init__(
+        self,
+        source: httpx.SyncByteStream,
+        on_chunk: Callable[[bytes, float], None],
+        on_done: Callable[[], None],
+    ) -> None:
+        self._source = source
+        self._on_chunk = on_chunk
+        self._on_done = on_done
+        self._start = time.monotonic()
+        self._done = False
+        self._source_closed = False
+
+    def __iter__(self) -> Iterator[bytes]:
+        try:
+            for chunk in self._source:
+                self._on_chunk(chunk, time.monotonic() - self._start)
+                yield chunk
+        finally:
+            self._finalize()
+
+    def close(self) -> None:
+        if not self._source_closed:
+            self._source_closed = True
+            self._source.close()
+        self._finalize()
+
+    def _finalize(self) -> None:
+        if not self._done:
+            self._done = True
+            self._on_done()
+
+
+class _SyncReplayStream(httpx.SyncByteStream):
+    """Sync twin of :class:`_ReplayStream`."""
+
+    def __init__(self, chunks: List[CapturedChunk], simulate_timing: bool = False) -> None:
+        self._chunks = chunks
+        self._simulate_timing = simulate_timing
+
+    def __iter__(self) -> Iterator[bytes]:
+        last = 0.0
+        for chunk in self._chunks:
+            if self._simulate_timing:
+                delay = chunk.timestamp_offset - last
+                if delay > 0:
+                    time.sleep(delay)
+                last = chunk.timestamp_offset
+            yield chunk.data
+
+    def close(self) -> None:
+        pass
+
+
+def _sync_replay_response(interaction: CapturedInteraction, simulate_timing: bool) -> httpx.Response:
+    return httpx.Response(
+        status_code=interaction.response_status,
+        headers=interaction.response_headers,
+        stream=_SyncReplayStream(interaction.chunks, simulate_timing),
+        extensions=interaction.response_extensions,
+    )
+
+
+class SyncRecordingTransport(httpx.BaseTransport):
+    """Sync twin of :class:`RecordingTransport`.
+
+    Requires a store implementing the sync store interface
+    (:meth:`~agentrec.store.InteractionStore.save_sync` etc.); both built-in
+    stores do.
+    """
+
+    def __init__(
+        self,
+        inner: httpx.BaseTransport,
+        store: InteractionStore,
+        key: KeyLike = None,
+        extra_metadata: ExtraMetadata = None,
+        record_errors: bool = False,
+    ) -> None:
+        self._inner = inner
+        self._store = store
+        self._keyer = _as_keyer(key)
+        self._extra_metadata = extra_metadata
+        self._record_errors = record_errors
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        request.read()  # buffer the body so we can fingerprint it and still send it
+        interaction_id = self._keyer(request)
+
+        response = self._inner.handle_request(request)
+        if not self._record_errors and not _is_recordable(response.status_code):
+            return response
+
+        interaction = _build_interaction(
+            request,
+            response.status_code,
+            response.headers,
+            response.extensions,
+            self._extra_metadata,
+        )
+
+        def on_chunk(data: bytes, offset: float) -> None:
+            interaction.chunks.append(CapturedChunk(data=data, timestamp_offset=offset))
+
+        def on_done() -> None:
+            interaction.metadata["recorded_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
+            self._store.save_sync(interaction_id, interaction)
+
+        return httpx.Response(
+            status_code=response.status_code,
+            headers=response.headers,
+            stream=_SyncTeeStream(response.stream, on_chunk, on_done),
+            extensions=response.extensions,
+        )
+
+    def close(self) -> None:
+        self._inner.close()
+
+
+class SyncReplayTransport(httpx.BaseTransport):
+    """Sync twin of :class:`ReplayTransport` — fully offline, no sockets."""
+
+    def __init__(
+        self,
+        store: InteractionStore,
+        key: KeyLike = None,
+        simulate_timing: bool = False,
+    ) -> None:
+        self._store = store
+        self._keyer = _as_keyer(key)
+        self._simulate_timing = simulate_timing
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        request.read()
+        interaction = self._store.load_sync(self._keyer(request))
+        return _sync_replay_response(interaction, self._simulate_timing)
+
+    def close(self) -> None:
+        pass
+
+
+class SyncAutoTransport(httpx.BaseTransport):
+    """Sync twin of :class:`AutoTransport`: replay when recorded, else record."""
+
+    def __init__(
+        self,
+        inner: httpx.BaseTransport,
+        store: InteractionStore,
+        key: KeyLike = None,
+        simulate_timing: bool = False,
+        extra_metadata: ExtraMetadata = None,
+        record_errors: bool = False,
+    ) -> None:
+        self._store = store
+        self._keyer = _as_keyer(key)
+        self._record = SyncRecordingTransport(inner, store, self._keyer, extra_metadata, record_errors)
+        self._replay = SyncReplayTransport(store, self._keyer, simulate_timing)
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        request.read()
+        if self._store.has_sync(self._keyer(request)):
+            return self._replay.handle_request(request)
+        return self._record.handle_request(request)
+
+    def close(self) -> None:
+        self._record.close()

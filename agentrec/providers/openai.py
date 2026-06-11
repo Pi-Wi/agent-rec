@@ -3,6 +3,14 @@ OpenAI chat-completions adapter (``/v1/chat/completions``).
 
 Covers both response shapes the transport records: non-streaming JSON bodies
 and SSE streams of ``chat.completion.chunk`` deltas.
+
+Scope: this adapter speaks the **chat-completions** dialect only.  Recordings
+made against the newer Responses API (``/v1/responses``) are not decodable
+yet — register a custom adapter to override this one if you need that (see
+``agentrec.providers.register``).  o-series reasoning models are supported as
+chat-completions targets: they reject ``max_tokens`` and sampling params, so
+``build_request`` sends ``max_completion_tokens`` and drops ``temperature``
+for them.
 """
 from __future__ import annotations
 
@@ -91,11 +99,14 @@ class OpenAIAdapter(ProviderAdapter):
             messages.append({"role": "system", "content": conversation.system})
         messages.extend(conversation.messages)
         body: dict = {"model": model, "messages": messages}
+        # o-series reasoning models reject max_tokens (use max_completion_tokens
+        # instead) and 400 on sampling params like temperature.
+        reasoning = model.startswith(("o1", "o3", "o4"))
         # max_tokens is optional on this API: only carry it over when the
         # baseline set it; never invent a cap the original call didn't have.
         if conversation.max_tokens is not None:
-            body["max_tokens"] = conversation.max_tokens
-        if conversation.temperature is not None:
+            body["max_completion_tokens" if reasoning else "max_tokens"] = conversation.max_tokens
+        if conversation.temperature is not None and not reasoning:
             body["temperature"] = conversation.temperature
         headers = {
             "Authorization": f"Bearer {self.api_key()}",

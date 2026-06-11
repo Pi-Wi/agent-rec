@@ -1,5 +1,55 @@
 # Changelog
 
+## Dev (0.3.0)
+
+### Added
+- **Sync support**: `sync_client()` plus `SyncRecordingTransport` /
+  `SyncReplayTransport` / `SyncAutoTransport` for SDKs built on
+  `httpx.Client`; `cassette` now works as a plain `with` block and decorates
+  sync functions. Stores expose a `*_sync` interface (both built-ins are
+  natively synchronous).
+- `record_errors=` on the recording transports and `cassette`: non-2xx
+  responses are **no longer recorded by default** — a cached failure could be
+  replayed forever in auto mode. Opt in to capture them deliberately.
+- `scrub_response_body=True` on `FileStore` for opt-in best-effort scrubbing
+  of response chunks (off by default: chunks are the replay source of truth).
+- More built-in secret patterns (GitHub/Google/Slack tokens, JWTs, PEM
+  private keys, URL credentials).
+- Provider registry: `register` and the `adapter_for_*` lookups are exported
+  at the top level, and **later registrations win**, so a custom adapter can
+  override a built-in.
+- Migration report rows are flagged when the target response was truncated by
+  its token cap (the verbosity/token-ratio signal is skewed on such rows).
+- `Retry-After` HTTP-date form is now honoured (previously only
+  delta-seconds).
+
+### Changed
+- **`semantic_key` is now prompt-level and provider-neutral**: it hashes the
+  conversation extracted by the provider adapter (system + messages), so the
+  same prompt recorded against OpenAI and Anthropic — or with different
+  sampling parameters — groups together in the migration report. Requests no
+  adapter understands fall back to a body hash without model/sampling
+  fields. Cassette ids (record/replay keys) are unchanged; **semantic keys
+  recomputed by the tooling differ from 0.2** (run `agentrec annotate` only
+  on fresh corpora; pinned keys on existing migration cassettes are kept).
+- `--strict` now fails when **nothing was compared**: an all-skipped run no
+  longer green-lights a CI gate, and the CLI warns when 0 prompts ran.
+- `FileStore` filenames: ids needing sanitization get a short digest suffix
+  so distinct ids ("a/b" vs "a_b") can no longer collide on one file.
+- OpenAI adapter: o-series targets get `max_completion_tokens` and no
+  `temperature` (they reject both `max_tokens` and sampling params).
+- Docs now state the secret-scrubbing scope honestly (best-effort, request
+  side by default) and scope the "replay can't leak" guarantee to
+  `mode="replay"`.
+
+### Fixed
+- SSE decoding strips exactly one leading space after `data:` per the spec
+  (was `lstrip()`, which could eat significant payload whitespace) and
+  handles bare `data` lines.
+- The judge comparator now prefers the JSON object containing an
+  `equivalent` key instead of blindly taking the first `{...}` in the reply.
+- `_TeeStream` no longer double-closes the underlying network stream.
+
 ## 0.2.0 — 2026-06-11
 
 First public (PyPI) release.

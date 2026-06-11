@@ -5,19 +5,25 @@ Recording at the httpx layer means we see the request the SDK actually sent:
 a method, a URL, and a JSON body.  ``fingerprint`` turns that into:
 
 * ``cassette_id`` — the default key under which an interaction is stored and
-  replayed.  It includes the model, so the same prompt sent to two models
-  produces two distinct recordings.
-* ``semantic_key`` — a hash of the request *without* the model (or other
-  non-semantic fields).  Two interactions that share a ``semantic_key`` are the
-  same logical call answered by (potentially) different models — the grouping a
-  future migration report needs to compare one model against another.
+  replayed.  It includes the model and the full request body (minus streaming
+  flags), so the same prompt sent to two models — or with different sampling
+  parameters — produces distinct recordings.
+* ``semantic_key`` — the *prompt-level* identity.  When a provider adapter
+  recognises the request, the key is a hash of the extracted provider-neutral
+  conversation (system + messages), so the same prompt recorded against
+  OpenAI and Anthropic — or with different sampling parameters — hashes
+  identically.  When no adapter matches (unknown host, tools, non-chat
+  endpoint), it falls back to a hash of the request body without the model
+  and sampling/infrastructure knobs.  Two interactions that share a
+  ``semantic_key`` ask the same thing — the grouping the migration report
+  compares across.
 * ``provider`` / ``model`` — pulled out so the corpus is browsable and a
   migration tool can filter by them without re-parsing every body.
 
 Everything is best-effort: a non-JSON body still yields a usable key, just
-without a model or semantic grouping.  No provider-specific code lives here —
-OpenAI and Anthropic both send a top-level ``model`` and ``messages`` in a JSON
-body, so one generic normaliser covers both (and most other httpx-based SDKs).
+without a model or semantic grouping.  Provider knowledge is delegated to the
+adapter registry (:mod:`agentrec.providers`); this module only falls back to a
+generic body normaliser when no adapter understands the request.
 """
 from __future__ import annotations
 
@@ -31,10 +37,35 @@ import httpx
 
 from .capture import CapturedInteraction
 
-# Fields that do not change the *meaning* of a request, so they are excluded
-# from the semantic key.  ``model`` is handled separately (kept out of the
-# semantic key but folded into the cassette id).
-_NON_SEMANTIC_FIELDS = frozenset({"stream", "stream_options"})
+# Transport details that change neither the meaning nor the replayable
+# identity of a request: excluded from BOTH keys.  ``model`` is handled
+# separately (kept out of the semantic key but folded into the cassette id).
+_TRANSPORT_FIELDS = frozenset({"stream", "stream_options"})
+
+# Sampling / infrastructure knobs: they change *how* an answer is produced,
+# not *what is being asked*.  Excluded from the semantic key only — the same
+# prompt at temperature 0.0 and 0.7 must group together for the migration
+# report — but kept in the cassette id, so record/replay still distinguishes
+# requests that differ in these fields.
+_SAMPLING_FIELDS = frozenset(
+    {
+        "temperature",
+        "top_p",
+        "top_k",
+        "max_tokens",
+        "max_completion_tokens",
+        "seed",
+        "user",
+        "metadata",
+        "frequency_penalty",
+        "presence_penalty",
+        "logit_bias",
+        "logprobs",
+        "top_logprobs",
+        "service_tier",
+        "store",
+    }
+)
 
 _UNSAFE_ID_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -45,8 +76,8 @@ class Fingerprint:
 
     provider: str
     model: Optional[str]
-    semantic_key: str  # stable across model swaps — groups comparable calls
-    cassette_id: str  # default record/replay key (model-specific)
+    semantic_key: str  # stable across model/provider/sampling swaps — groups comparable calls
+    cassette_id: str  # default record/replay key (model- and request-specific)
 
     def as_metadata(self) -> dict:
         """The slice of the fingerprint worth persisting with the interaction."""
@@ -82,11 +113,36 @@ def _sanitize(text: str) -> str:
     return _UNSAFE_ID_CHARS.sub("-", text).strip("-") or "x"
 
 
+def _conversation_canon(host: str, body: dict) -> Optional[str]:
+    """Canonical form of the request's provider-neutral conversation.
+
+    Resolving through the provider adapter normalises away dialect differences
+    (system as a leading message vs. a top-level field, plain strings vs. text
+    blocks), so the same logical prompt hashes identically across providers.
+    Sampling parameters are deliberately not part of the canon.  Returns None
+    when no adapter matches the host or the request uses features the adapter
+    cannot translate (tools, images, …) — callers then fall back to the
+    generic body hash.
+    """
+    # Deferred import: providers also (lazily) imports keying for summaries.
+    from .providers import adapter_for_host
+
+    adapter = adapter_for_host(host)
+    if adapter is None:
+        return None
+    try:
+        conversation = adapter.extract_conversation(body)
+    except Exception:
+        return None
+    return _canonical({"system": conversation.system, "messages": conversation.messages})
+
+
 def fingerprint(request: httpx.Request) -> Fingerprint:
     """Compute a :class:`Fingerprint` for *request* (body must be readable)."""
     method = request.method
     path = request.url.path or ""
-    provider = _provider_from_host(request.url.host or "")
+    host = request.url.host or ""
+    provider = _provider_from_host(host)
 
     try:
         body = json.loads(request.content)
@@ -94,17 +150,29 @@ def fingerprint(request: httpx.Request) -> Fingerprint:
         body = None
 
     model: Optional[str] = None
+    semantic_key: str
     if isinstance(body, dict):
         model = body.get("model")
-        semantic = {k: v for k, v in body.items() if k not in _NON_SEMANTIC_FIELDS and k != "model"}
-        canon = _canonical(semantic)
+        replay_view = {
+            k: v for k, v in body.items() if k not in _TRANSPORT_FIELDS and k != "model"
+        }
+        canon = _canonical(replay_view)
+        conversation_canon = _conversation_canon(host, body)
+        if conversation_canon is not None:
+            # Provider-neutral: no method/path/host — the same prompt asked of
+            # OpenAI and Anthropic lands in the same group.
+            semantic_key = _digest("conversation", conversation_canon)
+        else:
+            semantic_view = {k: v for k, v in replay_view.items() if k not in _SAMPLING_FIELDS}
+            semantic_key = _digest(method, path, _canonical(semantic_view))
     elif body is not None:
         canon = _canonical(body)
+        semantic_key = _digest(method, path, canon)
     else:
         # Non-JSON body: fall back to the raw bytes so the key is still stable.
         canon = request.content.decode("utf-8", "replace")
+        semantic_key = _digest(method, path, canon)
 
-    semantic_key = _digest(method, path, canon)
     model_hash = _digest(method, path, str(model), canon)
     cassette_id = "_".join(
         (_sanitize(provider), _sanitize(model or "unknown"), model_hash[:16])

@@ -27,13 +27,30 @@ from .providers import (
     MissingAPIKeyError,
     ProviderAdapter,
     UnsupportedRequestError,
+    adapter_for_host,
+    adapter_for_model,
+    adapter_for_provider,
     conversation_of,
     decode_interaction,
+    register,
 )
 from .report import render_console, render_html, render_markdown
-from .session import DynamicTransport, async_client, cassette
+from .session import (
+    DynamicTransport,
+    SyncDynamicTransport,
+    async_client,
+    cassette,
+    sync_client,
+)
 from .store import FileStore, InMemoryStore, InteractionStore
-from .transport import AutoTransport, RecordingTransport, ReplayTransport
+from .transport import (
+    AutoTransport,
+    RecordingTransport,
+    ReplayTransport,
+    SyncAutoTransport,
+    SyncRecordingTransport,
+    SyncReplayTransport,
+)
 
 try:
     __version__ = _version("agentrec")
@@ -59,9 +76,14 @@ __all__ = [
     "AutoTransport",
     "RecordingTransport",
     "ReplayTransport",
+    "SyncAutoTransport",
+    "SyncRecordingTransport",
+    "SyncReplayTransport",
     # High-level facade
     "DynamicTransport",
+    "SyncDynamicTransport",
     "async_client",
+    "sync_client",
     "cassette",
     # Providers
     "Conversation",
@@ -70,8 +92,12 @@ __all__ = [
     "MissingAPIKeyError",
     "ProviderAdapter",
     "UnsupportedRequestError",
+    "adapter_for_host",
+    "adapter_for_model",
+    "adapter_for_provider",
     "conversation_of",
     "decode_interaction",
+    "register",
     # Comparators
     "Comparator",
     "ComparisonResult",

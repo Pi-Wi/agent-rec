@@ -94,11 +94,15 @@ def sse_data_lines(payload: bytes) -> List[str]:
     out: List[str] = []
     # The SSE spec allows CRLF as well as LF between lines/frames.
     for frame in re.split(r"\r?\n\r?\n", text):
-        datas = [
-            line[5:].lstrip()
-            for line in frame.splitlines()
-            if line.startswith("data:")
-        ]
+        datas: List[str] = []
+        for line in frame.splitlines():
+            if line == "data":
+                datas.append("")  # spec: a bare "data" line carries an empty payload
+            elif line.startswith("data:"):
+                value = line[5:]
+                # Spec: strip exactly ONE leading space; anything further is
+                # payload (significant for raw text deltas, harmless for JSON).
+                datas.append(value[1:] if value.startswith(" ") else value)
         if datas:
             # Per the SSE spec, multiple data lines in one frame join with \n.
             out.append("\n".join(datas))

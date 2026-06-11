@@ -55,7 +55,13 @@ _ADAPTERS: List[ProviderAdapter] = []
 
 
 def register(adapter: ProviderAdapter) -> None:
-    """Make *adapter* discoverable by provider name, model prefix and host."""
+    """Make *adapter* discoverable by provider name, model prefix and host.
+
+    Later registrations win: registering an adapter that matches the same
+    name/host/model patterns as a built-in *overrides* the built-in, so a
+    custom OpenAI adapter (e.g. one speaking the Responses API) can replace
+    the stock one without touching the library.
+    """
     _ADAPTERS.append(adapter)
 
 
@@ -64,7 +70,7 @@ def adapters() -> List[ProviderAdapter]:
 
 
 def adapter_for_provider(name: str) -> ProviderAdapter:
-    for adapter in _ADAPTERS:
+    for adapter in reversed(_ADAPTERS):  # later registrations win
         if adapter.name == name.lower():
             return adapter
     known = ", ".join(a.name for a in _ADAPTERS)
@@ -72,7 +78,7 @@ def adapter_for_provider(name: str) -> ProviderAdapter:
 
 
 def adapter_for_model(model: str) -> ProviderAdapter:
-    for adapter in _ADAPTERS:
+    for adapter in reversed(_ADAPTERS):  # later registrations win
         if adapter.matches_model(model):
             return adapter
     known = ", ".join(a.name for a in _ADAPTERS)
@@ -83,7 +89,7 @@ def adapter_for_model(model: str) -> ProviderAdapter:
 
 
 def adapter_for_host(host: str) -> Optional[ProviderAdapter]:
-    for adapter in _ADAPTERS:
+    for adapter in reversed(_ADAPTERS):  # later registrations win
         if adapter.matches_host(host):
             return adapter
     return None

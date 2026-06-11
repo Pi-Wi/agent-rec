@@ -172,8 +172,16 @@ _JUDGE_TEMPLATE = """<prompt>
 </candidate_response>"""
 
 
-def _first_json_object(text: str) -> dict:
+def _judge_verdict(text: str) -> dict:
+    """Extract the verdict object from a judge reply.
+
+    Prefers the first JSON object that actually looks like a verdict (has an
+    ``equivalent`` key), so prose or an example object emitted before the
+    verdict is never scored by mistake; falls back to the first JSON object
+    found when no verdict-shaped one exists.
+    """
     decoder = json.JSONDecoder()
+    fallback: Optional[dict] = None
     for start in range(len(text)):
         if text[start] != "{":
             continue
@@ -182,7 +190,12 @@ def _first_json_object(text: str) -> dict:
         except ValueError:
             continue
         if isinstance(obj, dict):
-            return obj
+            if "equivalent" in obj:
+                return obj
+            if fallback is None:
+                fallback = obj
+    if fallback is not None:
+        return fallback
     raise ValueError(f"no JSON object found in judge reply: {text[:200]!r}")
 
 
@@ -219,7 +232,7 @@ class JudgeComparator(_HttpComparator):
         response = await self._post(url, headers, body)
         response.raise_for_status()
         decoded = adapter.decode_response(await response.aread(), is_sse=False)
-        verdict = _first_json_object(decoded.text)
+        verdict = _judge_verdict(decoded.text)
 
         equivalent = bool(verdict.get("equivalent"))
         raw_score = verdict.get("score")

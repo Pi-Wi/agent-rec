@@ -19,12 +19,14 @@ the in-flight request (cassette id + lineage metadata) travels in a task-local
 contextvar, so one shared transport serves all rows without races; report row
 order stays deterministic regardless of completion order.
 
-Cross-provider semantic-key continuity: a translated request body hashes to a
-different semantic key, so the baseline's key is pinned onto the migration
-cassette's metadata (together with ``migrated_from`` and the baseline's
-``category`` tag, when present) via the transport's ``extra_metadata`` hook.
-The on-disk invariant "same semantic_key = same logical prompt" survives
-translation.
+Cross-provider semantic-key continuity: semantic keys are derived from the
+provider-neutral conversation, so a translated request normally hashes to the
+baseline's key by construction.  The baseline's key is still pinned onto the
+migration cassette's metadata (together with ``migrated_from`` and the
+baseline's ``category`` tag, when present) via the transport's
+``extra_metadata`` hook — belt-and-braces for requests that only key via the
+generic body-hash fallback.  The on-disk invariant "same semantic_key = same
+logical prompt" survives translation either way.
 """
 from __future__ import annotations
 
@@ -33,6 +35,7 @@ import contextvars
 import datetime as _dt
 import re
 from dataclasses import dataclass, field
+from email.utils import parsedate_to_datetime
 from typing import Callable, Dict, List, Optional, Tuple
 
 import httpx
@@ -68,7 +71,14 @@ def _retry_delay(response: httpx.Response, attempt: int) -> float:
         try:
             return max(0.0, float(retry_after))
         except ValueError:
-            pass  # HTTP-date form or garbage: fall back to exponential
+            pass  # not the delta-seconds form; try the HTTP-date form
+        try:
+            when = parsedate_to_datetime(retry_after)
+        except (TypeError, ValueError):
+            return float(2**attempt)  # garbage header: fall back to exponential
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=_dt.timezone.utc)
+        return max(0.0, (when - _dt.datetime.now(_dt.timezone.utc)).total_seconds())
     return float(2**attempt)
 
 # Identity (cassette id, extra metadata) of the row currently being scored.
@@ -269,7 +279,14 @@ class MigrationReport:
 
     @property
     def all_passed(self) -> bool:
-        """True when nothing failed: drives the CLI's ``--strict`` exit code."""
+        """True when at least one prompt was compared and nothing failed.
+
+        Drives the CLI's ``--strict`` exit code.  An all-skipped run (e.g.
+        offline with no recorded migration cassettes) is *not* a pass — a CI
+        gate that is green because nothing ran would be false confidence.
+        """
+        if not self.ok_rows:
+            return False
         if self.error_rows:
             return False
         for row in self.ok_rows:
@@ -445,6 +462,15 @@ async def run_migration(
         row.target_text = target.text
         row.target_model = target.model or target_model
         row.target_in_tokens, row.target_out_tokens = _usage_tokens(target.usage)
+        if target.finish_reason in ("max_tokens", "length"):
+            # A truncated target makes every comparison (and the output-token
+            # ratio) quietly unfair — surface it instead of letting the
+            # numbers lie.
+            row.notes.append(
+                f"target response was truncated by its token cap "
+                f"(finish_reason={target.finish_reason!r}); scores and token "
+                "ratios may be skewed — consider raising --max-tokens"
+            )
 
         # --- Score with every comparator in one pass ---------------------
         for comparator in comparators:
