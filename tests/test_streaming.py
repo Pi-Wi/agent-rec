@@ -202,7 +202,7 @@ async def test_replay_offline() -> None:
         "handle_async_request",
         side_effect=AssertionError("ReplayTransport must not touch the network"),
     ):
-        transport = ReplayTransport(store=store, interaction_id=iid)
+        transport = ReplayTransport(store=store, key=iid)
         http_client = httpx.AsyncClient(transport=transport, base_url="https://api.openai.com")
         async with http_client:
             client = AsyncOpenAI(api_key="fake-key", http_client=http_client)
@@ -248,7 +248,7 @@ async def test_record_and_replay() -> None:
     # Record phase: real network call through RecordingTransport.
     # ------------------------------------------------------------------
     inner = httpx.AsyncHTTPTransport()
-    record_transport = RecordingTransport(inner=inner, store=store, interaction_id=iid)
+    record_transport = RecordingTransport(inner=inner, store=store, key=iid)
 
     async with httpx.AsyncClient(transport=record_transport) as http_client:
         client = AsyncOpenAI(http_client=http_client)
@@ -273,7 +273,7 @@ async def test_record_and_replay() -> None:
         "handle_async_request",
         side_effect=AssertionError("ReplayTransport must not touch the network"),
     ):
-        replay_transport = ReplayTransport(store=store, interaction_id=iid)
+        replay_transport = ReplayTransport(store=store, key=iid)
         async with httpx.AsyncClient(transport=replay_transport) as http_client:
             client = AsyncOpenAI(http_client=http_client)
             stream = await client.chat.completions.create(

@@ -157,6 +157,21 @@ async def test_record_captures_provenance_metadata(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_cassette_metadata_is_stamped_on_recordings(tmp_path: Path) -> None:
+    """metadata= on a cassette scope lands in every interaction it records."""
+    store = FileStore(tmp_path)
+    upstream = _CannedSSE(_stream_body("Hello world"))
+
+    async with async_client(inner=upstream) as http:
+        async with cassette(store, mode="record", id="tagged", metadata={"category": "classify"}):
+            await _ask(http, "say hi")
+
+    interaction = await store.load("tagged")
+    assert interaction.metadata["category"] == "classify"
+    assert interaction.metadata["provider"] == "openai"  # fingerprint fields intact
+
+
+@pytest.mark.asyncio
 async def test_decorator_form_scopes_recording(tmp_path: Path) -> None:
     """@cassette wraps an async function the same way the context manager does."""
     store = FileStore(tmp_path)

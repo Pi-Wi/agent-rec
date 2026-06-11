@@ -5,10 +5,16 @@ Records and replays at the **httpx transport layer**, so it works below
 the OpenAI SDK, the Anthropic SDK, LangChain, or any other httpx-backed client —
 the core depends on nothing but `httpx`.
 
-> **Status:** prototype. The record/replay mechanic is proven for streaming
+> **Status:** beta (0.2). The record/replay mechanic is proven for streaming
 > (SSE) and non-streaming (JSON) responses, for both OpenAI and Anthropic.
 > On top of the recorded corpus sits a working **model-migration report**
-> (see [Model-migration report](#model-migration-report)).
+> (see [Model-migration report](#model-migration-report)). The API may still
+> change in minor releases before 1.0.
+>
+> **Scope limits:** record/replay works for *any* httpx-backed SDK, but the
+> migration runner's cross-provider translation covers OpenAI ↔ Anthropic and
+> **text-only** conversations — requests using tools, images, or other rich
+> content become clearly-reasoned skipped rows rather than translations.
 
 ---
 
@@ -52,7 +58,11 @@ Key design commitments:
 ## Install
 
 ```bash
-pip install -e ".[dev]"     # core is httpx-only; the dev extra adds the SDKs + pytest
+pip install agentrec                 # core is httpx-only
+pip install "agentrec[compression]"  # + brotli/zstd cassette decoding
+
+# from a checkout:
+pip install -e ".[dev]"              # the dev extra adds the SDKs + pytest
 ```
 
 ---
@@ -215,6 +225,11 @@ agentrec annotate --corpus corpus
 Re-running `migrate` is cheap: each target answer is itself a cassette, so
 already-answered prompts are served from disk and only new prompts hit the API.
 A failed (non-200) target call is never cached — a re-run retries it live.
+
+Rows are scored concurrently (`--concurrency`, default 8). Recordings tagged
+with a category — `cassette(store, metadata={"category": "extract"})` — get a
+**per-category breakdown** in the report, and output-token counts per row and
+per category surface verbosity/cost differences between the models.
 
 ---
 

@@ -52,6 +52,8 @@ def _openai_chunk(content=None, finish=None) -> dict:
 
 def _baseline_interaction(prompt: str = PROMPT, answer_parts=("bl", "ue")) -> CapturedInteraction:
     body = {"model": "gpt-4o-mini", "stream": True, "messages": [{"role": "user", "content": prompt}]}
+    final = _openai_chunk(None, finish="stop")
+    final["usage"] = {"prompt_tokens": 7, "completion_tokens": 3}
     return CapturedInteraction(
         request=CapturedRequest(
             method="POST",
@@ -63,7 +65,7 @@ def _baseline_interaction(prompt: str = PROMPT, answer_parts=("bl", "ue")) -> Ca
         response_headers=[(b"content-type", b"text/event-stream; charset=utf-8")],
         response_extensions={},
         chunks=[CapturedChunk(data=_sse(_openai_chunk(part))) for part in answer_parts]
-        + [CapturedChunk(data=_sse(_openai_chunk(None, finish="stop"))), CapturedChunk(data=b"data: [DONE]\n\n")],
+        + [CapturedChunk(data=_sse(final)), CapturedChunk(data=b"data: [DONE]\n\n")],
     )
 
 
@@ -99,7 +101,9 @@ def corpus(tmp_path: Path) -> FileStore:
 
 
 async def _seed_baseline(store: FileStore) -> None:
-    await store.save(BASELINE_ID, _baseline_interaction())
+    interaction = _baseline_interaction()
+    interaction.metadata["category"] = "classify"
+    await store.save(BASELINE_ID, interaction)
 
 
 # ---------------------------------------------------------------------------
@@ -219,9 +223,87 @@ async def test_migration_end_to_end_cross_provider(corpus: FileStore, monkeypatc
     assert cassette.metadata["semantic_key"] == baseline_fp.semantic_key
     assert cassette.metadata["baseline_model"] == "gpt-4o-mini"
     assert cassette.metadata["model"] == TARGET_MODEL
+    assert cassette.metadata["category"] == "classify"  # baseline tag inherited
 
     assert report.all_passed
     assert report.live_count == 1 and report.cached_count == 0
+
+
+async def test_category_and_tokens_flow_into_report(corpus: FileStore, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    await _seed_baseline(corpus)
+
+    report = await run_migration(
+        corpus, TARGET_MODEL, build_comparators("exact,fuzzy"), inner_transport=_anthropic_answer("Blue")
+    )
+    row = report.rows[0]
+    assert row.category == "classify"
+    # Baseline usage from the SSE stream; target usage from the mock JSON.
+    assert (row.baseline_in_tokens, row.baseline_out_tokens) == (7, 3)
+    assert (row.target_in_tokens, row.target_out_tokens) == (12, 2)
+
+    totals = report.token_totals()
+    assert totals is not None
+    assert (totals.baseline_out, totals.target_out, totals.rows) == (3, 2, 1)
+    assert totals.ratio == pytest.approx(2 / 3)
+
+    breakdown = report.by_category()
+    assert [cat.category for cat in breakdown] == ["classify"]
+    assert breakdown[0].prompts == 1
+    assert breakdown[0].aggregates[0].comparator == "exact"
+    assert breakdown[0].tokens is not None
+
+
+def _echo_transport() -> httpx.MockTransport:
+    """Target stand-in that answers each prompt with a derived echo."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        prompt = body["messages"][0]["content"]
+        return httpx.Response(
+            200,
+            json={
+                "model": TARGET_MODEL,
+                "content": [{"type": "text", "text": f"echo: {prompt}"}],
+                "stop_reason": "end_turn",
+                "usage": {"input_tokens": 5, "output_tokens": 4},
+            },
+        )
+
+    return httpx.MockTransport(handler)
+
+
+async def test_concurrent_rows_keep_identities_separate(corpus: FileStore, monkeypatch):
+    """Rows scored in parallel must not mix up cassette ids or lineage."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    prompts = [f"prompt number {i}" for i in range(6)]
+    for i, prompt in enumerate(prompts):
+        await corpus.save(f"b{i}", _baseline_interaction(prompt, answer_parts=("echo: ", prompt)))
+
+    finished: list = []
+    report = await run_migration(
+        corpus,
+        TARGET_MODEL,
+        build_comparators("exact"),
+        inner_transport=_echo_transport(),
+        concurrency=4,
+        progress=finished.append,
+    )
+
+    assert len(report.rows) == 6
+    assert len(finished) == 6  # progress fired once per row
+    for row in report.rows:
+        assert row.status == "ok"
+        # The target echoed exactly this row's prompt -> identities never crossed.
+        assert row.target_text == f"echo: {row.prompt_text}"
+    assert report.all_passed
+
+    # Each migration cassette landed under the right id with the right lineage.
+    for i, prompt in enumerate(prompts):
+        cassette = await corpus.load(migration_id_for(f"b{i}", TARGET_MODEL))
+        assert cassette.metadata["migrated_from"] == f"b{i}"
+        payload = b"".join(chunk.data for chunk in cassette.chunks).decode()
+        assert f"echo: {prompt}" in payload
 
 
 async def test_migration_rerun_is_served_from_corpus(corpus: FileStore, monkeypatch):
@@ -274,7 +356,8 @@ async def test_failed_target_call_is_not_cached(corpus: FileStore, monkeypatch):
         return httpx.Response(429, json={"type": "error", "error": {"type": "rate_limit_error"}})
 
     report = await run_migration(
-        corpus, TARGET_MODEL, build_comparators("exact"), inner_transport=httpx.MockTransport(handler)
+        corpus, TARGET_MODEL, build_comparators("exact"),
+        inner_transport=httpx.MockTransport(handler), retries=0,
     )
     row = report.rows[0]
     assert row.status == "error"
@@ -282,6 +365,44 @@ async def test_failed_target_call_is_not_cached(corpus: FileStore, monkeypatch):
     # The failure was discarded, so a re-run gets a fresh live attempt.
     assert not await corpus.has(migration_id_for(BASELINE_ID, TARGET_MODEL))
     assert not report.all_passed
+
+
+async def test_rate_limited_target_is_retried(corpus: FileStore, monkeypatch):
+    """A 429 with Retry-After is retried; only the eventual 200 is cached."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    await _seed_baseline(corpus)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] <= 2:
+            return httpx.Response(
+                429,
+                headers={"retry-after": "0"},
+                json={"type": "error", "error": {"type": "rate_limit_error"}},
+            )
+        return httpx.Response(
+            200,
+            json={
+                "model": TARGET_MODEL,
+                "content": [{"type": "text", "text": "Blue"}],
+                "stop_reason": "end_turn",
+                "usage": {"input_tokens": 12, "output_tokens": 2},
+            },
+        )
+
+    report = await run_migration(
+        corpus, TARGET_MODEL, build_comparators("exact"),
+        inner_transport=httpx.MockTransport(handler),
+    )
+    row = report.rows[0]
+    assert calls["n"] == 3
+    assert row.status == "ok"
+    assert row.target_text == "Blue"
+    assert sum("retried after HTTP 429" in note for note in row.notes) == 2
+    # The cassette on disk is the successful answer, not a recorded 429.
+    cassette = await corpus.load(migration_id_for(BASELINE_ID, TARGET_MODEL))
+    assert b"Blue" in b"".join(chunk.data for chunk in cassette.chunks)
 
 
 async def test_migration_cassettes_are_excluded_as_baselines(corpus: FileStore, monkeypatch):
@@ -317,15 +438,21 @@ async def test_render_markdown_html_console(corpus: FileStore, monkeypatch):
     assert "| exact |" in markdown or "| exact " in markdown
     assert "<details><summary>Prompt</summary>" in markdown
     assert PROMPT in markdown
+    assert "## By category" in markdown
+    assert "classify" in markdown
+    assert "**Output tokens:**" in markdown
 
     html = render_html(report)
     assert html.startswith("<!doctype html>")
     assert "class='pass'" in html
     assert "Blue" in html
+    assert "By category" in html
+    assert "class='tag'" in html  # category chips in the tables
 
     console = render_console(report)
     assert console.isascii(), "console output must be ASCII-safe on Windows terminals"
     assert "1 prompts" in console
+    assert "out tokens" in console
 
 
 def test_cli_report_smoke(corpus: FileStore, monkeypatch, tmp_path: Path, capsys):

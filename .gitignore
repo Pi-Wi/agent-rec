@@ -9,3 +9,4 @@ venv/
 .venv/
 corpus/
 migration-report__*
+examples/

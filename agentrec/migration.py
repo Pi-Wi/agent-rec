@@ -56,6 +56,21 @@ MIGRATION_PREFIX = "migration__"
 
 _PREVIEW_WS = re.compile(r"\s+")
 
+# Target-call statuses worth retrying with backoff: rate limits and
+# transient provider overload (529 is Anthropic's "overloaded").
+_RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 529})
+
+
+def _retry_delay(response: httpx.Response, attempt: int) -> float:
+    """Seconds to wait before retry *attempt*: Retry-After wins, else 1·2ⁿ."""
+    retry_after = response.headers.get("retry-after")
+    if retry_after:
+        try:
+            return max(0.0, float(retry_after))
+        except ValueError:
+            pass  # HTTP-date form or garbage: fall back to exponential
+    return float(2**attempt)
+
 # Identity (cassette id, extra metadata) of the row currently being scored.
 # Rows run as separate asyncio tasks and contextvars are task-local, so the
 # shared transport's keyer resolves each request to its own row without
@@ -275,15 +290,18 @@ async def run_migration(
     filter_substr: Optional[str] = None,
     inner_transport: Optional[httpx.AsyncBaseTransport] = None,
     concurrency: int = 8,
+    retries: int = 3,
     progress: Optional[Callable[[RowResult], None]] = None,
 ) -> MigrationReport:
     """Compare every corpus prompt's recorded answer against *target_model*.
 
     Rows are scored concurrently (bounded by ``concurrency``); report row
     order stays deterministic regardless of completion order, and ``progress``
-    is invoked once per finished row.  ``offline=True`` never opens a socket:
-    prompts without a recorded migration cassette become skipped rows.
-    ``inner_transport`` overrides the real network transport (test seam).
+    is invoked once per finished row.  A rate-limited or overloaded target
+    call (429/5xx) is retried up to ``retries`` times with backoff, honouring
+    ``Retry-After``.  ``offline=True`` never opens a socket: prompts without a
+    recorded migration cassette become skipped rows.  ``inner_transport``
+    overrides the real network transport (test seam).
     """
     target_adapter = (
         adapter_for_provider(target_provider) if target_provider else adapter_for_model(target_model)
@@ -393,15 +411,26 @@ async def run_migration(
             if row.category:
                 extra["category"] = row.category
             _ROW_IDENTITY.set((row.migration_id, extra))
-            try:
-                response = await client.post(url, headers=headers, json=body)
-                payload = await response.aread()
-            except httpx.HTTPError as exc:
-                row.status, row.reason = "error", f"target call failed: {exc}"
-                return
-            if response.status_code != 200:
-                # Don't let a failure poison the cache: a re-run retries.
+            payload = b""
+            for attempt in range(max(0, retries) + 1):
+                try:
+                    response = await client.post(url, headers=headers, json=body)
+                    payload = await response.aread()
+                except httpx.HTTPError as exc:
+                    row.status, row.reason = "error", f"target call failed: {exc}"
+                    return
+                if response.status_code == 200:
+                    break
+                # Don't let a failure poison the cache: the transport recorded
+                # this response, so discard it before any retry or re-run.
                 await store.discard(row.migration_id)
+                if response.status_code in _RETRYABLE_STATUSES and attempt < retries:
+                    row.notes.append(
+                        f"retried after HTTP {response.status_code} "
+                        f"(attempt {attempt + 1}/{retries})"
+                    )
+                    await asyncio.sleep(_retry_delay(response, attempt))
+                    continue
                 row.status, row.reason = "error", (
                     f"target API returned {response.status_code}: "
                     f"{payload[:200].decode('utf-8', 'replace')}"

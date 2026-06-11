@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentrec"
-version = "0.1.0"
+version = "0.2.0"
 description = "Framework-agnostic record/replay for LLM API interactions (streaming and non-streaming)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,9 +12,13 @@ license = "MIT"
 license-files = ["LICENSE", "NOTICE"]
 keywords = ["llm", "openai", "anthropic", "httpx", "record", "replay", "vcr", "testing"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Testing",
     "Topic :: Software Development :: Libraries",
 ]
@@ -34,6 +38,12 @@ dev = [
     "python-dotenv>=1.0",
     "openai>=1.30",
     "anthropic>=0.40",
+]
+# Decoding cassettes whose responses were served with brotli/zstd
+# content-encoding (gzip and deflate work out of the box).
+compression = [
+    "brotli>=1.1",
+    "zstandard>=0.22",
 ]
 
 [tool.pytest.ini_options]

@@ -94,6 +94,43 @@ def test_decode_openai_sse_with_midframe_chunk_split():
     assert decoded.model == "gpt-4o-mini"
 
 
+def test_decode_gzip_encoded_json():
+    """A gzip Content-Encoding (what OpenAI actually sends) is decompressed."""
+    import gzip
+
+    body = {
+        "model": "gpt-4o-mini",
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": "Billing"}, "finish_reason": "stop"}],
+    }
+    interaction = _interaction(
+        url="https://api.openai.com/v1/chat/completions",
+        request_body={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "classify"}]},
+        chunks=[gzip.compress(json.dumps(body).encode())],
+        content_type=b"application/json",
+    )
+    interaction.response_headers.append((b"content-encoding", b"gzip"))
+    decoded = decode_interaction(interaction)
+    assert decoded.text == "Billing"
+
+
+def test_decode_deflate_encoded_json():
+    """zlib deflate Content-Encoding is also handled."""
+    import zlib
+
+    body = {
+        "model": "gpt-4o-mini",
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
+    }
+    interaction = _interaction(
+        url="https://api.openai.com/v1/chat/completions",
+        request_body={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "hi"}]},
+        chunks=[zlib.compress(json.dumps(body).encode())],
+        content_type=b"application/json",
+    )
+    interaction.response_headers.append((b"content-encoding", b"deflate"))
+    assert decode_interaction(interaction).text == "ok"
+
+
 def test_decode_openai_json():
     body = {
         "model": "gpt-4o-2024-08-06",
