@@ -11,7 +11,15 @@ from .comparators import (
     build_comparators,
 )
 from .keying import Fingerprint, default_key, fingerprint, fingerprint_of
-from .migration import MigrationReport, RowResult, annotate_corpus, migration_id_for, run_migration
+from .migration import (
+    CategoryBreakdown,
+    MigrationReport,
+    RowResult,
+    TokenTotals,
+    annotate_corpus,
+    migration_id_for,
+    run_migration,
+)
 from .providers import (
     Conversation,
     DecodedResponse,
@@ -73,8 +81,10 @@ __all__ = [
     "JudgeComparator",
     "build_comparators",
     # Migration report
+    "CategoryBreakdown",
     "MigrationReport",
     "RowResult",
+    "TokenTotals",
     "annotate_corpus",
     "migration_id_for",
     "run_migration",

@@ -1,10 +1,11 @@
 """
 Render a :class:`~agentrec.migration.MigrationReport` for humans.
 
-* ``render_markdown`` — the primary artifact: verdict line, per-comparator
-  summary table, per-prompt results table, collapsible full-text details.
+* ``render_markdown`` — verdict line, per-comparator summary table, per-category
+  breakdown, per-prompt results table, collapsible full-text details.
 * ``render_html``     — self-contained single file (inline CSS, no JS) with
-  color-coded scores and side-by-side baseline/target panels.
+  color-coded scores, the category breakdown and side-by-side panels; the
+  primary artifact.
 * ``render_console``  — a few ASCII-safe lines for the terminal.
 """
 from __future__ import annotations
@@ -28,6 +29,19 @@ def _fmt_score(value: Optional[float]) -> str:
 
 def _fmt_rate(value: Optional[float]) -> str:
     return "–" if value is None else f"{value:.0%}"
+
+
+def _fmt_ratio(value: Optional[float]) -> str:
+    return "–" if value is None else f"{value:.2f}×"
+
+
+def _fmt_out_tokens(row: RowResult) -> str:
+    """Per-row output-token cell, e.g. ``12→34`` ('–' when nothing is known)."""
+    if row.baseline_out_tokens is None and row.target_out_tokens is None:
+        return "–"
+    baseline = "?" if row.baseline_out_tokens is None else str(row.baseline_out_tokens)
+    target = "?" if row.target_out_tokens is None else str(row.target_out_tokens)
+    return f"{baseline}→{target}"
 
 
 def _verdict(report: MigrationReport) -> str:
@@ -55,6 +69,11 @@ def _comparison_cell(row: RowResult, name: str) -> str:
     return "–"
 
 
+def _aggregate_cell(agg: ComparatorAggregate) -> str:
+    """Compact per-category cell: pass rate and mean score."""
+    return f"{_fmt_rate(agg.pass_rate)} · {_fmt_score(agg.mean_score)}"
+
+
 # ---------------------------------------------------------------------------
 # Markdown
 # ---------------------------------------------------------------------------
@@ -75,6 +94,8 @@ def _md_fence(text: str) -> str:
 def render_markdown(report: MigrationReport) -> str:
     lines: List[str] = []
     baselines = ", ".join(report.baseline_models) or "unknown"
+    breakdown = report.by_category()
+    totals = report.token_totals()
     lines.append(f"# Migration Report — {baselines} → {report.target_model}")
     lines.append("")
     lines.append(f"- **Corpus:** `{report.corpus or '<memory>'}`")
@@ -86,6 +107,12 @@ def render_markdown(report: MigrationReport) -> str:
         f"({report.cached_count} from corpus cache, {report.live_count} live), "
         f"{len(report.skipped_rows)} skipped, {len(report.error_rows)} errored"
     )
+    if totals:
+        lines.append(
+            f"- **Output tokens:** baseline {totals.baseline_out:,} → "
+            f"target {totals.target_out:,} ({_fmt_ratio(totals.ratio)}, "
+            f"over {totals.rows} prompts)"
+        )
     lines.append("")
     lines.append(f"> **Verdict:** {_verdict(report)}")
     lines.append("")
@@ -102,18 +129,38 @@ def render_markdown(report: MigrationReport) -> str:
         )
     lines.append("")
 
+    if breakdown:
+        lines.append("## By category")
+        lines.append("")
+        lines.append("_Cells are pass rate · mean score. Out tokens is the target/baseline output-token ratio._")
+        lines.append("")
+        header = ["Category", "Prompts"] + report.comparator_names + ["Out tokens"]
+        lines.append("| " + " | ".join(header) + " |")
+        lines.append("|---|---:|" + "---:|" * (len(report.comparator_names) + 1))
+        for cat in breakdown:
+            cells = [cat.category, str(cat.prompts)]
+            cells.extend(_aggregate_cell(agg) for agg in cat.aggregates)
+            cells.append(_fmt_ratio(cat.tokens.ratio) if cat.tokens else "–")
+            lines.append("| " + " | ".join(cells) + " |")
+        lines.append("")
+
     if report.ok_rows:
         lines.append("## Results")
         lines.append("")
-        header = ["#", "Prompt", "Baseline model"] + report.comparator_names + ["Cached"]
+        header = ["#", "Prompt"]
+        if breakdown:
+            header.append("Category")
+        header += ["Baseline model"] + report.comparator_names + ["Out tok", "Cached"]
         lines.append("| " + " | ".join(header) + " |")
         lines.append("|" + "---|" * len(header))
         for index, row in enumerate(report.ok_rows, 1):
-            cells = [
-                str(index),
-                _md_escape_cell(row.prompt_preview),
+            cells = [str(index), _md_escape_cell(row.prompt_preview)]
+            if breakdown:
+                cells.append(row.category or "–")
+            cells += [
                 row.baseline_model or "?",
                 *[_comparison_cell(row, name) for name in report.comparator_names],
+                _fmt_out_tokens(row),
                 "✅" if row.cached else "live",
             ]
             lines.append("| " + " | ".join(cells) + " |")
@@ -124,9 +171,14 @@ def render_markdown(report: MigrationReport) -> str:
         for index, row in enumerate(report.ok_rows, 1):
             lines.append(f"### {index}. {row.prompt_preview}")
             lines.append("")
-            lines.append(
+            meta = (
                 f"`{row.baseline_id}` → `{row.migration_id}` · semantic key `{row.semantic_key}`"
             )
+            if row.category:
+                meta += f" · category `{row.category}`"
+            if row.baseline_out_tokens is not None or row.target_out_tokens is not None:
+                meta += f" · out tokens {_fmt_out_tokens(row)}"
+            lines.append(meta)
             for note in row.notes:
                 lines.append(f"- _{note}_")
             lines.append("")
@@ -185,6 +237,8 @@ th { background: #f6f8fa; }
 .fail { background: #fdecea; }
 .err  { background: #fff8e1; }
 .meta { color: #59636e; font-size: .9rem; }
+.tag  { background: #ddf4ff; color: #0969da; border-radius: 999px; padding: .05rem .55rem;
+        font-size: .8rem; white-space: nowrap; }
 details { margin: .8rem 0; }
 summary { cursor: pointer; font-weight: 600; }
 .panes { display: flex; gap: 1rem; flex-wrap: wrap; }
@@ -211,12 +265,14 @@ def _html_cell_class(row: RowResult, name: str) -> str:
 def render_html(report: MigrationReport) -> str:
     esc = _html.escape
     baselines = ", ".join(report.baseline_models) or "unknown"
+    breakdown = report.by_category()
+    totals = report.token_totals()
     parts: List[str] = []
     parts.append("<!doctype html><html><head><meta charset='utf-8'>")
     parts.append(f"<title>Migration Report — {esc(report.target_model)}</title>")
     parts.append(f"<style>{_CSS}</style></head><body>")
     parts.append(f"<h1>Migration Report — {esc(baselines)} → {esc(report.target_model)}</h1>")
-    parts.append(
+    meta = (
         "<p class='meta'>"
         f"Corpus <code>{esc(report.corpus or '<memory>')}</code> · "
         f"target <code>{esc(report.target_model)}</code> ({esc(report.target_provider)}) · "
@@ -224,8 +280,15 @@ def render_html(report: MigrationReport) -> str:
         f"comparators: {esc(', '.join(report.comparator_names))}<br>"
         f"{len(report.ok_rows)} prompts compared ({report.cached_count} cached, "
         f"{report.live_count} live), {len(report.skipped_rows)} skipped, "
-        f"{len(report.error_rows)} errored</p>"
+        f"{len(report.error_rows)} errored"
     )
+    if totals:
+        meta += (
+            f"<br>output tokens: baseline {totals.baseline_out:,} → "
+            f"target {totals.target_out:,} ({esc(_fmt_ratio(totals.ratio))} "
+            f"over {totals.rows} prompts)"
+        )
+    parts.append(meta + "</p>")
     parts.append(f"<div class='verdict'>{esc(_verdict(report))}</div>")
 
     parts.append("<h2>Summary</h2><table><tr><th>Comparator</th><th>Compared</th>"
@@ -238,32 +301,63 @@ def render_html(report: MigrationReport) -> str:
         )
     parts.append("</table>")
 
-    if report.ok_rows:
-        parts.append("<h2>Results</h2><table><tr><th>#</th><th>Prompt</th><th>Baseline</th>")
+    if breakdown:
+        parts.append("<h2>By category</h2>")
+        parts.append(
+            "<p class='meta'>Cells are pass rate · mean score. "
+            "Out tokens is the target/baseline output-token ratio.</p>"
+        )
+        parts.append("<table><tr><th>Category</th><th>Prompts</th>")
         for name in report.comparator_names:
             parts.append(f"<th>{esc(name)}</th>")
-        parts.append("<th>Cached</th></tr>")
-        for index, row in enumerate(report.ok_rows, 1):
+        parts.append("<th>Out tokens</th></tr>")
+        for cat in breakdown:
             parts.append(
-                f"<tr><td>{index}</td><td>{esc(row.prompt_preview)}</td>"
-                f"<td>{esc(row.baseline_model or '?')}</td>"
+                f"<tr><td><span class='tag'>{esc(cat.category)}</span></td>"
+                f"<td>{cat.prompts}</td>"
             )
+            for agg in cat.aggregates:
+                parts.append(f"<td>{esc(_aggregate_cell(agg))}</td>")
+            ratio = _fmt_ratio(cat.tokens.ratio) if cat.tokens else "–"
+            parts.append(f"<td>{esc(ratio)}</td></tr>")
+        parts.append("</table>")
+
+    if report.ok_rows:
+        parts.append("<h2>Results</h2><table><tr><th>#</th><th>Prompt</th>")
+        if breakdown:
+            parts.append("<th>Category</th>")
+        parts.append("<th>Baseline</th>")
+        for name in report.comparator_names:
+            parts.append(f"<th>{esc(name)}</th>")
+        parts.append("<th>Out tok</th><th>Cached</th></tr>")
+        for index, row in enumerate(report.ok_rows, 1):
+            parts.append(f"<tr><td>{index}</td><td>{esc(row.prompt_preview)}</td>")
+            if breakdown:
+                tag = f"<span class='tag'>{esc(row.category)}</span>" if row.category else "–"
+                parts.append(f"<td>{tag}</td>")
+            parts.append(f"<td>{esc(row.baseline_model or '?')}</td>")
             for name in report.comparator_names:
                 parts.append(
                     f"<td class='{_html_cell_class(row, name)}'>"
                     f"{esc(_comparison_cell(row, name))}</td>"
                 )
+            parts.append(f"<td>{esc(_fmt_out_tokens(row))}</td>")
             parts.append(f"<td>{'yes' if row.cached else 'live'}</td></tr>")
         parts.append("</table>")
 
         parts.append("<h2>Details</h2>")
         for index, row in enumerate(report.ok_rows, 1):
             parts.append(f"<details><summary>{index}. {esc(row.prompt_preview)}</summary>")
-            parts.append(
+            meta = (
                 f"<p class='meta'><code>{esc(row.baseline_id)}</code> → "
                 f"<code>{esc(row.migration_id)}</code> · semantic key "
-                f"<code>{esc(row.semantic_key)}</code></p>"
+                f"<code>{esc(row.semantic_key)}</code>"
             )
+            if row.category:
+                meta += f" · <span class='tag'>{esc(row.category)}</span>"
+            if row.baseline_out_tokens is not None or row.target_out_tokens is not None:
+                meta += f" · out tokens {esc(_fmt_out_tokens(row))}"
+            parts.append(meta + "</p>")
             for note in row.notes:
                 parts.append(f"<p class='note'>{esc(note)}</p>")
             parts.append("<ul>")
@@ -319,6 +413,12 @@ def render_console(report: MigrationReport) -> str:
         )
         mean = "n/a" if agg.mean_score is None else f"{agg.mean_score:.2f}"
         lines.append(f"  {agg.comparator:<10} {passed:<22} mean {mean}")
+    totals = report.token_totals()
+    if totals and totals.ratio is not None:
+        lines.append(
+            f"  out tokens baseline {totals.baseline_out:,} -> "
+            f"target {totals.target_out:,} ({totals.ratio:.2f}x)"
+        )
     for row in report.skipped_rows + report.error_rows:
         lines.append(f"  [{row.status}] {row.baseline_id}: {row.reason}")
     return "\n".join(lines)

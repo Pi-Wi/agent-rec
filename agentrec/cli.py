@@ -47,6 +47,10 @@ def _add_report_args(parser: argparse.ArgumentParser, *, default_compare: str) -
     )
     parser.add_argument("--filter", default=None, help="only baselines whose id contains this substring")
     parser.add_argument(
+        "--concurrency", type=int, default=8,
+        help="rows scored in parallel (default: 8)",
+    )
+    parser.add_argument(
         "--format", choices=("md", "html", "both"), default="both", help="report format(s) to write"
     )
     parser.add_argument(
@@ -133,6 +137,7 @@ async def _run_report_command(args: argparse.Namespace, *, offline: bool) -> int
         offline=offline,
         max_tokens_default=args.max_tokens,
         filter_substr=args.filter,
+        concurrency=args.concurrency,
     )
     written = _write_reports(args, report)
     print(render_console(report))

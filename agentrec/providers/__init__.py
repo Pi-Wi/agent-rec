@@ -107,18 +107,86 @@ def _adapter_for_interaction(interaction: CapturedInteraction) -> ProviderAdapte
     return adapter
 
 
+def _header(interaction: CapturedInteraction, name: bytes) -> Optional[bytes]:
+    """Last value of response header *name* (lowercased match), or None."""
+    found: Optional[bytes] = None
+    for header_name, value in interaction.response_headers:
+        if header_name.lower() == name:
+            found = value
+    return found
+
+
 def _is_sse(interaction: CapturedInteraction) -> bool:
-    for name, value in interaction.response_headers:
-        if name.lower() == b"content-type":
-            return b"text/event-stream" in value.lower()
-    return False
+    content_type = _header(interaction, b"content-type")
+    return content_type is not None and b"text/event-stream" in content_type.lower()
+
+
+def _response_payload(interaction: CapturedInteraction) -> bytes:
+    """Joined response bytes, decompressed per the recorded Content-Encoding.
+
+    The transport tees raw on-the-wire bytes, so a gzip/deflate/br response is
+    stored compressed (replay re-decompresses via httpx using the header).  The
+    corpus tooling reads chunks directly, so it must undo the same encoding here
+    before any JSON/SSE parsing.
+    """
+    payload = b"".join(chunk.data for chunk in interaction.chunks)
+    encoding = _header(interaction, b"content-encoding")
+    if not encoding:
+        return payload
+    encoding = encoding.decode("ascii", "ignore").strip().lower()
+    # Multiple codings can be comma-separated, applied left-to-right on the way
+    # out; undo them right-to-left.
+    for coding in reversed([c.strip() for c in encoding.split(",") if c.strip()]):
+        if coding in ("identity", ""):
+            continue
+        try:
+            payload = _decompress(coding, payload)
+        except Exception as exc:  # corrupt/short stream, unknown codec, etc.
+            raise DecodeError(
+                f"could not decode {coding!r} content-encoding: {exc}"
+            ) from None
+    return payload
+
+
+def _decompress(coding: str, payload: bytes) -> bytes:
+    if coding == "gzip":
+        import gzip
+
+        return gzip.decompress(payload)
+    if coding == "deflate":
+        import zlib
+
+        try:
+            return zlib.decompress(payload)
+        except zlib.error:
+            # Raw DEFLATE without a zlib header (some servers send this).
+            return zlib.decompress(payload, -zlib.MAX_WBITS)
+    if coding in ("br", "brotli"):
+        try:
+            import brotli  # optional dependency
+        except ImportError as exc:  # pragma: no cover - environment-specific
+            raise DecodeError(
+                "response uses brotli content-encoding but the 'brotli' "
+                "package is not installed"
+            ) from exc
+        return brotli.decompress(payload)
+    if coding == "zstd":
+        try:
+            import zstandard  # optional dependency
+        except ImportError as exc:  # pragma: no cover - environment-specific
+            raise DecodeError(
+                "response uses zstd content-encoding but the 'zstandard' "
+                "package is not installed"
+            ) from exc
+        return zstandard.ZstdDecompressor().decompress(payload)
+    raise DecodeError(f"unsupported content-encoding {coding!r}")
 
 
 def decode_interaction(interaction: CapturedInteraction) -> DecodedResponse:
     """Decode a recorded interaction's response into assistant text."""
     if interaction.response_status != 200:
         raise DecodeError(f"response status {interaction.response_status}, not 200")
-    payload = b"".join(chunk.data for chunk in interaction.chunks)
+    payload = _response_payload(interaction)
     adapter = _adapter_for_interaction(interaction)
     return adapter.decode_response(payload, is_sse=_is_sse(interaction))
 

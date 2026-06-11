@@ -33,7 +33,7 @@ from typing import Awaitable, Callable, Optional, TypeVar
 import httpx
 
 from .store import InteractionStore
-from .transport import AutoTransport, KeyLike, RecordingTransport, ReplayTransport
+from .transport import AutoTransport, ExtraMetadata, KeyLike, RecordingTransport, ReplayTransport
 
 Mode = str  # "auto" | "record" | "replay"
 
@@ -46,6 +46,7 @@ class _Scope:
     mode: Mode
     key: KeyLike
     simulate_timing: bool
+    metadata: ExtraMetadata
 
 
 # None outside any cassette scope → DynamicTransport passes through to network.
@@ -56,11 +57,13 @@ _active: contextvars.ContextVar[Optional[_Scope]] = contextvars.ContextVar(
 
 def _transport_for(scope: _Scope, inner: httpx.AsyncBaseTransport) -> httpx.AsyncBaseTransport:
     if scope.mode == "record":
-        return RecordingTransport(inner, scope.store, scope.key)
+        return RecordingTransport(inner, scope.store, scope.key, scope.metadata)
     if scope.mode == "replay":
         return ReplayTransport(scope.store, scope.key, scope.simulate_timing)
     if scope.mode == "auto":
-        return AutoTransport(inner, scope.store, scope.key, scope.simulate_timing)
+        return AutoTransport(
+            inner, scope.store, scope.key, scope.simulate_timing, scope.metadata
+        )
     raise ValueError(f"unknown mode {scope.mode!r}; expected auto|record|replay")
 
 
@@ -107,6 +110,9 @@ class cassette:
     * ``id`` — fix every call in the scope to one cassette id.  Omit to derive a
       stable id per request (so distinct calls get distinct cassettes).
     * ``key`` — a custom ``request -> id`` callable, for advanced keying.
+    * ``metadata`` — extra metadata merged into every recording made in this
+      scope (e.g. ``{"category": "classify"}``); a dict or a per-request
+      callable.  The migration report groups on a ``category`` tag.
     """
 
     def __init__(
@@ -117,6 +123,7 @@ class cassette:
         id: Optional[str] = None,
         key: KeyLike = None,
         simulate_timing: bool = False,
+        metadata: ExtraMetadata = None,
     ) -> None:
         if mode not in ("auto", "record", "replay"):
             raise ValueError(f"unknown mode {mode!r}; expected auto|record|replay")
@@ -127,6 +134,7 @@ class cassette:
             mode=mode,
             key=id if id is not None else key,
             simulate_timing=simulate_timing,
+            metadata=metadata,
         )
         self._token: Optional[contextvars.Token] = None
 
