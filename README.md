@@ -7,11 +7,17 @@ Recording happens at the **httpx transport layer**, below the OpenAI SDK, the
 Anthropic SDK, LangChain, or any other httpx-backed client. The core depends
 on nothing but `httpx`.
 
-> **Status:** beta (0.2). Record/replay is proven for streaming (SSE) and
-> non-streaming (JSON) responses on OpenAI and Anthropic; the API may still
-> change in minor releases before 1.0. Migration translation covers
-> OpenAI ↔ Anthropic, text-only conversations — tools/images become
+> **Status:** beta (0.3). Record/replay is proven for streaming (SSE) and
+> non-streaming (JSON) responses on OpenAI and Anthropic, sync and async; the
+> API may still change in minor releases before 1.0. Migration translation
+> covers OpenAI ↔ Anthropic, text-only conversations — tools/images become
 > clearly-reasoned skipped rows.
+>
+> **0.3 highlights:** synchronous client + transports, non-2xx responses no
+> longer cached by default, and a prompt-level `semantic_key` that groups the
+> same prompt across providers and sampling parameters. See
+> [CHANGELOG](CHANGELOG.md). *Semantic keys recomputed by the tooling differ
+> from 0.2 — run `agentrec annotate` only on fresh corpora.*
 
 ## Install
 
