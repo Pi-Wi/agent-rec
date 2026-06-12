@@ -4,7 +4,8 @@ Command-line interface: ``python -m agentrec <command>`` (or ``agentrec ...``).
 migrate   Run the corpus against a target model (records new responses into
           the corpus) and write a Markdown/HTML migration report.
 report    Re-render the report fully offline from already-recorded cassettes;
-          only the offline comparators (exact, fuzzy) are allowed.
+          the offline comparators (exact, fuzzy, json) are allowed, plus
+          judge served from corpus-cached verdicts.
 annotate  Backfill human-readable summary blocks and fingerprint metadata
           into existing cassettes.
 """
@@ -14,9 +15,9 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-from .comparators import OFFLINE_COMPARATOR_NAMES, build_comparators
+from .comparators import OFFLINE_COMPARATOR_NAMES, build_comparators, parse_compare_spec
 from .migration import annotate_corpus, run_migration
 from .report import default_report_basename, render_console, render_html, render_markdown
 from .store import FileStore
@@ -59,7 +60,14 @@ def _add_report_args(parser: argparse.ArgumentParser, *, default_compare: str) -
     )
     parser.add_argument(
         "--strict", action="store_true",
-        help="exit with code 1 if any comparison failed or errored (CI gate)",
+        help="exit with code 1 if the run failed the gate: any failed/errored "
+             "comparison, or — with --min-pass — any comparator below its threshold",
+    )
+    parser.add_argument(
+        "--min-pass", action="append", default=[], metavar="COMPARATOR=RATE",
+        help="gate --strict on a comparator's pass rate instead of every row "
+             '(repeatable, e.g. --min-pass json=1.0 --min-pass "json:category,priority"=0.9); '
+             "comparators without a threshold become informational",
     )
 
 
@@ -104,31 +112,63 @@ def _write_reports(args: argparse.Namespace, report) -> List[Path]:
     return written
 
 
+def _parse_min_pass(items: List[str], comparator_names: List[str]) -> Dict[str, float]:
+    """Parse repeated ``--min-pass COMPARATOR=RATE`` flags against the run's
+    comparators.  ``rpartition`` on ``=``: comparator names may contain
+    ``:`` and ``,`` (``json:category,priority=0.9``)."""
+    out: Dict[str, float] = {}
+    for item in items:
+        name, sep, value = item.rpartition("=")
+        if not sep or not name:
+            raise ValueError(f"--min-pass expects COMPARATOR=RATE, got {item!r}")
+        try:
+            rate = float(value)
+        except ValueError:
+            raise ValueError(f"--min-pass rate must be a number, got {value!r}") from None
+        if not 0.0 <= rate <= 1.0:
+            raise ValueError(f"--min-pass rate must be within 0..1, got {value}")
+        if name not in comparator_names:
+            raise ValueError(
+                f"--min-pass names a comparator not in this run: {name!r} "
+                f"(this run has: {', '.join(comparator_names)})"
+            )
+        out[name] = rate
+    return out
+
+
 async def _run_report_command(args: argparse.Namespace, *, offline: bool) -> int:
     if offline:
-        requested = (
-            list(OFFLINE_COMPARATOR_NAMES)
-            if args.compare.strip().lower() == "all"
-            else [name.strip() for name in args.compare.split(",") if name.strip()]
-        )
-        online = [name for name in requested if name not in OFFLINE_COMPARATOR_NAMES]
+        # `all` stays the conservative offline set; an explicit `judge` is
+        # allowed because cached verdicts replay without a socket.
+        if args.compare.strip().lower() == "all":
+            args.compare = ",".join(OFFLINE_COMPARATOR_NAMES)
+        parsed = parse_compare_spec(args.compare)
+        online = [
+            entry.name
+            for entry in parsed
+            if entry.base not in OFFLINE_COMPARATOR_NAMES and entry.base != "judge"
+        ]
         if online:
             print(
-                f"report (offline) supports only {', '.join(OFFLINE_COMPARATOR_NAMES)}; "
+                f"report (offline) supports only {', '.join(OFFLINE_COMPARATOR_NAMES)} "
+                "(and judge, served from cached verdicts); "
                 f"drop: {', '.join(online)} (use `agentrec migrate` for live comparators)",
                 file=sys.stderr,
             )
             return 2
-        args.compare = ",".join(requested)
+        args.compare = ",".join(entry.name for entry in parsed)
 
+    store = FileStore(args.corpus)
     comparators = build_comparators(
         args.compare,
         judge_model=args.judge_model,
         embedding_model=args.embedding_model,
         fuzzy_threshold=args.fuzzy_threshold,
         embedding_threshold=args.embedding_threshold,
+        store=store,
+        offline=offline,
     )
-    store = FileStore(args.corpus)
+    min_pass = _parse_min_pass(args.min_pass, [c.name for c in comparators])
     report = await run_migration(
         store,
         args.target,
@@ -138,6 +178,7 @@ async def _run_report_command(args: argparse.Namespace, *, offline: bool) -> int
         max_tokens_default=args.max_tokens,
         filter_substr=args.filter,
         concurrency=args.concurrency,
+        min_pass=min_pass,
     )
     written = _write_reports(args, report)
     print(render_console(report))
@@ -149,7 +190,7 @@ async def _run_report_command(args: argparse.Namespace, *, offline: bool) -> int
             "errored) — with --strict this counts as a failure",
             file=sys.stderr,
         )
-    if args.strict and not report.all_passed:
+    if args.strict and not report.strict_passed:
         return 1
     return 0
 

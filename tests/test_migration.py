@@ -532,6 +532,59 @@ async def test_non_retryable_4xx_stays_fatal_with_body_snippet(corpus: FileStore
     assert not await corpus.has(migration_id_for(BASELINE_ID, TARGET_MODEL))
 
 
+async def test_judge_verdicts_are_cached_in_corpus_and_replayed_offline(
+    corpus: FileStore, monkeypatch
+):
+    """End-to-end: migrate online with a judge, then re-report fully offline."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    await _seed_baseline(corpus)
+
+    judge_calls = {"n": 0}
+
+    def judge_handler(request: httpx.Request) -> httpx.Response:
+        judge_calls["n"] += 1
+        verdict = '{"equivalent": true, "score": 0.9, "reason": "same color"}'
+        return httpx.Response(
+            200,
+            json={
+                "model": "claude-opus-4-8",
+                "content": [{"type": "text", "text": verdict}],
+                "stop_reason": "end_turn",
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(judge_handler)) as judge_http:
+        comparators = build_comparators("exact,judge", http=judge_http, store=corpus)
+        report = await run_migration(
+            corpus, TARGET_MODEL, comparators, inner_transport=_anthropic_answer("Blue")
+        )
+    assert judge_calls["n"] == 1
+    judge_result = next(c for c in report.rows[0].comparisons if c.comparator == "judge")
+    assert judge_result.passed is True and "[cached]" not in judge_result.detail
+    judge_ids = [i for i in corpus.ids() if i.startswith("judge__")]
+    assert len(judge_ids) == 1  # the verdict is now a corpus cassette
+
+    # Offline re-run: no key, no socket — the verdict replays from the corpus.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    def explode(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("offline run must not touch the network")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(explode)) as judge_http:
+        comparators = build_comparators("exact,judge", http=judge_http, store=corpus, offline=True)
+        offline_report = await run_migration(
+            corpus, TARGET_MODEL, comparators, offline=True,
+            inner_transport=_raising_transport(),
+        )
+    row = offline_report.rows[0]
+    assert row.status == "ok" and row.cached is True
+    judge_result = next(c for c in row.comparisons if c.comparator == "judge")
+    assert judge_result.passed is True
+    assert "[cached]" in judge_result.detail
+    # Judge cassettes are tooling artifacts, never baselines.
+    assert [r.baseline_id for r in offline_report.rows] == [BASELINE_ID]
+
+
 async def test_migration_cassettes_are_excluded_as_baselines(corpus: FileStore, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     await _seed_baseline(corpus)
@@ -542,6 +595,89 @@ async def test_migration_cassettes_are_excluded_as_baselines(corpus: FileStore, 
         corpus, TARGET_MODEL, build_comparators("exact"), inner_transport=_raising_transport()
     )
     assert [row.baseline_id for row in report.rows] == [BASELINE_ID]
+
+
+# ---------------------------------------------------------------------------
+# --min-pass threshold gates
+# ---------------------------------------------------------------------------
+
+
+def _gate_report(min_pass: dict, json_passes: int = 9, json_fails: int = 1) -> "MigrationReport":
+    """Hand-built report: N ok rows scored by json (mixed) and fuzzy (all failing)."""
+    from agentrec import ComparisonResult, MigrationReport, RowResult
+
+    rows = []
+    for i in range(json_passes + json_fails):
+        passed = i < json_passes
+        rows.append(
+            RowResult(
+                semantic_key=f"k{i}",
+                baseline_id=f"b{i}",
+                migration_id=f"m{i}",
+                prompt_preview=f"p{i}",
+                comparisons=[
+                    ComparisonResult("json", 1.0 if passed else 0.5, passed, ""),
+                    ComparisonResult("fuzzy", 0.4, False, ""),
+                ],
+            )
+        )
+    return MigrationReport(
+        target_model="t", target_provider="anthropic", corpus="c", generated_at="now",
+        comparator_names=["json", "fuzzy"], rows=rows, min_pass=min_pass,
+    )
+
+
+def test_min_pass_gates_on_pass_rate_and_ignores_informational_comparators():
+    # json 9/10 = 90%: meets a 0.9 threshold even though fuzzy fails every row.
+    report = _gate_report({"json": 0.9})
+    assert report.all_passed is False  # all-or-nothing still red
+    assert report.strict_passed is True
+    (gate,) = report.gates()
+    assert gate.comparator == "json" and gate.passed is True
+    assert gate.pass_rate == pytest.approx(0.9)
+    assert "9/10" in gate.detail
+
+    # A higher bar fails.
+    report = _gate_report({"json": 0.95})
+    assert report.strict_passed is False
+    (gate,) = report.gates()
+    assert gate.passed is False and "<" in gate.detail
+
+    # Naming the failing comparator gates on it.
+    report = _gate_report({"json": 0.9, "fuzzy": 0.6})
+    assert report.strict_passed is False
+    assert [g.passed for g in report.gates()] == [True, False]
+
+
+def test_min_pass_comparator_errors_fail_the_gate():
+    from agentrec import ComparisonResult
+
+    report = _gate_report({"json": 0.5})
+    report.rows[0].comparisons[0] = ComparisonResult("json", 0.0, None, "boom", error=True)
+    (gate,) = report.gates()
+    assert gate.passed is False
+    assert gate.errors == 1
+    assert "error" in gate.detail
+    assert report.strict_passed is False
+
+
+def test_min_pass_empty_run_is_not_a_pass():
+    report = _gate_report({"json": 0.0})
+    report.rows.clear()
+    assert report.strict_passed is False
+
+    # An errored row also fails the gate, same as all-or-nothing --strict.
+    report = _gate_report({"json": 0.0})
+    report.rows[0].status = "error"
+    report.rows[0].reason = "target call failed"
+    assert report.strict_passed is False
+
+
+def test_min_pass_unknown_comparator_fails_closed():
+    report = _gate_report({"judge": 0.5})
+    (gate,) = report.gates()
+    assert gate.passed is False and "did not run" in gate.detail
+    assert report.strict_passed is False
 
 
 # ---------------------------------------------------------------------------
@@ -607,6 +743,45 @@ def test_cli_report_smoke(corpus: FileStore, monkeypatch, tmp_path: Path, capsys
     assert "Report written" in capsys.readouterr().out
 
 
+def test_cli_strict_min_pass_gates_and_renders(corpus: FileStore, monkeypatch, tmp_path: Path, capsys):
+    """--strict --min-pass gates on the named comparator's pass rate only."""
+    import asyncio
+
+    # Target answers "Red" for the "blue" baseline: exact and fuzzy both fail.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    asyncio.run(_seed_baseline(corpus))
+    asyncio.run(
+        run_migration(
+            corpus, TARGET_MODEL, build_comparators("exact"), inner_transport=_anthropic_answer("Red")
+        )
+    )
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    base_args = [
+        "report", "--corpus", str(corpus.root), "--target", TARGET_MODEL,
+        "--compare", "exact,fuzzy", "--out", str(tmp_path / "rep"), "--strict",
+    ]
+    # All-or-nothing --strict: red.
+    assert cli_main(base_args) == 1
+    # Gate only on fuzzy with a 0.0 bar: exact's failure is informational.
+    assert cli_main(base_args + ["--min-pass", "fuzzy=0.0"]) == 0
+    # Gate on exact at 1.0: red again.
+    assert cli_main(base_args + ["--min-pass", "exact=1.0"]) == 1
+    out = capsys.readouterr().out
+    assert "gate exact:" in out and "FAIL" in out
+
+    # The written reports surface thresholds and rates.
+    markdown = (tmp_path / "rep.md").read_text(encoding="utf-8")
+    assert "## Strict gate" in markdown and "100%" in markdown
+    html = (tmp_path / "rep.html").read_text(encoding="utf-8")
+    assert "Strict gate" in html
+
+    # Malformed or unknown --min-pass flags are usage errors (exit 2).
+    assert cli_main(base_args + ["--min-pass", "exact"]) == 2
+    assert cli_main(base_args + ["--min-pass", "exact=1.5"]) == 2
+    assert cli_main(base_args + ["--min-pass", "judge=0.5"]) == 2
+
+
 def test_cli_report_accepts_json_comparator_offline(corpus: FileStore, monkeypatch, capsys):
     """`json` is offline: the report command's gate must let it through."""
     import asyncio
@@ -625,11 +800,12 @@ def test_cli_report_accepts_json_comparator_offline(corpus: FileStore, monkeypat
 
 
 def test_cli_report_rejects_online_comparators(corpus: FileStore, capsys):
+    # judge is allowed offline since 0.5 (cached verdicts); embedding is not.
     code = cli_main(
-        ["report", "--corpus", str(corpus.root), "--target", TARGET_MODEL, "--compare", "exact,judge"]
+        ["report", "--corpus", str(corpus.root), "--target", TARGET_MODEL, "--compare", "exact,embedding"]
     )
     assert code == 2
-    assert "judge" in capsys.readouterr().err
+    assert "embedding" in capsys.readouterr().err
 
 
 def test_cli_annotate_smoke(corpus: FileStore, capsys):

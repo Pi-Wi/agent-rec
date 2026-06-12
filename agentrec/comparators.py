@@ -11,8 +11,12 @@ embedding similarity and judge verdicts side by side.
 * ``json``      — structural JSON comparison: parses both sides and scores the
                   fraction of matching scalar fields, so a category/priority
                   match with a differing free-text field scores high, not zero.
+                  A field scope (``json:category,priority``) restricts which
+                  fields drive the verdict; the rest become informational.
 * ``embedding`` — cosine similarity of OpenAI embeddings (live API call).
-* ``judge``     — an LLM scores semantic equivalence (live API call).
+* ``judge``     — an LLM scores semantic equivalence (live API call; verdicts
+                  are cached into the corpus when a store is supplied, so a
+                  re-run on unchanged texts costs nothing).
 
 The offline comparators tolerate a markdown code fence wrapping the whole
 payload (``` ```json … ``` ```): some target models fence structured output
@@ -23,20 +27,34 @@ errored :class:`ComparisonResult` on that row — it never crashes the run.
 """
 from __future__ import annotations
 
+import datetime as _dt
 import difflib
 import json
 import math
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import httpx
 
-from .providers import Conversation, DecodedResponse, adapter_for_model, adapter_for_provider
+from .capture import CapturedChunk, CapturedInteraction, CapturedRequest
+from .keying import _digest, _sanitize, fingerprint
+from .providers import (
+    Conversation,
+    DecodedResponse,
+    adapter_for_model,
+    adapter_for_provider,
+    decode_interaction,
+)
+from .store import InteractionStore
 
 OFFLINE_COMPARATOR_NAMES = ("exact", "fuzzy", "json")
 ALL_COMPARATOR_NAMES = ("exact", "fuzzy", "json", "embedding", "judge")
+
+# Corpus-id prefix for cached judge verdicts; the migration runner excludes
+# these from the baseline set, like ``migration__`` cassettes.
+JUDGE_PREFIX = "judge__"
 
 _WHITESPACE = re.compile(r"\s+")
 
@@ -174,11 +192,40 @@ class JsonComparator(Comparator):
     high instead of zero.  ``passed`` requires every scalar field to match.
     An unparseable baseline is a comparator error; an unparseable target is a
     failed comparison — the target genuinely broke the contract.
+
+    A field scope (``fields=["category", "priority"]``, spelled
+    ``json:category,priority`` in a ``--compare`` spec) restricts which fields
+    drive the score and the pass/fail verdict — the fit for payloads that mix
+    fixed fields with free text (scope the fixed fields; the free text stops
+    diluting the mean).  Scope entries use the flattened-path syntax: dotted
+    for nested objects (``meta.source``), ``[i]`` for list indices
+    (``labels[0]``); a scope entry covers its whole subtree.  Out-of-scope
+    differences are still reported in ``detail``, marked informational.  A
+    scope that matches nothing in either payload is a comparator error (most
+    likely a typo — silent green would be worse).
     """
 
     name = "json"
 
     _MAX_DIFFS = 6
+
+    def __init__(self, fields: Optional[Sequence[str]] = None) -> None:
+        self._fields: Tuple[str, ...] = tuple(fields) if fields else ()
+        if self._fields:
+            self.name = f"json:{','.join(self._fields)}"
+
+    def _in_scope(self, path: str) -> bool:
+        return any(
+            path == field or path.startswith(field + ".") or path.startswith(field + "[")
+            for field in self._fields
+        )
+
+    @classmethod
+    def _capped(cls, diffs: List[str]) -> List[str]:
+        shown = diffs[: cls._MAX_DIFFS]
+        if len(diffs) > cls._MAX_DIFFS:
+            shown.append(f"… (+{len(diffs) - cls._MAX_DIFFS} more)")
+        return shown
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
         try:
@@ -206,34 +253,65 @@ class JsonComparator(Comparator):
         _flatten_json(baseline_value, "", baseline_fields)
         _flatten_json(target_value, "", target_fields)
 
-        diffs: List[str] = []
+        diffs: List[str] = []  # in-scope mismatches: these drive the verdict
+        info_diffs: List[str] = []  # out-of-scope mismatches: reported, not scored
         matched = 0
+        total = 0
         all_paths = list(baseline_fields) + [
             path for path in target_fields if path not in baseline_fields
         ]
         for path in all_paths:
             if path not in target_fields:
-                diffs.append(f"missing in target: {path}")
+                diff = f"missing in target: {path}"
             elif path not in baseline_fields:
-                diffs.append(f"extra in target: {path}")
+                diff = f"extra in target: {path}"
             elif _scalars_match(baseline_fields[path], target_fields[path]):
-                matched += 1
+                diff = None
             else:
-                diffs.append(
+                diff = (
                     f"{path}: {_fmt_scalar(baseline_fields[path])}"
                     f"→{_fmt_scalar(target_fields[path])}"
                 )
+            if not self._fields or self._in_scope(path):
+                total += 1
+                if diff is None:
+                    matched += 1
+                else:
+                    diffs.append(diff)
+            elif diff is not None:
+                info_diffs.append(diff)
 
-        total = len(all_paths)
+        unmatched_scopes = [
+            field
+            for field in self._fields
+            if not any(
+                path == field or path.startswith(field + ".") or path.startswith(field + "[")
+                for path in all_paths
+            )
+        ]
+        if self._fields and len(unmatched_scopes) == len(self._fields):
+            return ComparisonResult(
+                comparator=self.name,
+                score=0.0,
+                passed=None,
+                detail=(
+                    f"none of the scoped fields ({', '.join(self._fields)}) exist in "
+                    "either payload — check the field paths in the comparator spec"
+                ),
+                error=True,
+            )
+
         score = matched / total if total else 1.0
         passed = matched == total
+        scoped = " scoped" if self._fields else ""
         if passed:
-            detail = f"all {total} fields match" if total else "both payloads are empty JSON"
+            detail = f"all {total}{scoped} fields match" if total else "both payloads are empty JSON"
         else:
-            shown = diffs[: self._MAX_DIFFS]
-            if len(diffs) > self._MAX_DIFFS:
-                shown.append(f"… (+{len(diffs) - self._MAX_DIFFS} more)")
-            detail = "; ".join(shown)
+            detail = "; ".join(self._capped(diffs))
+        if unmatched_scopes:
+            detail += f" · scoped fields absent from both payloads: {', '.join(unmatched_scopes)}"
+        if info_diffs:
+            detail += " · out of scope (informational): " + "; ".join(self._capped(info_diffs))
         return ComparisonResult(
             comparator=self.name, score=score, passed=passed, detail=detail
         )
@@ -343,18 +421,141 @@ def _judge_verdict(text: str) -> dict:
 
 
 class JudgeComparator(_HttpComparator):
+    """LLM-as-judge equivalence verdicts, with corpus-cached results.
+
+    When a *store* is supplied, each verdict is persisted as a corpus cassette
+    keyed on ``(judge_model, baseline_text, target_text)`` — the same
+    full-interaction shape as a ``migration__`` cassette — so re-rendering a
+    report on unchanged texts replays the verdict instead of re-buying it.
+    With ``offline=True`` no socket is ever opened: rows without a cached
+    verdict degrade to errored comparisons.
+
+    ``passed`` follows the judge's ``equivalent`` boolean.  When the verdict's
+    numeric score disagrees with the boolean (score ≥ 0.8 but
+    ``equivalent=false``, or score < 0.5 but ``equivalent=true``), the
+    inconsistency is flagged in ``detail`` so report readers see it.
+    """
+
     name = "judge"
+
+    # Boolean-vs-score disagreement bands flagged in the detail text.
+    _INCONSISTENT_HIGH = 0.8
+    _INCONSISTENT_LOW = 0.5
 
     def __init__(
         self,
         http: Optional[httpx.AsyncClient] = None,
         *,
         judge_model: str = "claude-opus-4-8",
+        store: Optional[InteractionStore] = None,
+        offline: bool = False,
     ) -> None:
         super().__init__(http)
         self._judge_model = judge_model
+        self._store = store
+        self._offline = offline
+
+    def cache_id(self, baseline_text: str, target_text: str) -> str:
+        """Deterministic corpus id for one (judge_model, baseline, target) verdict.
+
+        Keyed on the compared texts, not the prompt: the prompt only frames
+        the comparison, and unchanged texts should reuse the verdict.
+        """
+        digest = _digest(self._judge_model, baseline_text, target_text)[:32]
+        return f"{JUDGE_PREFIX}{_sanitize(self._judge_model)}__{digest}"
+
+    def _result(self, verdict: dict, *, cached: bool) -> ComparisonResult:
+        equivalent = bool(verdict.get("equivalent"))
+        raw_score = verdict.get("score")
+        explicit = isinstance(raw_score, (int, float)) and not isinstance(raw_score, bool)
+        score = float(raw_score) if explicit else (1.0 if equivalent else 0.0)
+        score = max(0.0, min(1.0, score))
+        detail = str(verdict.get("reason", "")) or f"judge {self._judge_model} verdict"
+        if explicit and not equivalent and score >= self._INCONSISTENT_HIGH:
+            detail += (
+                f" [inconsistent verdict: equivalent=false but score {score:.2f} >= "
+                f"{self._INCONSISTENT_HIGH}; passed follows the boolean]"
+            )
+        elif explicit and equivalent and score < self._INCONSISTENT_LOW:
+            detail += (
+                f" [inconsistent verdict: equivalent=true but score {score:.2f} < "
+                f"{self._INCONSISTENT_LOW}; passed follows the boolean]"
+            )
+        if cached:
+            detail += " [cached]"
+        return ComparisonResult(
+            comparator=self.name, score=score, passed=equivalent, detail=detail
+        )
+
+    async def _save_verdict(
+        self, cache_id: str, url: str, headers: Dict[str, str], body: dict,
+        response: httpx.Response, payload: bytes,
+    ) -> None:
+        """Persist the judge call as a corpus cassette (best-effort).
+
+        A cache-write failure must not void a verdict that was already bought;
+        the next run simply re-asks.
+        """
+        request = httpx.Request("POST", url, headers=headers, json=body)
+        request.read()
+        # *payload* is the DECODED body (aread() decompresses), so the stored
+        # headers must not claim a content-encoding/-length the chunk no
+        # longer has — unlike the transports, which record raw network bytes.
+        response_headers = [
+            (name, value)
+            for name, value in response.headers.raw
+            if name.lower() not in (b"content-encoding", b"content-length")
+        ]
+        interaction = CapturedInteraction(
+            request=CapturedRequest(
+                method="POST",
+                url=url,
+                headers=list(request.headers.raw),
+                content=request.content,
+            ),
+            response_status=response.status_code,
+            response_headers=response_headers,
+            response_extensions={},
+            chunks=[CapturedChunk(data=payload)],
+            metadata=fingerprint(request).as_metadata(),
+        )
+        interaction.metadata.update(
+            {
+                "judge_model": self._judge_model,
+                "judge_key": cache_id,
+                "recorded_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+            }
+        )
+        try:
+            await self._store.save(cache_id, interaction)
+        except Exception:
+            pass
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
+        cache_id = self.cache_id(baseline.text, target.text) if self._store else None
+
+        if cache_id and await self._store.has(cache_id):
+            try:
+                cached = decode_interaction(await self._store.load(cache_id))
+                return self._result(_judge_verdict(cached.text), cached=True)
+            except Exception:
+                if self._offline:
+                    raise  # the runner degrades this to an errored result
+                # Unreadable cached verdict: drop it and re-ask live.
+                await self._store.discard(cache_id)
+
+        if self._offline:
+            return ComparisonResult(
+                comparator=self.name,
+                score=0.0,
+                passed=None,
+                detail=(
+                    f"no cached verdict from judge {self._judge_model} for this row; "
+                    "run `agentrec migrate` (online) to record one"
+                ),
+                error=True,
+            )
+
         adapter = adapter_for_model(self._judge_model)
         conversation = Conversation(
             system=_JUDGE_SYSTEM,
@@ -374,19 +575,82 @@ class JudgeComparator(_HttpComparator):
         url, headers, body = adapter.build_request(conversation, self._judge_model)
         response = await self._post(url, headers, body)
         response.raise_for_status()
-        decoded = adapter.decode_response(await response.aread(), is_sse=False)
+        payload = await response.aread()
+        decoded = adapter.decode_response(payload, is_sse=False)
         verdict = _judge_verdict(decoded.text)
+        if cache_id:
+            # Only after the verdict parsed: a cached malformed reply would be
+            # replayed as the same failure forever.
+            await self._save_verdict(cache_id, url, headers, body, response, payload)
+        return self._result(verdict, cached=False)
 
-        equivalent = bool(verdict.get("equivalent"))
-        raw_score = verdict.get("score")
-        score = float(raw_score) if isinstance(raw_score, (int, float)) else (1.0 if equivalent else 0.0)
-        score = max(0.0, min(1.0, score))
-        return ComparisonResult(
-            comparator=self.name,
-            score=score,
-            passed=equivalent,
-            detail=str(verdict.get("reason", "")) or f"judge {self._judge_model} verdict",
-        )
+
+@dataclass(frozen=True)
+class ParsedComparator:
+    """One entry of a ``--compare`` spec: a base comparator plus optional args.
+
+    Today only ``json`` takes args (its field scope); ``name`` is the
+    canonical spelling (``json:category,priority``) used as the comparator's
+    display name and as the key ``--min-pass`` thresholds match against.
+    """
+
+    base: str
+    args: Tuple[str, ...] = ()
+
+    @property
+    def name(self) -> str:
+        return f"{self.base}:{','.join(self.args)}" if self.args else self.base
+
+
+def parse_compare_spec(spec: str) -> List[ParsedComparator]:
+    """Parse ``"exact,fuzzy,json:category,priority"`` or ``"all"``.
+
+    Comma-separated tokens; a token that is not a comparator name continues
+    the argument list of the preceding ``name:...`` token, so
+    ``json:category,priority`` is ONE json comparator scoped to two fields.
+    (Consequence: a scoped field whose name collides with a comparator name —
+    a JSON field literally called ``fuzzy`` — cannot be expressed; compare
+    unscoped in that case.)  Entries are de-duplicated on their canonical
+    name, so ``json`` and ``json:category`` may coexist.
+    """
+    if spec.strip().lower() == "all":
+        return [ParsedComparator(name) for name in ALL_COMPARATOR_NAMES]
+
+    # (base, args, scoped_form): scoped_form marks a `name:` token, whose args
+    # may still be empty and whose arg list later tokens can continue.
+    entries: List[Tuple[str, List[str], bool]] = []
+    for token in (t.strip() for t in spec.split(",")):
+        if not token:
+            continue
+        base, colon, first_arg = token.partition(":")
+        base = base.strip().lower()
+        if base in ALL_COMPARATOR_NAMES:
+            if colon and base != "json":
+                raise ValueError(
+                    f"comparator {base!r} does not take a field scope (only 'json' does)"
+                )
+            args = [first_arg.strip()] if first_arg.strip() else []
+            entries.append((base, args, bool(colon)))
+        elif entries and entries[-1][2]:
+            entries[-1][1].append(token)  # continuation of the open json:… scope
+        else:
+            raise ValueError(
+                f"unknown comparator {token!r}; expected any of "
+                f"{', '.join(ALL_COMPARATOR_NAMES)} or 'all'"
+            )
+
+    parsed: List[ParsedComparator] = []
+    seen: set = set()
+    for base, args, scoped_form in entries:
+        if scoped_form and not args:
+            raise ValueError(f"'{base}:' needs at least one field, e.g. json:category")
+        entry = ParsedComparator(base, tuple(args))
+        if entry.name not in seen:
+            seen.add(entry.name)
+            parsed.append(entry)
+    if not parsed:
+        raise ValueError("no comparators selected")
+    return parsed
 
 
 def build_comparators(
@@ -397,32 +661,25 @@ def build_comparators(
     fuzzy_threshold: float = 0.8,
     embedding_threshold: float = 0.8,
     http: Optional[httpx.AsyncClient] = None,
+    store: Optional[InteractionStore] = None,
+    offline: bool = False,
 ) -> List[Comparator]:
-    """Parse a ``--compare`` spec like ``"exact,judge"`` or ``"all"``."""
-    names = (
-        list(ALL_COMPARATOR_NAMES)
-        if spec.strip().lower() == "all"
-        else [name.strip().lower() for name in spec.split(",") if name.strip()]
-    )
-    seen: List[str] = []
-    for name in names:
-        if name not in ALL_COMPARATOR_NAMES:
-            raise ValueError(
-                f"unknown comparator {name!r}; expected any of "
-                f"{', '.join(ALL_COMPARATOR_NAMES)} or 'all'"
-            )
-        if name not in seen:
-            seen.append(name)
-    if not seen:
-        raise ValueError("no comparators selected")
+    """Build comparators from a ``--compare`` spec like ``"exact,judge"``,
+    ``"json:category,priority"`` or ``"all"``.
 
+    ``store`` enables judge-verdict caching into that corpus; ``offline=True``
+    additionally forbids the judge from opening a socket (cached verdicts
+    only).
+    """
     factories = {
-        "exact": lambda: ExactMatchComparator(),
-        "fuzzy": lambda: FuzzyComparator(threshold=fuzzy_threshold),
-        "json": lambda: JsonComparator(),
-        "embedding": lambda: EmbeddingComparator(
+        "exact": lambda entry: ExactMatchComparator(),
+        "fuzzy": lambda entry: FuzzyComparator(threshold=fuzzy_threshold),
+        "json": lambda entry: JsonComparator(fields=entry.args or None),
+        "embedding": lambda entry: EmbeddingComparator(
             http, model=embedding_model, threshold=embedding_threshold
         ),
-        "judge": lambda: JudgeComparator(http, judge_model=judge_model),
+        "judge": lambda entry: JudgeComparator(
+            http, judge_model=judge_model, store=store, offline=offline
+        ),
     }
-    return [factories[name]() for name in seen]
+    return [factories[entry.base](entry) for entry in parse_compare_spec(spec)]

@@ -7,17 +7,17 @@ Recording happens at the **httpx transport layer**, below the OpenAI SDK, the
 Anthropic SDK, LangChain, or any other httpx-backed client. The core depends
 on nothing but `httpx`.
 
-> **Status:** beta (0.4). Record/replay is proven for streaming (SSE) and
+> **Status:** beta (0.5). Record/replay is proven for streaming (SSE) and
 > non-streaming (JSON) responses on OpenAI and Anthropic, sync and async; the
 > API may still change in minor releases before 1.0. Migration translation
 > covers OpenAI ↔ Anthropic, text-only conversations (plus JSON mode) — tools,
 > images and strict `json_schema` become clearly-reasoned skipped rows.
 >
-> **0.4 highlights:** a structural `json` comparator, fence-tolerant
-> `exact`/`fuzzy`, and `response_format` JSON mode that translates across
-> providers instead of skipping the row. See [CHANGELOG](CHANGELOG.md).
-> *Corpora recorded with `response_format` get new `semantic_key`s — run
-> `agentrec annotate` only on fresh corpora.*
+> **0.5 highlights:** a field-scoped `json` comparator
+> (`json:category,priority`), threshold-based CI gating
+> (`--strict --min-pass`), and judge verdicts cached into the corpus —
+> re-rendering a report on unchanged texts costs nothing. See
+> [CHANGELOG](CHANGELOG.md).
 
 ## Install
 
@@ -84,7 +84,11 @@ caches the answers back into the corpus, and scores baseline vs. target:
 | `fuzzy`     | no             | `difflib` sequence similarity                     |
 | `json`      | no             | structural field-by-field match of JSON payloads  |
 | `embedding` | OpenAI API     | cosine similarity of embeddings                   |
-| `judge`     | LLM API        | an LLM scores semantic equivalence                |
+| `judge`     | LLM API¹       | an LLM scores semantic equivalence                |
+
+¹ judge verdicts are cached into the corpus — only new (baseline, target)
+pairs cost an API call, and `agentrec report` (offline) replays cached
+verdicts without a socket.
 
 The offline comparators (`exact`, `fuzzy`, `json`) tolerate a markdown code
 fence wrapping the whole payload — a target that emits ```` ```json … ``` ````
@@ -94,17 +98,35 @@ fraction of fields that match, so a `category`/`priority` agreement with a
 differing `summary` scores high instead of zero, and the per-field diff
 (`priority: high→medium`) lands in the report.
 
+When the free text shouldn't count at all, **scope** the comparator:
+`json:category,priority` scores and passes on just those fields (dotted paths
+for nested objects — `meta.source` — and `[i]` for list indices —
+`labels[0]`; an entry covers its subtree). Out-of-scope diffs still appear in
+the report, marked informational. In a spec, tokens after `json:` that aren't
+comparator names continue the scope, so `exact,fuzzy,json:category,priority`
+is three comparators.
+
 ```bash
-agentrec migrate  --corpus corpus --target claude-haiku-4-5 --compare exact,fuzzy,json,judge
+agentrec migrate  --corpus corpus --target claude-haiku-4-5 --compare "exact,judge,json:category,priority"
 agentrec report   --corpus corpus --target claude-haiku-4-5 --compare json --strict   # offline; CI gate
 agentrec annotate --corpus corpus                                      # backfill summaries/metadata
 ```
 
-Re-runs are cheap: answered prompts are served from disk, rate-limited or
-header-bloated calls (429/431/5xx) retry with backoff, and failures are never
-cached. Rows are scored concurrently (`--concurrency`). Recordings tagged with
-a category — `cassette(store, metadata={"category": "extract"})` — get a
-per-category breakdown in the report, with output-token columns that surface
+`--strict` alone is all-or-nothing: any failed or errored comparison (or an
+all-skipped run) exits 1. For corpora with free-text fields that's permanently
+red, so gate on pass rates instead: `--strict --min-pass
+"json:category,priority"=0.9` exits by whether ≥ 90 % of compared rows passed
+that comparator — comparators without a threshold become informational
+(`--min-pass` is repeatable; comparator errors and errored rows still fail
+the gate). Thresholds and actual rates land in a "Strict gate" section of the
+report.
+
+Re-runs are cheap: answered prompts and judge verdicts are served from disk,
+rate-limited or header-bloated calls (429/431/5xx) retry with backoff, and
+failures are never cached. Rows are scored concurrently (`--concurrency`).
+Recordings tagged with a category —
+`cassette(store, metadata={"category": "extract"})` — get a per-category
+breakdown in the report, with output-token columns that surface
 verbosity/cost differences between the models.
 
 **JSON mode translates, it doesn't skip.** A baseline recorded with OpenAI's

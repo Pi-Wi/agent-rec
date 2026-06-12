@@ -1,5 +1,51 @@
 # Changelog
 
+## Dev (0.5.0)
+
+### Added
+- **Field-scoped `json` comparator**: `--compare "json:category,priority"`
+  restricts which fields drive the score and the pass/fail verdict, so a
+  free-text field (`summary`) no longer dilutes the signal of the fixed
+  fields. Scope entries use the flattened-path syntax (dotted for nested
+  objects — `meta.source` — and `[i]` for list indices — `labels[0]`); an
+  entry covers its whole subtree. Out-of-scope differences are still shown in
+  `detail`, marked informational. A scope matching nothing in either payload
+  is a comparator error (it's almost certainly a typo — silent green would be
+  worse). In a `--compare` spec, tokens after `json:` that are not comparator
+  names continue the scope, so `exact,fuzzy,json:category,priority` is three
+  comparators; a scoped and an unscoped `json` may coexist. The canonical
+  spelling (`json:category,priority`) is the comparator's display name and
+  the key `--min-pass` matches against. (Limitation: a JSON field literally
+  named like a comparator — `fuzzy` — can't be scoped.) The spec parser is
+  exported as `parse_compare_spec`.
+- **Threshold-based `--strict` gating**: `--min-pass COMPARATOR=RATE`
+  (repeatable, e.g. `--min-pass "json:category,priority"=0.9`) gates the
+  `--strict` exit code on the named comparators' pass rates over compared
+  rows; comparators without a threshold become informational. `--strict`
+  without `--min-pass` keeps the all-or-nothing behaviour. An all-skipped run
+  is still not a pass, and errored rows or comparator errors still fail the
+  gate. Thresholds and actual rates are surfaced in the console output and as
+  a "Strict gate" section in the Markdown/HTML reports
+  (`MigrationReport.gates()` / `strict_passed` / `GateResult` in the API).
+- **Judge verdicts are cached in the corpus**: with a store supplied (the CLI
+  always passes its corpus), each judge verdict is persisted as a
+  `judge__<model>__<hash>` cassette keyed on
+  `(judge_model, baseline_text, target_text)` — same full-interaction shape
+  as a `migration__` cassette — so re-rendering a report on unchanged texts
+  replays verdicts instead of re-buying them. `agentrec report` (offline) now
+  accepts `judge`: cached verdicts replay without a socket, rows without one
+  degrade to errored comparisons. Judge cassettes are excluded from the
+  baseline set, like migration cassettes. A malformed judge reply is never
+  cached; an unreadable cached verdict is discarded and re-asked live.
+- `JsonComparator` is now exported from the package root (it was missing).
+
+### Changed
+- **Judge boolean-vs-score inconsistencies are flagged**: `passed` still
+  follows the judge's `equivalent` boolean, but when the numeric score
+  disagrees (score ≥ 0.8 with `equivalent=false`, or score < 0.5 with
+  `equivalent=true`) the inconsistency is appended to `detail` so report
+  readers see it.
+
 ## Dev (0.4.0)
 
 ### Added

@@ -40,7 +40,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import httpx
 
-from .comparators import Comparator, ComparisonResult
+from .comparators import JUDGE_PREFIX, Comparator, ComparisonResult
 from .keying import _sanitize, fingerprint_of
 from .providers import (
     DecodeError,
@@ -176,6 +176,18 @@ class TokenTotals:
 
 
 @dataclass(frozen=True)
+class GateResult:
+    """Outcome of one ``--min-pass`` threshold against a comparator's pass rate."""
+
+    comparator: str
+    threshold: float
+    pass_rate: Optional[float]
+    errors: int
+    passed: bool
+    detail: str
+
+
+@dataclass(frozen=True)
 class CategoryBreakdown:
     """Comparator aggregates over the ok rows of one prompt category."""
 
@@ -193,6 +205,9 @@ class MigrationReport:
     generated_at: str
     comparator_names: List[str]
     rows: List[RowResult]
+    # --min-pass thresholds (comparator name → minimum pass rate); empty means
+    # --strict keeps its all-or-nothing semantics.
+    min_pass: Dict[str, float] = field(default_factory=dict)
 
     @property
     def ok_rows(self) -> List[RowResult]:
@@ -284,9 +299,10 @@ class MigrationReport:
     def all_passed(self) -> bool:
         """True when at least one prompt was compared and nothing failed.
 
-        Drives the CLI's ``--strict`` exit code.  An all-skipped run (e.g.
-        offline with no recorded migration cassettes) is *not* a pass — a CI
-        gate that is green because nothing ran would be false confidence.
+        Drives the CLI's ``--strict`` exit code (when no ``--min-pass``
+        thresholds are set).  An all-skipped run (e.g. offline with no
+        recorded migration cassettes) is *not* a pass — a CI gate that is
+        green because nothing ran would be false confidence.
         """
         if not self.ok_rows:
             return False
@@ -297,6 +313,52 @@ class MigrationReport:
                 if comparison.error or comparison.passed is False:
                     return False
         return True
+
+    def gates(self) -> List[GateResult]:
+        """One :class:`GateResult` per ``min_pass`` threshold (empty when none).
+
+        A gate passes when its comparator produced no errored comparisons and
+        its pass rate over the compared rows meets the threshold.  Comparators
+        without a threshold are informational and produce no gate.
+        """
+        aggregates = {agg.comparator: agg for agg in self.aggregates()}
+        out: List[GateResult] = []
+        for name, threshold in self.min_pass.items():
+            agg = aggregates.get(name)
+            if agg is None:
+                out.append(GateResult(name, threshold, None, 0, False, "comparator did not run"))
+                continue
+            rate = agg.pass_rate
+            if agg.errors:
+                passed = False
+                detail = f"{agg.errors} comparator error(s)"
+                if rate is not None:
+                    detail += f"; pass rate {rate:.0%} ignored"
+            elif rate is None:
+                passed, detail = False, "no compared rows"
+            else:
+                passed = rate >= threshold
+                detail = (
+                    f"pass rate {agg.passed}/{agg.passed + agg.failed} ({rate:.0%}) "
+                    f"{'>=' if passed else '<'} {threshold:.0%}"
+                )
+            out.append(GateResult(name, threshold, rate, agg.errors, passed, detail))
+        return out
+
+    @property
+    def strict_passed(self) -> bool:
+        """Drives the CLI's ``--strict`` exit code.
+
+        With ``min_pass`` thresholds, each named comparator gates on its pass
+        rate and unnamed comparators are informational; without thresholds
+        this is the all-or-nothing :attr:`all_passed`.  Either way an
+        all-skipped run is not a pass, and errored rows fail the gate.
+        """
+        if not self.min_pass:
+            return self.all_passed
+        if not self.ok_rows or self.error_rows:
+            return False
+        return all(gate.passed for gate in self.gates())
 
 
 async def run_migration(
@@ -312,6 +374,7 @@ async def run_migration(
     concurrency: int = 8,
     retries: int = 3,
     progress: Optional[Callable[[RowResult], None]] = None,
+    min_pass: Optional[Dict[str, float]] = None,
 ) -> MigrationReport:
     """Compare every corpus prompt's recorded answer against *target_model*.
 
@@ -321,13 +384,21 @@ async def run_migration(
     call (429/5xx) is retried up to ``retries`` times with backoff, honouring
     ``Retry-After``.  ``offline=True`` never opens a socket: prompts without a
     recorded migration cassette become skipped rows.  ``inner_transport``
-    overrides the real network transport (test seam).
+    overrides the real network transport (test seam).  ``min_pass`` carries
+    per-comparator pass-rate thresholds into the report (see
+    :meth:`MigrationReport.gates`).
     """
     target_adapter = (
         adapter_for_provider(target_provider) if target_provider else adapter_for_model(target_model)
     )
 
-    baseline_ids = [bid for bid in store.ids() if not bid.startswith(MIGRATION_PREFIX)]
+    # Migration answers and cached judge verdicts live in the same corpus but
+    # are tooling artifacts, not prompts to compare.
+    baseline_ids = [
+        bid
+        for bid in store.ids()
+        if not bid.startswith(MIGRATION_PREFIX) and not bid.startswith(JUDGE_PREFIX)
+    ]
     if filter_substr:
         baseline_ids = [bid for bid in baseline_ids if filter_substr in bid]
 
@@ -510,6 +581,7 @@ async def run_migration(
         generated_at=_dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds"),
         comparator_names=[comparator.name for comparator in comparators],
         rows=rows,
+        min_pass=dict(min_pass or {}),
     )
 
 

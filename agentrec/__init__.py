@@ -7,12 +7,16 @@ from .comparators import (
     EmbeddingComparator,
     ExactMatchComparator,
     FuzzyComparator,
+    JsonComparator,
     JudgeComparator,
+    ParsedComparator,
     build_comparators,
+    parse_compare_spec,
 )
 from .keying import Fingerprint, default_key, fingerprint, fingerprint_of
 from .migration import (
     CategoryBreakdown,
+    GateResult,
     MigrationReport,
     RowResult,
     TokenTotals,
@@ -103,11 +107,15 @@ __all__ = [
     "ComparisonResult",
     "ExactMatchComparator",
     "FuzzyComparator",
+    "JsonComparator",
     "EmbeddingComparator",
     "JudgeComparator",
+    "ParsedComparator",
     "build_comparators",
+    "parse_compare_spec",
     # Migration report
     "CategoryBreakdown",
+    "GateResult",
     "MigrationReport",
     "RowResult",
     "TokenTotals",

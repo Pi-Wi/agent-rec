@@ -154,6 +154,80 @@ async def test_json_unparseable_baseline_is_a_comparator_error():
 
 
 # ---------------------------------------------------------------------------
+# json comparator — field scope
+# ---------------------------------------------------------------------------
+
+
+async def test_json_scoped_fields_drive_verdict_free_text_is_informational():
+    baseline = _resp('{"category": "billing", "priority": "high", "summary": "Refund the invoice."}')
+    target = _resp('{"category": "billing", "priority": "high", "summary": "Issue a refund."}')
+    result = await JsonComparator(fields=["category", "priority"]).compare("p", baseline, target)
+    assert result.comparator == "json:category,priority"
+    assert result.passed is True
+    assert result.score == 1.0
+    assert "all 2 scoped fields match" in result.detail
+    # The out-of-scope difference is still visible, marked informational.
+    assert "out of scope (informational)" in result.detail
+    assert "summary" in result.detail
+
+
+async def test_json_scoped_mismatch_scores_over_scoped_fields_only():
+    baseline = _resp('{"category": "billing", "priority": "high", "summary": "x"}')
+    target = _resp('{"category": "billing", "priority": "medium", "summary": "y"}')
+    result = await JsonComparator(fields=["category", "priority"]).compare("p", baseline, target)
+    assert result.passed is False
+    assert result.score == pytest.approx(1 / 2)
+    assert "priority: high→medium" in result.detail
+
+
+async def test_json_scope_covers_nested_subtrees_and_list_indices():
+    baseline = _resp('{"meta": {"source": "web", "spam": false}, "labels": ["a", "b"], "note": "x"}')
+    target = _resp('{"meta": {"source": "api", "spam": false}, "labels": ["a", "c"], "note": "y"}')
+    # "meta" covers meta.source and meta.spam; "labels[1]" is one list slot.
+    result = await JsonComparator(fields=["meta", "labels[1]"]).compare("p", baseline, target)
+    assert result.passed is False
+    assert result.score == pytest.approx(1 / 3)  # spam matches; source and labels[1] differ
+    assert "meta.source: web→api" in result.detail
+    assert "labels[1]: b→c" in result.detail
+    assert "note" not in result.detail.split("out of scope")[0]  # note never drives the verdict
+
+
+async def test_json_scope_field_missing_in_target_fails_the_row():
+    baseline = _resp('{"category": "bug", "priority": "low"}')
+    target = _resp('{"category": "bug"}')
+    result = await JsonComparator(fields=["category", "priority"]).compare("p", baseline, target)
+    assert result.passed is False
+    assert "missing in target: priority" in result.detail
+
+
+async def test_json_scope_absent_from_both_payloads_is_noted_not_failed():
+    baseline = _resp('{"category": "bug"}')
+    target = _resp('{"category": "bug"}')
+    result = await JsonComparator(fields=["category", "severity"]).compare("p", baseline, target)
+    assert result.passed is True
+    assert result.error is False
+    assert "scoped fields absent from both payloads: severity" in result.detail
+
+
+async def test_json_scope_matching_nothing_anywhere_is_a_comparator_error():
+    # Most likely a typo in the spec — silent green would be worse.
+    result = await JsonComparator(fields=["cattegory"]).compare(
+        "p", _resp('{"category": "bug"}'), _resp('{"category": "bug"}')
+    )
+    assert result.error is True
+    assert result.passed is None
+    assert "cattegory" in result.detail
+
+
+async def test_json_scope_does_not_prefix_match_sibling_field_names():
+    # Scope "cat" must not cover "category": only ".", "[" or exact match extend.
+    result = await JsonComparator(fields=["cat"]).compare(
+        "p", _resp('{"category": "bug"}'), _resp('{"category": "feature"}')
+    )
+    assert result.error is True  # "cat" matched nothing
+
+
+# ---------------------------------------------------------------------------
 # API-backed comparators (mocked transport)
 # ---------------------------------------------------------------------------
 
@@ -211,6 +285,134 @@ async def test_judge_comparator_anthropic(monkeypatch):
     assert seen["headers"]["x-api-key"] == "test-key"
 
 
+def _judge_handler(equivalent: bool, score: float, calls: dict):
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] = calls.get("n", 0) + 1
+        verdict = json.dumps({"equivalent": equivalent, "score": score, "reason": "r"})
+        return httpx.Response(
+            200,
+            json={
+                "model": "claude-opus-4-8",
+                "content": [{"type": "text", "text": verdict}],
+                "stop_reason": "end_turn",
+            },
+        )
+
+    return handler
+
+
+async def test_judge_flags_boolean_vs_score_inconsistency(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+
+    async def verdict_of(equivalent: bool, score: float):
+        transport = httpx.MockTransport(_judge_handler(equivalent, score, {}))
+        async with httpx.AsyncClient(transport=transport) as http:
+            return await JudgeComparator(http).compare("p", _resp("a"), _resp("b"))
+
+    # equivalent=false at a high score: passed follows the boolean, flagged.
+    result = await verdict_of(False, 0.85)
+    assert result.passed is False and result.score == pytest.approx(0.85)
+    assert "inconsistent verdict: equivalent=false" in result.detail
+
+    # equivalent=true at a low score: also flagged.
+    result = await verdict_of(True, 0.3)
+    assert result.passed is True
+    assert "inconsistent verdict: equivalent=true" in result.detail
+
+    # Consistent verdicts are not flagged.
+    result = await verdict_of(True, 0.85)
+    assert result.passed is True and "inconsistent" not in result.detail
+    result = await verdict_of(False, 0.3)
+    assert result.passed is False and "inconsistent" not in result.detail
+
+
+async def test_judge_verdict_is_cached_in_the_store(monkeypatch):
+    from agentrec import InMemoryStore
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    store = InMemoryStore()
+    calls: dict = {}
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_judge_handler(True, 0.9, calls))) as http:
+        judge = JudgeComparator(http, store=store)
+        first = await judge.compare("p", _resp("baseline text"), _resp("target text"))
+        second = await judge.compare("p", _resp("baseline text"), _resp("target text"))
+        other = await judge.compare("p", _resp("baseline text"), _resp("different target"))
+
+    assert calls["n"] == 2  # one buy per distinct (baseline, target) pair
+    assert first.passed is True and "[cached]" not in first.detail
+    assert second.passed is second.passed is True
+    assert second.score == pytest.approx(first.score)
+    assert "[cached]" in second.detail
+    assert "[cached]" not in other.detail
+
+    cache_id = judge.cache_id("baseline text", "target text")
+    assert cache_id.startswith("judge__")
+    assert await store.has(cache_id)
+    saved = await store.load(cache_id)
+    assert saved.metadata["judge_model"] == "claude-opus-4-8"
+
+
+async def test_judge_cached_verdict_survives_gzip_content_encoding(monkeypatch):
+    """The cassette stores the DECODED body, so the gzip header must not be kept.
+
+    Regression: the live path reads the decompressed payload, but the original
+    response headers still said content-encoding: gzip — replaying that
+    cassette tried to gunzip plain JSON and errored.
+    """
+    import gzip
+
+    from agentrec import InMemoryStore
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    store = InMemoryStore()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        verdict = '{"equivalent": true, "score": 0.9, "reason": "same"}'
+        body = json.dumps(
+            {"model": "claude-opus-4-8", "content": [{"type": "text", "text": verdict}]}
+        ).encode()
+        return httpx.Response(
+            200,
+            headers={"content-encoding": "gzip", "content-type": "application/json"},
+            content=gzip.compress(body),
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        live = await JudgeComparator(http, store=store).compare("p", _resp("a"), _resp("b"))
+    assert live.passed is True
+
+    # Replay offline: must decode cleanly, no socket.
+    offline = JudgeComparator(None, store=store, offline=True)
+    cached = await offline.compare("p", _resp("a"), _resp("b"))
+    assert cached.passed is True
+    assert cached.score == pytest.approx(0.9)
+    assert "[cached]" in cached.detail
+
+
+async def test_judge_offline_uses_cache_and_errors_without_it(monkeypatch):
+    from agentrec import InMemoryStore
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    store = InMemoryStore()
+
+    # Record one verdict online.
+    async with httpx.AsyncClient(transport=httpx.MockTransport(_judge_handler(True, 0.9, {}))) as http:
+        await JudgeComparator(http, store=store).compare("p", _resp("a"), _resp("b"))
+
+    def explode(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("offline judge must not touch the network")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(explode)) as http:
+        offline_judge = JudgeComparator(http, store=store, offline=True)
+        cached = await offline_judge.compare("p", _resp("a"), _resp("b"))
+        missing = await offline_judge.compare("p", _resp("a"), _resp("never judged"))
+
+    assert cached.passed is True and "[cached]" in cached.detail
+    assert missing.error is True and missing.passed is None
+    assert "no cached verdict" in missing.detail
+
+
 async def test_judge_lenient_parse_failure_is_an_error_not_a_crash(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
 
@@ -245,3 +447,24 @@ def test_build_comparators_spec():
         build_comparators("exact,levenshtein")
     with pytest.raises(ValueError, match="no comparators"):
         build_comparators(" , ")
+
+
+def test_build_comparators_scoped_json_spec():
+    # Tokens after json:… that are not comparator names continue its scope.
+    names = [c.name for c in build_comparators("exact,fuzzy,json:category,priority")]
+    assert names == ["exact", "fuzzy", "json:category,priority"]
+
+    # A comparator name token closes the open scope.
+    names = [c.name for c in build_comparators("json:category,fuzzy")]
+    assert names == ["json:category", "fuzzy"]
+
+    # Scoped and unscoped json may coexist; duplicates collapse.
+    names = [c.name for c in build_comparators("json,json:category,priority,json")]
+    assert names == ["json", "json:category,priority"]
+
+    with pytest.raises(ValueError, match="does not take a field scope"):
+        build_comparators("fuzzy:0.7")
+    with pytest.raises(ValueError, match="needs at least one field"):
+        build_comparators("json:")
+    with pytest.raises(ValueError, match="unknown comparator"):
+        build_comparators("category,json")  # bare field with no open scope

@@ -46,6 +46,10 @@ def _fmt_out_tokens(row: RowResult) -> str:
 
 def _verdict(report: MigrationReport) -> str:
     parts = []
+    if report.min_pass:
+        parts.append(
+            "strict gate " + ("PASSED" if report.strict_passed else "FAILED")
+        )
     for agg in report.aggregates():
         if agg.compared == 0:
             parts.append(f"{agg.comparator}: no results")
@@ -128,6 +132,25 @@ def render_markdown(report: MigrationReport) -> str:
             f"| {_fmt_rate(agg.pass_rate)} | {_fmt_score(agg.mean_score)} |"
         )
     lines.append("")
+
+    gates = report.gates()
+    if gates:
+        lines.append("## Strict gate")
+        lines.append("")
+        lines.append(
+            "_Comparators named in `--min-pass` gate the run; the others are informational._"
+        )
+        lines.append("")
+        lines.append("| Comparator | Threshold | Pass rate | Errors | Verdict |")
+        lines.append("|---|---:|---:|---:|---|")
+        for gate in gates:
+            mark = "✅ pass" if gate.passed else "❌ fail"
+            lines.append(
+                f"| {gate.comparator} | {_fmt_rate(gate.threshold)} "
+                f"| {_fmt_rate(gate.pass_rate)} | {gate.errors} "
+                f"| {mark} — {_md_escape_cell(gate.detail)} |"
+            )
+        lines.append("")
 
     if breakdown:
         lines.append("## By category")
@@ -301,6 +324,25 @@ def render_html(report: MigrationReport) -> str:
         )
     parts.append("</table>")
 
+    gates = report.gates()
+    if gates:
+        parts.append("<h2>Strict gate</h2>")
+        parts.append(
+            "<p class='meta'>Comparators named in <code>--min-pass</code> gate the run; "
+            "the others are informational.</p>"
+        )
+        parts.append("<table><tr><th>Comparator</th><th>Threshold</th>"
+                     "<th>Pass rate</th><th>Errors</th><th>Verdict</th></tr>")
+        for gate in gates:
+            cell_class = "pass" if gate.passed else "fail"
+            mark = "pass" if gate.passed else "fail"
+            parts.append(
+                f"<tr><td>{esc(gate.comparator)}</td><td>{_fmt_rate(gate.threshold)}</td>"
+                f"<td>{_fmt_rate(gate.pass_rate)}</td><td>{gate.errors}</td>"
+                f"<td class='{cell_class}'>{mark} — {esc(gate.detail)}</td></tr>"
+            )
+        parts.append("</table>")
+
     if breakdown:
         parts.append("<h2>By category</h2>")
         parts.append(
@@ -413,6 +455,15 @@ def render_console(report: MigrationReport) -> str:
         )
         mean = "n/a" if agg.mean_score is None else f"{agg.mean_score:.2f}"
         lines.append(f"  {agg.comparator:<10} {passed:<22} mean {mean}")
+    gates = report.gates()
+    if gates:
+        for gate in gates:
+            status = "PASS" if gate.passed else "FAIL"
+            lines.append(f"  gate {gate.comparator}: {gate.detail} -> {status}")
+        lines.append(
+            "  strict gate: " + ("PASS" if report.strict_passed else "FAIL")
+            + " (ungated comparators are informational)"
+        )
     totals = report.token_totals()
     if totals and totals.ratio is not None:
         lines.append(
