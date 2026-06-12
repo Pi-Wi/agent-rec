@@ -59,12 +59,19 @@ class Conversation:
     ``messages`` hold only ``user`` / ``assistant`` roles with plain-string
     content; the system prompt is lifted out so each provider can place it
     where its API expects (top-level field vs. leading message).
+
+    ``response_format`` is the provider-neutral "the caller asked for a JSON
+    object".  Only ``{"type": "json_object"}`` is carried; providers with a
+    native JSON mode re-emit it, others emulate it via the system prompt.
+    It is *not* part of the prompt's semantic identity: the same prompt with
+    and without JSON mode groups under one ``semantic_key``.
     """
 
     system: Optional[str] = None
     messages: List[Dict[str, str]] = field(default_factory=list)
     temperature: Optional[float] = None
     max_tokens: Optional[int] = None
+    response_format: Optional[dict] = None
 
 
 def format_conversation(conversation: Conversation) -> str:

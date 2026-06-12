@@ -28,7 +28,11 @@ from .base import (
 
 # Request-body fields v1 cannot translate faithfully; their presence makes the
 # whole request unsupported rather than silently changing its meaning.
-_UNSUPPORTED_FIELDS = ("tools", "tool_choice", "functions", "function_call", "response_format")
+# ``response_format`` is NOT here: ``{"type": "json_object"}`` is captured as
+# the neutral ``Conversation.response_format``.  The ``json_schema`` variant
+# stays unsupported — strict structured output can't be faithfully emulated on
+# providers without it, and a prompt nudge does not enforce a schema.
+_UNSUPPORTED_FIELDS = ("tools", "tool_choice", "functions", "function_call")
 
 
 def _content_to_text(content) -> str:
@@ -64,9 +68,23 @@ class OpenAIAdapter(ProviderAdapter):
         if body.get("n") not in (None, 1):
             raise UnsupportedRequestError("request uses n > 1")
 
+        response_format = None
+        requested_format = body.get("response_format")
+        if requested_format:
+            format_type = (
+                requested_format.get("type") if isinstance(requested_format, dict) else None
+            )
+            if format_type == "json_object":
+                response_format = {"type": "json_object"}
+            elif format_type != "text":
+                raise UnsupportedRequestError(
+                    f"request uses response_format type {format_type!r}"
+                )
+
         conversation = Conversation(
             temperature=body.get("temperature"),
             max_tokens=body.get("max_tokens") or body.get("max_completion_tokens"),
+            response_format=response_format,
         )
         for message in body["messages"]:
             role = message.get("role")
@@ -108,6 +126,9 @@ class OpenAIAdapter(ProviderAdapter):
             body["max_completion_tokens" if reasoning else "max_tokens"] = conversation.max_tokens
         if conversation.temperature is not None and not reasoning:
             body["temperature"] = conversation.temperature
+        if conversation.response_format is not None:
+            # Native JSON mode: re-emit on this provider's own dialect.
+            body["response_format"] = {"type": "json_object"}
         headers = {
             "Authorization": f"Bearer {self.api_key()}",
             "Content-Type": "application/json",

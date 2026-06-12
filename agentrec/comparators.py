@@ -8,8 +8,15 @@ embedding similarity and judge verdicts side by side.
 * ``exact``     — normalized string equality.  The right metric for
                   classification-style outputs ("positive" vs "Positive ").
 * ``fuzzy``     — ``difflib.SequenceMatcher`` ratio; offline, dependency-free.
+* ``json``      — structural JSON comparison: parses both sides and scores the
+                  fraction of matching scalar fields, so a category/priority
+                  match with a differing free-text field scores high, not zero.
 * ``embedding`` — cosine similarity of OpenAI embeddings (live API call).
 * ``judge``     — an LLM scores semantic equivalence (live API call).
+
+The offline comparators tolerate a markdown code fence wrapping the whole
+payload (``` ```json … ``` ```): some target models fence structured output
+even when told not to, and the fence is presentation, not content.
 
 A comparator failure (missing API key, malformed judge reply) degrades to an
 errored :class:`ComparisonResult` on that row — it never crashes the run.
@@ -28,10 +35,27 @@ import httpx
 
 from .providers import Conversation, DecodedResponse, adapter_for_model, adapter_for_provider
 
-OFFLINE_COMPARATOR_NAMES = ("exact", "fuzzy")
-ALL_COMPARATOR_NAMES = ("exact", "fuzzy", "embedding", "judge")
+OFFLINE_COMPARATOR_NAMES = ("exact", "fuzzy", "json")
+ALL_COMPARATOR_NAMES = ("exact", "fuzzy", "json", "embedding", "judge")
 
 _WHITESPACE = re.compile(r"\s+")
+
+# A single markdown code fence (```lang ... ```) wrapping the ENTIRE payload.
+# Anchored at both ends on purpose: inner backticks and partial fences are
+# content, not wrapping, and must survive untouched.
+_FENCE = re.compile(r"^\s*```[\w+-]*[ \t]*\r?\n(.*?)\r?\n?[ \t]*```\s*$", re.DOTALL)
+
+
+def _strip_fence(text: str) -> str:
+    """Payload without a whole-string markdown code fence, if one wraps it.
+
+    Models (Anthropic's especially) often fence structured output in
+    ```json … ``` even when asked not to; the fence is presentation, not
+    content, so the offline comparators ignore it rather than zeroing every
+    fenced-vs-bare pair.
+    """
+    match = _FENCE.match(text)
+    return match.group(1) if match else text
 
 
 def _normalize(text: str) -> str:
@@ -69,7 +93,7 @@ class ExactMatchComparator(Comparator):
     name = "exact"
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
-        matched = _normalize(baseline.text) == _normalize(target.text)
+        matched = _normalize(_strip_fence(baseline.text)) == _normalize(_strip_fence(target.text))
         return ComparisonResult(
             comparator=self.name,
             score=1.0 if matched else 0.0,
@@ -86,13 +110,132 @@ class FuzzyComparator(Comparator):
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
         score = difflib.SequenceMatcher(
-            None, _normalize(baseline.text), _normalize(target.text)
+            None, _normalize(_strip_fence(baseline.text)), _normalize(_strip_fence(target.text))
         ).ratio()
         return ComparisonResult(
             comparator=self.name,
             score=score,
             passed=score >= self._threshold,
             detail=f"sequence similarity {score:.2f} (threshold {self._threshold})",
+        )
+
+
+# Sentinels for empty containers: an empty object/array is a real value at its
+# path (so {"a": {}} matches {"a": {}} and mismatches {"a": {"b": 1}}), but it
+# must never compare equal to the literal strings "{}" / "[]".
+_EMPTY_OBJECT = ("<empty object>",)
+_EMPTY_ARRAY = ("<empty array>",)
+
+
+def _flatten_json(value, path: str, out: Dict[str, object]) -> None:
+    """Flatten *value* into ``out`` as scalar leaves keyed by dotted path.
+
+    Dicts recurse by key (``a.b``), lists by index (``a[0]``); a top-level
+    scalar lands at ``$``.
+    """
+    if isinstance(value, dict):
+        if not value:
+            out[path or "$"] = _EMPTY_OBJECT
+        for key, item in value.items():
+            _flatten_json(item, f"{path}.{key}" if path else str(key), out)
+    elif isinstance(value, list):
+        if not value:
+            out[path or "$"] = _EMPTY_ARRAY
+        for index, item in enumerate(value):
+            _flatten_json(item, f"{path or '$'}[{index}]", out)
+    else:
+        out[path or "$"] = value
+
+
+def _scalars_match(a, b) -> bool:
+    if isinstance(a, bool) or isinstance(b, bool):
+        return a is b  # bool subclasses int: True must not match 1
+    if isinstance(a, str) and isinstance(b, str):
+        return _normalize(a) == _normalize(b)
+    return a == b  # numbers (1 == 1.0), None, empty-container sentinels
+
+
+def _fmt_scalar(value) -> str:
+    if value is _EMPTY_OBJECT:
+        return "{}"
+    if value is _EMPTY_ARRAY:
+        return "[]"
+    if isinstance(value, str):
+        return value
+    return json.dumps(value)
+
+
+class JsonComparator(Comparator):
+    """Field-by-field comparison of JSON payloads.
+
+    Both sides are parsed (after fence stripping) and flattened to scalar
+    fields; the score is the fraction of fields that match, so structured
+    outputs where the fixed fields agree but a free-text field differs score
+    high instead of zero.  ``passed`` requires every scalar field to match.
+    An unparseable baseline is a comparator error; an unparseable target is a
+    failed comparison — the target genuinely broke the contract.
+    """
+
+    name = "json"
+
+    _MAX_DIFFS = 6
+
+    async def compare(self, prompt, baseline, target) -> ComparisonResult:
+        try:
+            baseline_value = json.loads(_strip_fence(baseline.text))
+        except ValueError as exc:
+            return ComparisonResult(
+                comparator=self.name,
+                score=0.0,
+                passed=None,
+                detail=f"baseline is not valid JSON: {exc}",
+                error=True,
+            )
+        try:
+            target_value = json.loads(_strip_fence(target.text))
+        except ValueError as exc:
+            return ComparisonResult(
+                comparator=self.name,
+                score=0.0,
+                passed=False,
+                detail=f"target is not valid JSON: {exc}",
+            )
+
+        baseline_fields: Dict[str, object] = {}
+        target_fields: Dict[str, object] = {}
+        _flatten_json(baseline_value, "", baseline_fields)
+        _flatten_json(target_value, "", target_fields)
+
+        diffs: List[str] = []
+        matched = 0
+        all_paths = list(baseline_fields) + [
+            path for path in target_fields if path not in baseline_fields
+        ]
+        for path in all_paths:
+            if path not in target_fields:
+                diffs.append(f"missing in target: {path}")
+            elif path not in baseline_fields:
+                diffs.append(f"extra in target: {path}")
+            elif _scalars_match(baseline_fields[path], target_fields[path]):
+                matched += 1
+            else:
+                diffs.append(
+                    f"{path}: {_fmt_scalar(baseline_fields[path])}"
+                    f"→{_fmt_scalar(target_fields[path])}"
+                )
+
+        total = len(all_paths)
+        score = matched / total if total else 1.0
+        passed = matched == total
+        if passed:
+            detail = f"all {total} fields match" if total else "both payloads are empty JSON"
+        else:
+            shown = diffs[: self._MAX_DIFFS]
+            if len(diffs) > self._MAX_DIFFS:
+                shown.append(f"… (+{len(diffs) - self._MAX_DIFFS} more)")
+            detail = "; ".join(shown)
+        return ComparisonResult(
+            comparator=self.name, score=score, passed=passed, detail=detail
         )
 
 
@@ -276,6 +419,7 @@ def build_comparators(
     factories = {
         "exact": lambda: ExactMatchComparator(),
         "fuzzy": lambda: FuzzyComparator(threshold=fuzzy_threshold),
+        "json": lambda: JsonComparator(),
         "embedding": lambda: EmbeddingComparator(
             http, model=embedding_model, threshold=embedding_threshold
         ),

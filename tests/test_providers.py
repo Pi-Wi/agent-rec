@@ -297,6 +297,107 @@ def test_build_openai_request(monkeypatch):
     assert "stream" not in body
 
 
+def test_extract_openai_response_format_json_object_is_captured():
+    adapter = OpenAIAdapter()
+    conv = adapter.extract_conversation(
+        {
+            "model": "gpt-4o-mini",
+            "response_format": {"type": "json_object"},
+            "messages": [{"role": "user", "content": "Triage this ticket."}],
+        }
+    )
+    assert conv.response_format == {"type": "json_object"}
+
+    # type "text" is the default — nothing to carry.
+    conv = adapter.extract_conversation(
+        {
+            "model": "gpt-4o-mini",
+            "response_format": {"type": "text"},
+            "messages": [{"role": "user", "content": "hi"}],
+        }
+    )
+    assert conv.response_format is None
+
+
+def test_extract_openai_rejects_json_schema_response_format():
+    adapter = OpenAIAdapter()
+    with pytest.raises(UnsupportedRequestError, match="json_schema"):
+        adapter.extract_conversation(
+            {
+                "model": "gpt-4o-mini",
+                "response_format": {"type": "json_schema", "json_schema": {"name": "t"}},
+                "messages": [{"role": "user", "content": "hi"}],
+            }
+        )
+
+
+def test_build_openai_request_reemits_json_mode(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    conv = Conversation(
+        messages=[{"role": "user", "content": "hi"}], response_format={"type": "json_object"}
+    )
+    _, _, body = OpenAIAdapter().build_request(conv, "gpt-4o")
+    assert body["response_format"] == {"type": "json_object"}
+
+    conv = Conversation(messages=[{"role": "user", "content": "hi"}])
+    _, _, body = OpenAIAdapter().build_request(conv, "gpt-4o")
+    assert "response_format" not in body
+
+
+def test_build_anthropic_request_emulates_json_mode(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    conv = Conversation(
+        system="Be terse.",
+        messages=[{"role": "user", "content": "hi"}],
+        response_format={"type": "json_object"},
+    )
+    _, _, body = AnthropicAdapter().build_request(conv, "claude-haiku-4-5")
+    assert body["system"].startswith("Be terse.")
+    assert "single JSON object" in body["system"]
+    assert "response_format" not in body
+    assert conv.system == "Be terse."  # the shared Conversation was not mutated
+
+    # Without a recorded system prompt, the suffix becomes the system prompt.
+    conv = Conversation(
+        messages=[{"role": "user", "content": "hi"}], response_format={"type": "json_object"}
+    )
+    _, _, body = AnthropicAdapter().build_request(conv, "claude-haiku-4-5")
+    assert "single JSON object" in body["system"]
+
+    # And no JSON mode means no synthetic system prompt at all.
+    conv = Conversation(messages=[{"role": "user", "content": "hi"}])
+    _, _, body = AnthropicAdapter().build_request(conv, "claude-haiku-4-5")
+    assert "system" not in body
+
+
+def test_response_format_does_not_change_semantic_key():
+    """JSON mode is a format knob: same prompt, with and without, must group."""
+    import httpx
+
+    from agentrec.keying import fingerprint
+
+    def fp(body: dict):
+        return fingerprint(
+            httpx.Request(
+                "POST",
+                "https://api.openai.com/v1/chat/completions",
+                content=json.dumps(body).encode(),
+            )
+        )
+
+    plain = fp({"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Triage."}]})
+    json_mode = fp(
+        {
+            "model": "gpt-4o-mini",
+            "response_format": {"type": "json_object"},
+            "messages": [{"role": "user", "content": "Triage."}],
+        }
+    )
+    assert plain.semantic_key == json_mode.semantic_key
+    # Record/replay still distinguishes the two concrete requests.
+    assert plain.cassette_id != json_mode.cassette_id
+
+
 def test_missing_api_key(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     conv = Conversation(messages=[{"role": "user", "content": "hi"}])

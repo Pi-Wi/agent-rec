@@ -1,5 +1,43 @@
 # Changelog
 
+## Dev (0.4.0)
+
+### Added
+- **`json` comparator** (offline): parses baseline and target (after fence
+  stripping), flattens them to scalar fields, and scores the fraction that
+  match — so a structured output whose fixed fields agree but whose free-text
+  field differs scores high instead of zero. `passed` requires every scalar
+  field to match; the per-field diff (e.g. `priority: high→medium`) lands in
+  `detail`. An unparseable baseline is a comparator error; an unparseable
+  target is a failed comparison. Available everywhere `--compare` is
+  (including the offline `report` command).
+- **`response_format` translation**: OpenAI `{"type": "json_object"}` is no
+  longer an unsupported request. It is captured as the provider-neutral
+  `Conversation.response_format`, re-emitted natively for OpenAI targets, and
+  emulated on Anthropic targets via a system-prompt suffix ("Respond with
+  only a single JSON object. No prose, no markdown code fences."). The
+  `json_schema` variant stays unsupported: strict structured output cannot be
+  faithfully emulated by a prompt nudge.
+
+### Changed
+- **`exact`/`fuzzy` are fence-tolerant**: a single markdown code fence
+  wrapping the *whole* payload (```` ```json … ``` ````) is stripped before
+  normalization, so a target model that fences its structured output is no
+  longer unfairly zeroed. Inner backticks and partial fences are untouched.
+- `semantic_key` of corpora recorded **with** `response_format`: such
+  requests previously fell back to the generic body hash (extraction
+  raised); they now key via the provider-neutral conversation hash, so the
+  same prompt with and without JSON mode groups together. Their keys differ
+  from 0.3 — same caveat as the 0.3.0 semantic-key change (pinned keys on
+  existing migration cassettes are kept; cassette ids and record/replay are
+  unaffected).
+
+### Fixed
+- **HTTP 431 is retried** like other transient statuses: the runner builds
+  fresh, minimal headers per row, so "Request Header Fields Too Large" is
+  infrastructure noise, not a request defect — previously those rows errored
+  out on the first report.
+
 ## Dev (0.3.0)
 
 ### Added

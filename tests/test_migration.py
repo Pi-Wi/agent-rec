@@ -50,8 +50,12 @@ def _openai_chunk(content=None, finish=None) -> dict:
     }
 
 
-def _baseline_interaction(prompt: str = PROMPT, answer_parts=("bl", "ue")) -> CapturedInteraction:
+def _baseline_interaction(
+    prompt: str = PROMPT, answer_parts=("bl", "ue"), response_format=None
+) -> CapturedInteraction:
     body = {"model": "gpt-4o-mini", "stream": True, "messages": [{"role": "user", "content": prompt}]}
+    if response_format is not None:
+        body["response_format"] = response_format
     final = _openai_chunk(None, finish="stop")
     final["usage"] = {"prompt_tokens": 7, "completion_tokens": 3}
     return CapturedInteraction(
@@ -332,6 +336,75 @@ async def test_offline_mode_skips_unrecorded_targets(corpus: FileStore):
     assert "no recorded migration response" in (row.reason or "")
 
 
+async def test_response_format_baseline_migrates_to_anthropic(corpus: FileStore, monkeypatch):
+    """JSON-mode baselines are translated (system-prompt emulation), not skipped."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    interaction = _baseline_interaction(
+        answer_parts=('{"color": ', '"blue"}'), response_format={"type": "json_object"}
+    )
+    await corpus.save("json-mode", interaction)
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            json={
+                "model": TARGET_MODEL,
+                "content": [{"type": "text", "text": '{"color": "blue"}'}],
+                "stop_reason": "end_turn",
+            },
+        )
+
+    report = await run_migration(
+        corpus, TARGET_MODEL, build_comparators("exact,json"),
+        inner_transport=httpx.MockTransport(handler),
+    )
+    row = report.rows[0]
+    assert row.status == "ok"
+    # Anthropic has no native JSON mode: emulated via system prompt, and the
+    # OpenAI-only field must not leak into the Anthropic body.
+    assert "response_format" not in seen["body"]
+    assert "single JSON object" in seen["body"]["system"]
+    assert report.all_passed
+
+
+async def test_response_format_baseline_reemitted_for_openai_target(corpus: FileStore, monkeypatch):
+    """Same-provider migration re-emits native response_format."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    interaction = _baseline_interaction(
+        answer_parts=('{"color": ', '"blue"}'), response_format={"type": "json_object"}
+    )
+    await corpus.save("json-mode", interaction)
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            json={
+                "model": "gpt-4o",
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": '{"color": "blue"}'},
+                        "finish_reason": "stop",
+                    }
+                ],
+            },
+        )
+
+    report = await run_migration(
+        corpus, "gpt-4o", build_comparators("json"),
+        inner_transport=httpx.MockTransport(handler),
+    )
+    row = report.rows[0]
+    assert row.status == "ok"
+    assert seen["body"]["response_format"] == {"type": "json_object"}
+    assert "system" not in [m["role"] for m in seen["body"]["messages"]]
+    assert report.all_passed
+
+
 async def test_unsupported_baseline_becomes_skipped_row(corpus: FileStore, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     interaction = _baseline_interaction()
@@ -403,6 +476,60 @@ async def test_rate_limited_target_is_retried(corpus: FileStore, monkeypatch):
     # The cassette on disk is the successful answer, not a recorded 429.
     cassette = await corpus.load(migration_id_for(BASELINE_ID, TARGET_MODEL))
     assert b"Blue" in b"".join(chunk.data for chunk in cassette.chunks)
+
+
+async def test_431_is_retried_as_transient(corpus: FileStore, monkeypatch):
+    """431 (headers too large) is transient — headers are rebuilt fresh per row."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    await _seed_baseline(corpus)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return httpx.Response(431, headers={"retry-after": "0"}, text="Request headers too large")
+        return httpx.Response(
+            200,
+            json={
+                "model": TARGET_MODEL,
+                "content": [{"type": "text", "text": "Blue"}],
+                "stop_reason": "end_turn",
+            },
+        )
+
+    report = await run_migration(
+        corpus, TARGET_MODEL, build_comparators("exact"),
+        inner_transport=httpx.MockTransport(handler),
+    )
+    row = report.rows[0]
+    assert calls["n"] == 2
+    assert row.status == "ok"
+    assert row.target_text == "Blue"
+    assert any("retried after HTTP 431" in note for note in row.notes)
+    # The cassette on disk is the eventual 200, not the recorded 431.
+    cassette = await corpus.load(migration_id_for(BASELINE_ID, TARGET_MODEL))
+    assert b"Blue" in b"".join(chunk.data for chunk in cassette.chunks)
+
+
+async def test_non_retryable_4xx_stays_fatal_with_body_snippet(corpus: FileStore, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    await _seed_baseline(corpus)
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        return httpx.Response(400, json={"type": "error", "error": {"message": "bad sampling param"}})
+
+    report = await run_migration(
+        corpus, TARGET_MODEL, build_comparators("exact"),
+        inner_transport=httpx.MockTransport(handler),
+    )
+    row = report.rows[0]
+    assert calls["n"] == 1  # no retries for a request-shaped failure
+    assert row.status == "error"
+    assert "400" in (row.reason or "")
+    assert "bad sampling param" in (row.reason or "")  # body snippet surfaced
+    assert not await corpus.has(migration_id_for(BASELINE_ID, TARGET_MODEL))
 
 
 async def test_migration_cassettes_are_excluded_as_baselines(corpus: FileStore, monkeypatch):
@@ -478,6 +605,23 @@ def test_cli_report_smoke(corpus: FileStore, monkeypatch, tmp_path: Path, capsys
     assert (tmp_path / "rep.md").exists()
     assert (tmp_path / "rep.html").exists()
     assert "Report written" in capsys.readouterr().out
+
+
+def test_cli_report_accepts_json_comparator_offline(corpus: FileStore, monkeypatch, capsys):
+    """`json` is offline: the report command's gate must let it through."""
+    import asyncio
+
+    asyncio.run(_completed_report(corpus, monkeypatch))
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    # No --strict: this corpus's answers are plain words, so the json
+    # comparator degrades to an errored result per row — which is exactly
+    # what --strict is meant to flag. Here we only prove the gate accepts it.
+    code = cli_main(
+        ["report", "--corpus", str(corpus.root), "--target", TARGET_MODEL, "--compare", "json"]
+    )
+    assert code == 0
+    assert "json" in capsys.readouterr().out
 
 
 def test_cli_report_rejects_online_comparators(corpus: FileStore, capsys):

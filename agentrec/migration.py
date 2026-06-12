@@ -60,8 +60,11 @@ MIGRATION_PREFIX = "migration__"
 _PREVIEW_WS = re.compile(r"\s+")
 
 # Target-call statuses worth retrying with backoff: rate limits and
-# transient provider overload (529 is Anthropic's "overloaded").
-_RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 529})
+# transient provider overload (529 is Anthropic's "overloaded").  431
+# ("Request Header Fields Too Large") is included because the runner builds
+# fresh, minimal headers per row — a 431 here is transient infrastructure
+# noise, not something a different request would fix.
+_RETRYABLE_STATUSES = frozenset({429, 431, 500, 502, 503, 529})
 
 
 def _retry_delay(response: httpx.Response, attempt: int) -> float:

@@ -26,6 +26,14 @@ from .base import (
 
 _API_VERSION = "2023-06-01"
 
+# Anthropic has no native response_format/JSON mode, so a conversation that
+# carries the neutral "caller asked for a JSON object" flag is emulated with a
+# system-prompt suffix.  The no-fences wording matters: Claude models tend to
+# wrap JSON in markdown fences, which breaks downstream parsers.
+_JSON_MODE_SUFFIX = (
+    "Respond with only a single JSON object. No prose, no markdown code fences."
+)
+
 
 def _blocks_to_text(content, *, what: str) -> str:
     """Plain text from ``content`` (string or list of typed blocks)."""
@@ -51,6 +59,8 @@ class AnthropicAdapter(ProviderAdapter):
     messages_url = "https://api.anthropic.com/v1/messages"
 
     def extract_conversation(self, body: dict) -> Conversation:
+        # Note: Anthropic requests have no response_format equivalent to
+        # capture, so ``Conversation.response_format`` stays None here.
         if not isinstance(body, dict) or not isinstance(body.get("messages"), list):
             raise UnsupportedRequestError("request body has no messages list")
         if body.get("tools") or body.get("tool_choice"):
@@ -87,8 +97,13 @@ class AnthropicAdapter(ProviderAdapter):
             "max_tokens": conversation.max_tokens or max_tokens_default,
             "messages": list(conversation.messages),
         }
-        if conversation.system:
-            body["system"] = conversation.system
+        # JSON mode is emulated via the system prompt.  Composed locally into
+        # the body only: the shared Conversation must never be mutated.
+        system = conversation.system
+        if conversation.response_format is not None:
+            system = f"{system}\n\n{_JSON_MODE_SUFFIX}" if system else _JSON_MODE_SUFFIX
+        if system:
+            body["system"] = system
         if conversation.temperature is not None:
             body["temperature"] = conversation.temperature
         headers = {

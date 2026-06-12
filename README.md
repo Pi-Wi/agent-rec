@@ -7,17 +7,17 @@ Recording happens at the **httpx transport layer**, below the OpenAI SDK, the
 Anthropic SDK, LangChain, or any other httpx-backed client. The core depends
 on nothing but `httpx`.
 
-> **Status:** beta (0.3). Record/replay is proven for streaming (SSE) and
+> **Status:** beta (0.4). Record/replay is proven for streaming (SSE) and
 > non-streaming (JSON) responses on OpenAI and Anthropic, sync and async; the
 > API may still change in minor releases before 1.0. Migration translation
-> covers OpenAI ↔ Anthropic, text-only conversations — tools/images become
-> clearly-reasoned skipped rows.
+> covers OpenAI ↔ Anthropic, text-only conversations (plus JSON mode) — tools,
+> images and strict `json_schema` become clearly-reasoned skipped rows.
 >
-> **0.3 highlights:** synchronous client + transports, non-2xx responses no
-> longer cached by default, and a prompt-level `semantic_key` that groups the
-> same prompt across providers and sampling parameters. See
-> [CHANGELOG](CHANGELOG.md). *Semantic keys recomputed by the tooling differ
-> from 0.2 — run `agentrec annotate` only on fresh corpora.*
+> **0.4 highlights:** a structural `json` comparator, fence-tolerant
+> `exact`/`fuzzy`, and `response_format` JSON mode that translates across
+> providers instead of skipping the row. See [CHANGELOG](CHANGELOG.md).
+> *Corpora recorded with `response_format` get new `semantic_key`s — run
+> `agentrec annotate` only on fresh corpora.*
 
 ## Install
 
@@ -82,21 +82,36 @@ caches the answers back into the corpus, and scores baseline vs. target:
 | ----------- | -------------- | ------------------------------------------------- |
 | `exact`     | no             | normalized string equality (classification-style) |
 | `fuzzy`     | no             | `difflib` sequence similarity                     |
+| `json`      | no             | structural field-by-field match of JSON payloads  |
 | `embedding` | OpenAI API     | cosine similarity of embeddings                   |
 | `judge`     | LLM API        | an LLM scores semantic equivalence                |
 
+The offline comparators (`exact`, `fuzzy`, `json`) tolerate a markdown code
+fence wrapping the whole payload — a target that emits ```` ```json … ``` ````
+isn't unfairly zeroed. For structured outputs (a JSON object with some fixed
+fields and some free text), `json` is the metric to reach for: it scores the
+fraction of fields that match, so a `category`/`priority` agreement with a
+differing `summary` scores high instead of zero, and the per-field diff
+(`priority: high→medium`) lands in the report.
+
 ```bash
-agentrec migrate  --corpus corpus --target claude-haiku-4-5 --compare exact,fuzzy,judge
-agentrec report   --corpus corpus --target claude-haiku-4-5 --strict   # offline re-render; CI gate
+agentrec migrate  --corpus corpus --target claude-haiku-4-5 --compare exact,fuzzy,json,judge
+agentrec report   --corpus corpus --target claude-haiku-4-5 --compare json --strict   # offline; CI gate
 agentrec annotate --corpus corpus                                      # backfill summaries/metadata
 ```
 
-Re-runs are cheap: answered prompts are served from disk, rate-limited calls
-retry with backoff, and failures are never cached. Rows are scored
-concurrently (`--concurrency`). Recordings tagged with a category —
-`cassette(store, metadata={"category": "extract"})` — get a per-category
-breakdown in the report, with output-token columns that surface
+Re-runs are cheap: answered prompts are served from disk, rate-limited or
+header-bloated calls (429/431/5xx) retry with backoff, and failures are never
+cached. Rows are scored concurrently (`--concurrency`). Recordings tagged with
+a category — `cassette(store, metadata={"category": "extract"})` — get a
+per-category breakdown in the report, with output-token columns that surface
 verbosity/cost differences between the models.
+
+**JSON mode translates, it doesn't skip.** A baseline recorded with OpenAI's
+`response_format={"type": "json_object"}` migrates cleanly: re-emitted
+natively for OpenAI targets, and emulated on Anthropic via a system-prompt
+instruction (which also discourages the code fences). The strict `json_schema`
+variant stays an honest skip — a prompt nudge can't enforce a schema.
 
 ## How it works
 
@@ -108,7 +123,7 @@ agentrec/
   transport.py    # RecordingTransport / ReplayTransport / AutoTransport
   session.py      # async_client() + cassette — the ergonomic seam
   providers/      # OpenAI + Anthropic request/response dialects
-  comparators.py  # exact / fuzzy / embedding / judge response scoring
+  comparators.py  # exact / fuzzy / json / embedding / judge response scoring
   migration.py    # run_migration() — replay the corpus against a candidate model
   report.py       # Markdown / HTML / console rendering
   cli.py          # agentrec migrate | report | annotate
