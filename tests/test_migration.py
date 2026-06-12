@@ -406,19 +406,23 @@ async def test_response_format_baseline_reemitted_for_openai_target(corpus: File
 
 
 async def test_unsupported_baseline_becomes_skipped_row(corpus: FileStore, monkeypatch):
+    # Tools are translatable now; images remain the honest skip.
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     interaction = _baseline_interaction()
     body = json.loads(interaction.request.content)
-    body["tools"] = [{"type": "function", "function": {"name": "f"}}]
+    body["messages"][0]["content"] = [
+        {"type": "text", "text": "what is this?"},
+        {"type": "image_url", "image_url": {"url": "https://example.com/x.png"}},
+    ]
     interaction.request.content = json.dumps(body).encode()
-    await corpus.save("tooled", interaction)
+    await corpus.save("imaged", interaction)
 
     report = await run_migration(
         corpus, TARGET_MODEL, build_comparators("exact"), inner_transport=_anthropic_answer()
     )
-    row = next(r for r in report.rows if r.baseline_id == "tooled")
+    row = next(r for r in report.rows if r.baseline_id == "imaged")
     assert row.status == "skipped"
-    assert "tools" in (row.reason or "")
+    assert "image_url" in (row.reason or "")
 
 
 async def test_failed_target_call_is_not_cached(corpus: FileStore, monkeypatch):

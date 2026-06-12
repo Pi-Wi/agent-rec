@@ -441,7 +441,7 @@ def test_build_comparators_spec():
     assert names == ["json"]
 
     names = [c.name for c in build_comparators("all")]
-    assert names == ["exact", "fuzzy", "json", "embedding", "judge"]
+    assert names == ["exact", "fuzzy", "json", "toolcalls", "embedding", "judge"]
 
     with pytest.raises(ValueError, match="unknown comparator"):
         build_comparators("exact,levenshtein")

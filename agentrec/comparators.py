@@ -13,6 +13,9 @@ embedding similarity and judge verdicts side by side.
                   match with a differing free-text field scores high, not zero.
                   A field scope (``json:category,priority``) restricts which
                   fields drive the verdict; the rest become informational.
+* ``toolcalls`` — which tools the response called and with what arguments
+                  (selection + arguments only; recorded tools are never
+                  executed).  Offline, dependency-free.
 * ``embedding`` — cosine similarity of OpenAI embeddings (live API call).
 * ``judge``     — an LLM scores semantic equivalence (live API call; verdicts
                   are cached into the corpus when a store is supplied, so a
@@ -46,11 +49,12 @@ from .providers import (
     adapter_for_model,
     adapter_for_provider,
     decode_interaction,
+    render_response,
 )
 from .store import InteractionStore
 
-OFFLINE_COMPARATOR_NAMES = ("exact", "fuzzy", "json")
-ALL_COMPARATOR_NAMES = ("exact", "fuzzy", "json", "embedding", "judge")
+OFFLINE_COMPARATOR_NAMES = ("exact", "fuzzy", "json", "toolcalls")
+ALL_COMPARATOR_NAMES = ("exact", "fuzzy", "json", "toolcalls", "embedding", "judge")
 
 # Corpus-id prefix for cached judge verdicts; the migration runner excludes
 # these from the baseline set, like ``migration__`` cassettes.
@@ -107,11 +111,24 @@ class Comparator(ABC):
         ...
 
 
+def _comparable_text(decoded: DecodedResponse) -> str:
+    """The text a string comparator should look at.
+
+    ``render_response`` appends canonical tool-call lines, so a tool-calling
+    response compares on what the model decided to do instead of on an empty
+    string (where every pair would trivially "match").  For text-only
+    responses this is exactly ``decoded.text``.
+    """
+    return render_response(decoded)
+
+
 class ExactMatchComparator(Comparator):
     name = "exact"
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
-        matched = _normalize(_strip_fence(baseline.text)) == _normalize(_strip_fence(target.text))
+        matched = _normalize(_strip_fence(_comparable_text(baseline))) == _normalize(
+            _strip_fence(_comparable_text(target))
+        )
         return ComparisonResult(
             comparator=self.name,
             score=1.0 if matched else 0.0,
@@ -128,7 +145,9 @@ class FuzzyComparator(Comparator):
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
         score = difflib.SequenceMatcher(
-            None, _normalize(_strip_fence(baseline.text)), _normalize(_strip_fence(target.text))
+            None,
+            _normalize(_strip_fence(_comparable_text(baseline))),
+            _normalize(_strip_fence(_comparable_text(target))),
         ).ratio()
         return ComparisonResult(
             comparator=self.name,
@@ -317,6 +336,86 @@ class JsonComparator(Comparator):
         )
 
 
+class ToolCallsComparator(Comparator):
+    """Compare which tools were called and with what arguments — never executes them.
+
+    Calls are paired by position (an agent step's tool order is part of its
+    behaviour).  Each pair scores 0 when the tool *names* differ, otherwise
+    the fraction of matching argument fields (same flattening rules as the
+    ``json`` comparator); a missing or extra call scores 0.  The row score is
+    the mean over ``max(len(baseline), len(target))`` pairs, and ``passed``
+    requires every pair to match exactly.  Two responses that both called no
+    tools pass trivially — for tool-capable corpora "didn't call a tool" is
+    itself behaviour worth confirming.
+    """
+
+    name = "toolcalls"
+
+    _MAX_DIFFS = 6
+
+    async def compare(self, prompt, baseline, target) -> ComparisonResult:
+        baseline_calls = list(baseline.tool_calls)
+        target_calls = list(target.tool_calls)
+        if not baseline_calls and not target_calls:
+            return ComparisonResult(
+                comparator=self.name,
+                score=1.0,
+                passed=True,
+                detail="neither response called tools",
+            )
+
+        diffs: List[str] = []
+        scores: List[float] = []
+        for index in range(max(len(baseline_calls), len(target_calls))):
+            if index >= len(baseline_calls):
+                call = target_calls[index]
+                scores.append(0.0)
+                diffs.append(f"call[{index}] extra in target: {call.name}")
+                continue
+            if index >= len(target_calls):
+                call = baseline_calls[index]
+                scores.append(0.0)
+                diffs.append(f"call[{index}] missing in target: {call.name}")
+                continue
+            b_call, t_call = baseline_calls[index], target_calls[index]
+            if b_call.name != t_call.name:
+                scores.append(0.0)
+                diffs.append(f"call[{index}]: {b_call.name}→{t_call.name}")
+                continue
+            b_fields: Dict[str, object] = {}
+            t_fields: Dict[str, object] = {}
+            _flatten_json(b_call.arguments, "", b_fields)
+            _flatten_json(t_call.arguments, "", t_fields)
+            matched = 0
+            total = 0
+            for path in list(b_fields) + [p for p in t_fields if p not in b_fields]:
+                total += 1
+                if path not in t_fields:
+                    diffs.append(f"call[{index}] {b_call.name}: missing in target: {path}")
+                elif path not in b_fields:
+                    diffs.append(f"call[{index}] {b_call.name}: extra in target: {path}")
+                elif _scalars_match(b_fields[path], t_fields[path]):
+                    matched += 1
+                else:
+                    diffs.append(
+                        f"call[{index}] {b_call.name}.{path}: "
+                        f"{_fmt_scalar(b_fields[path])}→{_fmt_scalar(t_fields[path])}"
+                    )
+            scores.append(matched / total if total else 1.0)
+
+        score = sum(scores) / len(scores)
+        passed = not diffs
+        if passed:
+            names = ", ".join(call.name for call in baseline_calls)
+            detail = f"tool calls match ({names})"
+        else:
+            shown = diffs[: self._MAX_DIFFS]
+            if len(diffs) > self._MAX_DIFFS:
+                shown.append(f"… (+{len(diffs) - self._MAX_DIFFS} more)")
+            detail = "; ".join(shown)
+        return ComparisonResult(comparator=self.name, score=score, passed=passed, detail=detail)
+
+
 def cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
     dot = sum(x * y for x, y in zip(a, b))
     norm = math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))
@@ -359,7 +458,10 @@ class EmbeddingComparator(_HttpComparator):
             "Authorization": f"Bearer {adapter_for_provider('openai').api_key()}",
             "Content-Type": "application/json",
         }
-        body = {"model": self._model, "input": [_clip(baseline.text), _clip(target.text)]}
+        body = {
+            "model": self._model,
+            "input": [_clip(_comparable_text(baseline)), _clip(_comparable_text(target))],
+        }
         response = await self._post(self.embeddings_url, headers, body)
         response.raise_for_status()
         data = sorted(response.json()["data"], key=lambda item: item["index"])
@@ -532,7 +634,13 @@ class JudgeComparator(_HttpComparator):
             pass
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
-        cache_id = self.cache_id(baseline.text, target.text) if self._store else None
+        # Rendered texts (text + tool-call lines): the judge sees what each
+        # model decided to do, and the cache key distinguishes differing tool
+        # calls.  Identical to .text for text-only responses, so existing
+        # cached verdicts stay valid.
+        baseline_text = _comparable_text(baseline)
+        target_text = _comparable_text(target)
+        cache_id = self.cache_id(baseline_text, target_text) if self._store else None
 
         if cache_id and await self._store.has(cache_id):
             try:
@@ -564,8 +672,8 @@ class JudgeComparator(_HttpComparator):
                     "role": "user",
                     "content": _JUDGE_TEMPLATE.format(
                         prompt=_clip(prompt),
-                        baseline=_clip(baseline.text),
-                        target=_clip(target.text),
+                        baseline=_clip(baseline_text),
+                        target=_clip(target_text),
                     ),
                 }
             ],
@@ -675,6 +783,7 @@ def build_comparators(
         "exact": lambda entry: ExactMatchComparator(),
         "fuzzy": lambda entry: FuzzyComparator(threshold=fuzzy_threshold),
         "json": lambda entry: JsonComparator(fields=entry.args or None),
+        "toolcalls": lambda entry: ToolCallsComparator(),
         "embedding": lambda entry: EmbeddingComparator(
             http, model=embedding_model, threshold=embedding_threshold
         ),

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "profile": "openai-list",
+  "currency": "USD",
+  "effective": "2026-06-12",
+  "source": "https://openai.com/api/pricing",
+  "notes": "OpenAI list prices per million tokens for common chat-completions models. cache_read is the cached-input rate. Maintainers: verify against the source page and add a NEW dated snapshot file on any change, never edit this one.",
+  "models": [
+    {
+      "match": ["gpt-4o-mini", "gpt-4o-mini-*"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.15", "cache_read": "0.075", "output": "0.60"}
+    },
+    {
+      "match": ["gpt-4o", "gpt-4o-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "2.50", "cache_read": "1.25", "output": "10"}
+    },
+    {
+      "match": ["gpt-4.1-mini", "gpt-4.1-mini-*"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.40", "cache_read": "0.10", "output": "1.60"}
+    },
+    {
+      "match": ["gpt-4.1-nano", "gpt-4.1-nano-*"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.10", "cache_read": "0.025", "output": "0.40"}
+    },
+    {
+      "match": ["gpt-4.1", "gpt-4.1-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "2", "cache_read": "0.50", "output": "8"}
+    },
+    {
+      "match": ["o3", "o3-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "2", "cache_read": "0.50", "output": "8"}
+    },
+    {
+      "match": ["o4-mini", "o4-mini-*"],
+      "unit": "per_mtok",
+      "rates": {"input": "1.10", "cache_read": "0.275", "output": "4.40"}
+    }
+  ]
+}

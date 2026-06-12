@@ -10,10 +10,10 @@ a method, a URL, and a JSON body.  ``fingerprint`` turns that into:
   parameters — produces distinct recordings.
 * ``semantic_key`` — the *prompt-level* identity.  When a provider adapter
   recognises the request, the key is a hash of the extracted provider-neutral
-  conversation (system + messages), so the same prompt recorded against
-  OpenAI and Anthropic — or with different sampling parameters — hashes
-  identically.  When no adapter matches (unknown host, tools, non-chat
-  endpoint), it falls back to a hash of the request body without the model
+  conversation (system + messages + tools), so the same prompt recorded
+  against OpenAI and Anthropic — or with different sampling parameters —
+  hashes identically.  When no adapter matches (unknown host, images,
+  non-chat endpoint), it falls back to a hash of the request body without the model
   and sampling/infrastructure knobs.  Two interactions that share a
   ``semantic_key`` ask the same thing — the grouping the migration report
   compares across.
@@ -113,16 +113,39 @@ def _sanitize(text: str) -> str:
     return _UNSAFE_ID_CHARS.sub("-", text).strip("-") or "x"
 
 
+def _canon_message(message: dict) -> dict:
+    """A message stripped of provider-generated call ids.
+
+    Tool-call ids (``call_…`` / ``toolu_…``) are minted per response, so the
+    same logical conversation recorded on two providers carries different
+    ids; identity must come from order, names and arguments instead.
+    """
+    out = {"role": message.get("role"), "content": message.get("content")}
+    if message.get("role") == "tool":
+        return out  # tool_call_id dropped; position links result to call
+    calls = message.get("tool_calls")
+    if calls:
+        out["tool_calls"] = [
+            {"name": call.get("name"), "arguments": call.get("arguments")} for call in calls
+        ]
+    return out
+
+
 def _conversation_canon(host: str, body: dict) -> Optional[str]:
     """Canonical form of the request's provider-neutral conversation.
 
     Resolving through the provider adapter normalises away dialect differences
     (system as a leading message vs. a top-level field, plain strings vs. text
-    blocks), so the same logical prompt hashes identically across providers.
-    Sampling parameters are deliberately not part of the canon.  Returns None
-    when no adapter matches the host or the request uses features the adapter
-    cannot translate (tools, images, …) — callers then fall back to the
-    generic body hash.
+    blocks, tool_use blocks vs. tool_calls arrays), so the same logical prompt
+    hashes identically across providers.  Sampling parameters are deliberately
+    not part of the canon; tool definitions ARE (they shape the answer like a
+    system prompt does), while an explicit ``tool_choice: auto`` equals the
+    default.  Returns None when no adapter matches the host or the request
+    uses features the adapter cannot translate (images, …) — callers then
+    fall back to the generic body hash.
+
+    Text-only conversations without tools produce the exact canon (and so the
+    exact semantic keys) they always did.
     """
     # Deferred import: providers also (lazily) imports keying for summaries.
     from .providers import adapter_for_host
@@ -134,7 +157,15 @@ def _conversation_canon(host: str, body: dict) -> Optional[str]:
         conversation = adapter.extract_conversation(body)
     except Exception:
         return None
-    return _canonical({"system": conversation.system, "messages": conversation.messages})
+    canon: dict = {
+        "system": conversation.system,
+        "messages": [_canon_message(message) for message in conversation.messages],
+    }
+    if conversation.tools:
+        canon["tools"] = conversation.tools
+    if conversation.tool_choice not in (None, "auto"):
+        canon["tool_choice"] = conversation.tool_choice
+    return _canonical(canon)
 
 
 def fingerprint(request: httpx.Request) -> Fingerprint:

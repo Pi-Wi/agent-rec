@@ -12,10 +12,30 @@ from __future__ import annotations
 
 import datetime as _dt
 import html as _html
-from typing import List, Optional
+from decimal import Decimal
+from typing import Dict, List, Optional, Sequence, Union
 
 from .keying import _sanitize
 from .migration import ComparatorAggregate, MigrationReport, RowResult
+from .pricing import ReportPricing
+
+#: Renderers accept one ReportPricing or a list (one cost view per profile).
+PricingArg = Optional[Union[ReportPricing, Sequence[ReportPricing]]]
+
+
+def _pricing_list(pricing: PricingArg) -> List[ReportPricing]:
+    if pricing is None:
+        return []
+    if isinstance(pricing, ReportPricing):
+        return [pricing]
+    return list(pricing)
+
+
+def _rows_by_category(report: MigrationReport) -> Dict[str, List[RowResult]]:
+    groups: Dict[str, List[RowResult]] = {}
+    for row in report.ok_rows:
+        groups.setdefault(row.category or "(uncategorized)", []).append(row)
+    return groups
 
 
 def default_report_basename(target_model: str, when: Optional[_dt.datetime] = None) -> str:
@@ -35,6 +55,45 @@ def _fmt_ratio(value: Optional[float]) -> str:
     return "–" if value is None else f"{value:.2f}×"
 
 
+def _fmt_money(value: Decimal, currency: str) -> str:
+    """``$0.0042`` — up to 6 decimals, trailing zeros trimmed to at least 2."""
+    text = format(value.quantize(Decimal("0.000001")), ",f")
+    whole, _, frac = text.partition(".")
+    frac = frac.rstrip("0").ljust(2, "0")
+    amount = f"{whole}.{frac}"
+    return f"${amount}" if currency == "USD" else f"{amount} {currency}"
+
+
+def _fmt_cost_cell(pricing: ReportPricing, row: RowResult) -> str:
+    """Per-row cost cell, e.g. ``$0.0021→$0.0008`` (`*` = incomplete estimate)."""
+    cost = pricing.row_cost(row)
+    if cost is None or (cost.baseline is None and cost.target is None):
+        return "–"
+
+    def one(estimate) -> str:
+        if estimate is None:
+            return "?"
+        return _fmt_money(estimate.total, estimate.currency) + ("" if estimate.complete else "*")
+
+    return f"{one(cost.baseline)}→{one(cost.target)}"
+
+
+def _pricing_summary(
+    pricing: ReportPricing, report: MigrationReport, *, arrow: str = "→", times: str = "×"
+) -> str:
+    """One-line baseline→target cost totals for a profile (ASCII-safe via args)."""
+    totals = pricing.totals(report.ok_rows)
+    if totals is None:
+        return f"est. cost ({pricing.profile}): no rows priced"
+    ratio = "" if totals.ratio is None else f"{totals.ratio:.2f}{times}, "
+    return (
+        f"est. cost ({pricing.profile}): "
+        f"baseline {_fmt_money(totals.baseline_total, totals.currency)} {arrow} "
+        f"target {_fmt_money(totals.target_total, totals.currency)} "
+        f"({ratio}over {totals.rows} priced rows)"
+    )
+
+
 def _fmt_out_tokens(row: RowResult) -> str:
     """Per-row output-token cell, e.g. ``12→34`` ('–' when nothing is known)."""
     if row.baseline_out_tokens is None and row.target_out_tokens is None:
@@ -42,6 +101,23 @@ def _fmt_out_tokens(row: RowResult) -> str:
     baseline = "?" if row.baseline_out_tokens is None else str(row.baseline_out_tokens)
     target = "?" if row.target_out_tokens is None else str(row.target_out_tokens)
     return f"{baseline}→{target}"
+
+
+def _fmt_seconds(value: Optional[float]) -> str:
+    return "?" if value is None else f"{value:.2f}s"
+
+
+def _fmt_latency(row: RowResult) -> str:
+    """Per-row latency cell, e.g. ``2.41s→0.87s`` ('–' when nothing is known)."""
+    if row.baseline_latency_s is None and row.target_latency_s is None:
+        return "–"
+    return f"{_fmt_seconds(row.baseline_latency_s)}→{_fmt_seconds(row.target_latency_s)}"
+
+
+_LATENCY_CAVEAT = (
+    "Baseline latencies are recording-time provenance (whenever each cassette "
+    "was recorded); read the ratio as an indication, not a benchmark."
+)
 
 
 def _verdict(report: MigrationReport) -> str:
@@ -95,11 +171,13 @@ def _md_fence(text: str) -> str:
     return f"{fence}text\n{text}\n{fence}"
 
 
-def render_markdown(report: MigrationReport) -> str:
+def render_markdown(report: MigrationReport, *, pricing: PricingArg = None) -> str:
     lines: List[str] = []
     baselines = ", ".join(report.baseline_models) or "unknown"
     breakdown = report.by_category()
     totals = report.token_totals()
+    pricings = _pricing_list(pricing)
+    category_rows = _rows_by_category(report) if (pricings and breakdown) else {}
     lines.append(f"# Migration Report — {baselines} → {report.target_model}")
     lines.append("")
     lines.append(f"- **Corpus:** `{report.corpus or '<memory>'}`")
@@ -117,6 +195,26 @@ def render_markdown(report: MigrationReport) -> str:
             f"target {totals.target_out:,} ({_fmt_ratio(totals.ratio)}, "
             f"over {totals.rows} prompts)"
         )
+    latency = report.latency_stats()
+    if latency:
+        lines.append(
+            f"- **Latency:** baseline mean {_fmt_seconds(latency.baseline_mean_s)} → "
+            f"target mean {_fmt_seconds(latency.target_mean_s)} "
+            f"({_fmt_ratio(latency.ratio)}, over {latency.rows} prompts). "
+            f"_{_LATENCY_CAVEAT}_"
+        )
+    for entry in pricings:
+        cost_totals = entry.totals(report.ok_rows)
+        if cost_totals is None:
+            lines.append(f"- **Est. cost ({entry.profile}):** no rows priced")
+        else:
+            ratio = "" if cost_totals.ratio is None else f"{cost_totals.ratio:.2f}×, "
+            lines.append(
+                f"- **Est. cost ({entry.profile}):** baseline "
+                f"{_fmt_money(cost_totals.baseline_total, cost_totals.currency)} → target "
+                f"{_fmt_money(cost_totals.target_total, cost_totals.currency)} "
+                f"({ratio}over {cost_totals.rows} priced rows)"
+            )
     lines.append("")
     lines.append(f"> **Verdict:** {_verdict(report)}")
     lines.append("")
@@ -155,15 +253,23 @@ def render_markdown(report: MigrationReport) -> str:
     if breakdown:
         lines.append("## By category")
         lines.append("")
-        lines.append("_Cells are pass rate · mean score. Out tokens is the target/baseline output-token ratio._")
+        lines.append(
+            "_Cells are pass rate · mean score. Out tokens and Latency are "
+            "target/baseline ratios._"
+        )
         lines.append("")
-        header = ["Category", "Prompts"] + report.comparator_names + ["Out tokens"]
+        header = ["Category", "Prompts"] + report.comparator_names + ["Out tokens", "Latency"]
+        header += [f"Cost ({entry.profile})" for entry in pricings]
         lines.append("| " + " | ".join(header) + " |")
-        lines.append("|---|---:|" + "---:|" * (len(report.comparator_names) + 1))
+        lines.append("|---|---:|" + "---:|" * (len(report.comparator_names) + 2 + len(pricings)))
         for cat in breakdown:
             cells = [cat.category, str(cat.prompts)]
             cells.extend(_aggregate_cell(agg) for agg in cat.aggregates)
             cells.append(_fmt_ratio(cat.tokens.ratio) if cat.tokens else "–")
+            cells.append(_fmt_ratio(cat.latency.ratio) if cat.latency else "–")
+            for entry in pricings:
+                cost_totals = entry.totals(category_rows.get(cat.category, []))
+                cells.append(_fmt_ratio(cost_totals.ratio) if cost_totals else "–")
             lines.append("| " + " | ".join(cells) + " |")
         lines.append("")
 
@@ -173,7 +279,9 @@ def render_markdown(report: MigrationReport) -> str:
         header = ["#", "Prompt"]
         if breakdown:
             header.append("Category")
-        header += ["Baseline model"] + report.comparator_names + ["Out tok", "Cached"]
+        header += ["Baseline model"] + report.comparator_names + ["Out tok", "Latency"]
+        header += [f"Cost ({entry.profile})" for entry in pricings]
+        header.append("Cached")
         lines.append("| " + " | ".join(header) + " |")
         lines.append("|" + "---|" * len(header))
         for index, row in enumerate(report.ok_rows, 1):
@@ -184,6 +292,8 @@ def render_markdown(report: MigrationReport) -> str:
                 row.baseline_model or "?",
                 *[_comparison_cell(row, name) for name in report.comparator_names],
                 _fmt_out_tokens(row),
+                _fmt_latency(row),
+                *[_fmt_cost_cell(entry, row) for entry in pricings],
                 "✅" if row.cached else "live",
             ]
             lines.append("| " + " | ".join(cells) + " |")
@@ -201,6 +311,8 @@ def render_markdown(report: MigrationReport) -> str:
                 meta += f" · category `{row.category}`"
             if row.baseline_out_tokens is not None or row.target_out_tokens is not None:
                 meta += f" · out tokens {_fmt_out_tokens(row)}"
+            if row.baseline_latency_s is not None or row.target_latency_s is not None:
+                meta += f" · latency {_fmt_latency(row)}"
             lines.append(meta)
             for note in row.notes:
                 lines.append(f"- _{note}_")
@@ -238,6 +350,26 @@ def render_markdown(report: MigrationReport) -> str:
             lines.append(
                 f"| `{row.baseline_id}` | {row.status} | {_md_escape_cell(row.reason or '')} |"
             )
+        lines.append("")
+
+    if pricings:
+        lines.append("## Pricing")
+        lines.append("")
+        lines.append(
+            "_Cost is derived at report time from recorded tokens and the snapshots "
+            "below; cassettes store tokens only. `*` marks estimates where some token "
+            "categories had no rate in the profile._"
+        )
+        lines.append("")
+        for entry in pricings:
+            lines.append(f"- **{entry.profile}** ({entry.currency}, as-of {entry.as_of}):")
+            for ref in entry.snapshots:
+                lines.append(
+                    f"  - snapshot `{ref.snapshot}` (effective {ref.effective}, "
+                    f"sha256 `{ref.digest[:12]}…`)"
+                )
+            if not entry.snapshots:
+                lines.append("  - no rates resolved for any model in this report")
         lines.append("")
 
     return "\n".join(lines)
@@ -285,11 +417,13 @@ def _html_cell_class(row: RowResult, name: str) -> str:
     return ""
 
 
-def render_html(report: MigrationReport) -> str:
+def render_html(report: MigrationReport, *, pricing: PricingArg = None) -> str:
     esc = _html.escape
     baselines = ", ".join(report.baseline_models) or "unknown"
     breakdown = report.by_category()
     totals = report.token_totals()
+    pricings = _pricing_list(pricing)
+    category_rows = _rows_by_category(report) if (pricings and breakdown) else {}
     parts: List[str] = []
     parts.append("<!doctype html><html><head><meta charset='utf-8'>")
     parts.append(f"<title>Migration Report — {esc(report.target_model)}</title>")
@@ -311,6 +445,16 @@ def render_html(report: MigrationReport) -> str:
             f"target {totals.target_out:,} ({esc(_fmt_ratio(totals.ratio))} "
             f"over {totals.rows} prompts)"
         )
+    latency = report.latency_stats()
+    if latency:
+        meta += (
+            f"<br>latency: baseline mean {esc(_fmt_seconds(latency.baseline_mean_s))} → "
+            f"target mean {esc(_fmt_seconds(latency.target_mean_s))} "
+            f"({esc(_fmt_ratio(latency.ratio))} over {latency.rows} prompts; "
+            f"{esc(_LATENCY_CAVEAT)})"
+        )
+    for entry in pricings:
+        meta += "<br>" + esc(_pricing_summary(entry, report))
     parts.append(meta + "</p>")
     parts.append(f"<div class='verdict'>{esc(_verdict(report))}</div>")
 
@@ -347,12 +491,15 @@ def render_html(report: MigrationReport) -> str:
         parts.append("<h2>By category</h2>")
         parts.append(
             "<p class='meta'>Cells are pass rate · mean score. "
-            "Out tokens is the target/baseline output-token ratio.</p>"
+            "Out tokens and Latency are target/baseline ratios.</p>"
         )
         parts.append("<table><tr><th>Category</th><th>Prompts</th>")
         for name in report.comparator_names:
             parts.append(f"<th>{esc(name)}</th>")
-        parts.append("<th>Out tokens</th></tr>")
+        parts.append("<th>Out tokens</th><th>Latency</th>")
+        for entry in pricings:
+            parts.append(f"<th>Cost ({esc(entry.profile)})</th>")
+        parts.append("</tr>")
         for cat in breakdown:
             parts.append(
                 f"<tr><td><span class='tag'>{esc(cat.category)}</span></td>"
@@ -361,7 +508,14 @@ def render_html(report: MigrationReport) -> str:
             for agg in cat.aggregates:
                 parts.append(f"<td>{esc(_aggregate_cell(agg))}</td>")
             ratio = _fmt_ratio(cat.tokens.ratio) if cat.tokens else "–"
-            parts.append(f"<td>{esc(ratio)}</td></tr>")
+            parts.append(f"<td>{esc(ratio)}</td>")
+            latency_ratio = _fmt_ratio(cat.latency.ratio) if cat.latency else "–"
+            parts.append(f"<td>{esc(latency_ratio)}</td>")
+            for entry in pricings:
+                cost_totals = entry.totals(category_rows.get(cat.category, []))
+                cost_ratio = _fmt_ratio(cost_totals.ratio) if cost_totals else "–"
+                parts.append(f"<td>{esc(cost_ratio)}</td>")
+            parts.append("</tr>")
         parts.append("</table>")
 
     if report.ok_rows:
@@ -371,7 +525,10 @@ def render_html(report: MigrationReport) -> str:
         parts.append("<th>Baseline</th>")
         for name in report.comparator_names:
             parts.append(f"<th>{esc(name)}</th>")
-        parts.append("<th>Out tok</th><th>Cached</th></tr>")
+        parts.append("<th>Out tok</th><th>Latency</th>")
+        for entry in pricings:
+            parts.append(f"<th>Cost ({esc(entry.profile)})</th>")
+        parts.append("<th>Cached</th></tr>")
         for index, row in enumerate(report.ok_rows, 1):
             parts.append(f"<tr><td>{index}</td><td>{esc(row.prompt_preview)}</td>")
             if breakdown:
@@ -384,6 +541,9 @@ def render_html(report: MigrationReport) -> str:
                     f"{esc(_comparison_cell(row, name))}</td>"
                 )
             parts.append(f"<td>{esc(_fmt_out_tokens(row))}</td>")
+            parts.append(f"<td>{esc(_fmt_latency(row))}</td>")
+            for entry in pricings:
+                parts.append(f"<td>{esc(_fmt_cost_cell(entry, row))}</td>")
             parts.append(f"<td>{'yes' if row.cached else 'live'}</td></tr>")
         parts.append("</table>")
 
@@ -399,6 +559,8 @@ def render_html(report: MigrationReport) -> str:
                 meta += f" · <span class='tag'>{esc(row.category)}</span>"
             if row.baseline_out_tokens is not None or row.target_out_tokens is not None:
                 meta += f" · out tokens {esc(_fmt_out_tokens(row))}"
+            if row.baseline_latency_s is not None or row.target_latency_s is not None:
+                meta += f" · latency {esc(_fmt_latency(row))}"
             parts.append(meta + "</p>")
             for note in row.notes:
                 parts.append(f"<p class='note'>{esc(note)}</p>")
@@ -432,6 +594,28 @@ def render_html(report: MigrationReport) -> str:
             )
         parts.append("</table>")
 
+    if pricings:
+        parts.append("<h2>Pricing</h2>")
+        parts.append(
+            "<p class='meta'>Cost is derived at report time from recorded tokens and "
+            "the snapshots below; cassettes store tokens only. * marks estimates where "
+            "some token categories had no rate in the profile.</p><ul>"
+        )
+        for entry in pricings:
+            snapshots = (
+                "; ".join(
+                    f"<code>{esc(ref.snapshot)}</code> (effective {esc(ref.effective)}, "
+                    f"sha256 <code>{esc(ref.digest[:12])}…</code>)"
+                    for ref in entry.snapshots
+                )
+                or "no rates resolved for any model in this report"
+            )
+            parts.append(
+                f"<li><b>{esc(entry.profile)}</b> ({esc(entry.currency)}, "
+                f"as-of {esc(entry.as_of)}): {snapshots}</li>"
+            )
+        parts.append("</ul>")
+
     parts.append("</body></html>")
     return "".join(parts)
 
@@ -441,7 +625,7 @@ def render_html(report: MigrationReport) -> str:
 # ---------------------------------------------------------------------------
 
 
-def render_console(report: MigrationReport) -> str:
+def render_console(report: MigrationReport, *, pricing: PricingArg = None) -> str:
     lines = [
         f"Migration report: {len(report.ok_rows)} prompts -> {report.target_model} "
         f"({report.cached_count} cached, {report.live_count} live, "
@@ -470,6 +654,15 @@ def render_console(report: MigrationReport) -> str:
             f"  out tokens baseline {totals.baseline_out:,} -> "
             f"target {totals.target_out:,} ({totals.ratio:.2f}x)"
         )
+    latency = report.latency_stats()
+    if latency and latency.ratio is not None:
+        lines.append(
+            f"  latency baseline mean {latency.baseline_mean_s:.2f}s -> "
+            f"target mean {latency.target_mean_s:.2f}s ({latency.ratio:.2f}x; "
+            "baseline is recording-time provenance)"
+        )
+    for entry in _pricing_list(pricing):
+        lines.append("  " + _pricing_summary(entry, report, arrow="->", times="x"))
     for row in report.skipped_rows + report.error_rows:
         lines.append(f"  [{row.status}] {row.baseline_id}: {row.reason}")
     return "\n".join(lines)

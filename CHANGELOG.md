@@ -1,5 +1,101 @@
 # Changelog
 
+## Dev (0.6.0)
+
+### Added
+- **Tool-use conversations migrate.** Tool definitions, assistant tool calls
+  and tool results now have provider-neutral forms (`Conversation.tools` /
+  `tool_choice`, `tool_calls` on assistant messages, `role: "tool"` result
+  messages; `ToolCall` on `DecodedResponse`), translated in both directions
+  between the OpenAI dialect (`tools` array / `tool_calls` / `role: "tool"`)
+  and the Anthropic dialect (`input_schema` / `tool_use` / `tool_result`
+  blocks, with role-alternation merging).  `tool_choice` maps across
+  (`required` ↔ `any`, forced tool ↔ forced tool); the legacy OpenAI
+  *functions* API, server-side Anthropic tools and unparseable recorded
+  argument JSON stay clearly-reasoned skips.  Streaming decodes accumulate
+  OpenAI `tool_calls` deltas and Anthropic `input_json_delta` fragments, so
+  SSE-recorded agent steps decode like JSON ones.
+- **`toolcalls` comparator** (offline): pairs baseline/target tool calls by
+  position; a pair scores 0 on a name mismatch, else the fraction of matching
+  argument fields (same flattening as `json`); missing/extra calls score 0,
+  and two responses that both called no tools pass.  Recorded tools are
+  **never executed** — the comparator scores what the model decided to do.
+  Included in `--compare all` and the offline `report` set.  For tool-calling
+  rows, `exact`/`fuzzy`/`embedding`/`judge` (and report panes/summaries) use
+  the response's canonical rendering — text plus one deterministic
+  `[tool_call] name({...})` line per call — so empty-text tool calls never
+  trivially match; text-only responses render as their text exactly, keeping
+  existing judge-verdict cache keys valid.
+- **Latency capture and report columns.**  Recording transports stamp
+  `latency_s` (request sent → response stream finished) and
+  `latency_first_chunk_s` onto every cassette's metadata; the migration
+  runner times live target calls and reads cached ones, populating
+  `RowResult.baseline_latency_s` / `target_latency_s`.  Reports gain a
+  per-row `Latency` column, a baseline→target mean + ratio summary line
+  (`MigrationReport.latency_stats()` / `LatencyStats`), and a per-category
+  latency ratio.  Informational only — latency never gates `--strict`, and
+  the renderers carry the caveat that baseline latencies are recording-time
+  provenance.
+- README: documented the step-wise multi-turn methodology explicitly — each
+  recorded turn replays with the baseline's history held fixed, isolating
+  "does the new model take the same next action?" per row (and what that
+  deliberately does not measure: error recovery on the target's own
+  trajectory).
+
+### Changed
+- `semantic_key` of corpora recorded **with** tools: such requests previously
+  fell back to the generic body hash (extraction raised); they now key via
+  the provider-neutral conversation hash including tool definitions, with
+  provider-minted call ids normalised away — the same agent step recorded on
+  OpenAI and Anthropic now groups together.  Their keys differ from 0.5 —
+  same caveat as the 0.3.0 semantic-key change (pinned keys on existing
+  migration cassettes are kept; cassette ids and record/replay are
+  unaffected).  Text-only conversations produce byte-identical canons and
+  keep their 0.5 keys.
+- Cassette summary blocks render tool calls in the `response` field, so a
+  tool-calling cassette opens with what the model decided to do.
+
+## Dev (0.5.1)
+
+### Added
+- **Estimated-cost columns in the migration report** (`--pricing PROFILE`).
+  Tokens stay the canonical recorded metric — cassettes are untouched — and
+  cost is *derived at report time* from versioned pricing snapshots: dated,
+  immutable JSON files of per-model, per-category rates (`Decimal` math, no
+  float drift). Built-in `anthropic-list` and `openai-list` profiles ship as
+  package data; `--pricing-dir` merges your own (a profile named like a
+  built-in replaces it, so a company can pin its own rates). `a+b` composes
+  profiles for cross-provider migrations
+  (`--pricing anthropic-list+openai-list`), and `--pricing` is repeatable for
+  side-by-side cost views (list price vs. enterprise contract).
+  `--pricing-as-of` picks the snapshot date policy: `latest` (default — both
+  models priced on one consistent date, the forward-looking migration
+  question), `recorded` (each row at its cassette's `recorded_at` — historical
+  accuracy across price changes), or a pinned `YYYY-MM-DD`. Reports gain
+  baseline→target cost totals and ratios, per-row and per-category cost
+  columns, and a provenance section naming each snapshot used with its sha256
+  — re-rendering a historical report is reproducible even after prices move.
+  An estimate whose token categories have no rate is marked incomplete (`*`)
+  rather than silently free; totals only sum rows where both sides priced
+  completely; a model with no rate yields no estimate, never $0. Cost never
+  gates `--strict`. API: `PricingCatalog` / `price_report()` /
+  `TokenUsage`-typed `RowResult.baseline_usage` / `target_usage`, and
+  renderers accept `pricing=[...]`.
+- **Per-category token normalization** (`TokenUsage`): provider adapters now
+  decode usage into disjoint buckets — `input` (uncached), `cache_read`,
+  `cache_write`, `output`, plus informational `reasoning` — reconciling the
+  providers' conventions (OpenAI nests cached/reasoning inside its totals;
+  Anthropic keeps cache traffic additive). The verbatim usage dict is kept on
+  `TokenUsage.raw`, and the raw bytes remain in the cassette, so better
+  normalization can always be applied retroactively. Exported as
+  `agentrec.TokenUsage` / `usage_of()`.
+
+### Changed
+- `RowResult.baseline_in_tokens` / `target_in_tokens` now count the *whole*
+  prompt side (uncached + cache reads + cache writes). For Anthropic
+  recordings with prompt caching, cache traffic previously wasn't counted;
+  OpenAI recordings are unchanged.
+
 ## Dev (0.5.0)
 
 ### Added

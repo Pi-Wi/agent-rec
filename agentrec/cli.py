@@ -4,8 +4,8 @@ Command-line interface: ``python -m agentrec <command>`` (or ``agentrec ...``).
 migrate   Run the corpus against a target model (records new responses into
           the corpus) and write a Markdown/HTML migration report.
 report    Re-render the report fully offline from already-recorded cassettes;
-          the offline comparators (exact, fuzzy, json) are allowed, plus
-          judge served from corpus-cached verdicts.
+          the offline comparators (exact, fuzzy, json, toolcalls) are
+          allowed, plus judge served from corpus-cached verdicts.
 annotate  Backfill human-readable summary blocks and fingerprint metadata
           into existing cassettes.
 """
@@ -19,6 +19,9 @@ from typing import Dict, List, Optional
 
 from .comparators import OFFLINE_COMPARATOR_NAMES, build_comparators, parse_compare_spec
 from .migration import annotate_corpus, run_migration
+# PricingError subclasses ValueError, so a bad snapshot/--pricing-as-of value
+# lands in main()'s existing usage-error handler (exit 2).
+from .pricing import PricingCatalog, ReportPricing, price_report
 from .report import default_report_basename, render_console, render_html, render_markdown
 from .store import FileStore
 
@@ -69,6 +72,22 @@ def _add_report_args(parser: argparse.ArgumentParser, *, default_compare: str) -
              '(repeatable, e.g. --min-pass json=1.0 --min-pass "json:category,priority"=0.9); '
              "comparators without a threshold become informational",
     )
+    parser.add_argument(
+        "--pricing", action="append", default=[], metavar="PROFILE",
+        help="add estimated-cost columns priced under this profile "
+             "(repeatable/comma-separated; 'a+b' composes profiles, e.g. "
+             "'anthropic-list+openai-list' for cross-provider migrations)",
+    )
+    parser.add_argument(
+        "--pricing-dir", action="append", default=[], metavar="DIR",
+        help="directory of pricing snapshots merged over the built-in profiles "
+             "(repeatable; a profile with a built-in's name replaces it)",
+    )
+    parser.add_argument(
+        "--pricing-as-of", default="latest", metavar="WHEN",
+        help="snapshot date policy: 'latest' (default), 'recorded' "
+             "(each row at its cassette's recorded_at), or a YYYY-MM-DD date",
+    )
 
 
 def _parse(argv: Optional[List[str]]) -> argparse.Namespace:
@@ -95,7 +114,7 @@ def _parse(argv: Optional[List[str]]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _write_reports(args: argparse.Namespace, report) -> List[Path]:
+def _write_reports(args: argparse.Namespace, report, pricing: List[ReportPricing]) -> List[Path]:
     base = args.out or default_report_basename(args.target)
     base_path = Path(base)
     if base_path.suffix.lower() in (".md", ".html"):
@@ -103,13 +122,25 @@ def _write_reports(args: argparse.Namespace, report) -> List[Path]:
     written: List[Path] = []
     if args.format in ("md", "both"):
         path = base_path.with_suffix(".md")
-        path.write_text(render_markdown(report), encoding="utf-8")
+        path.write_text(render_markdown(report, pricing=pricing), encoding="utf-8")
         written.append(path)
     if args.format in ("html", "both"):
         path = base_path.with_suffix(".html")
-        path.write_text(render_html(report), encoding="utf-8")
+        path.write_text(render_html(report, pricing=pricing), encoding="utf-8")
         written.append(path)
     return written
+
+
+def _price_report(args: argparse.Namespace, report) -> List[ReportPricing]:
+    """One ReportPricing per --pricing profile spec (empty without the flag)."""
+    specs = [spec.strip() for item in args.pricing for spec in item.split(",") if spec.strip()]
+    if not specs:
+        return []
+    catalog = PricingCatalog.load(*args.pricing_dir)
+    return [
+        price_report(report, catalog.profile(spec), as_of=args.pricing_as_of)
+        for spec in specs
+    ]
 
 
 def _parse_min_pass(items: List[str], comparator_names: List[str]) -> Dict[str, float]:
@@ -180,8 +211,9 @@ async def _run_report_command(args: argparse.Namespace, *, offline: bool) -> int
         concurrency=args.concurrency,
         min_pass=min_pass,
     )
-    written = _write_reports(args, report)
-    print(render_console(report))
+    pricing = _price_report(args, report)
+    written = _write_reports(args, report, pricing)
+    print(render_console(report, pricing=pricing))
     for path in written:
         print(f"Report written: {path}")
     if not report.ok_rows:

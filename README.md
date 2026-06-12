@@ -7,16 +7,20 @@ Recording happens at the **httpx transport layer**, below the OpenAI SDK, the
 Anthropic SDK, LangChain, or any other httpx-backed client. The core depends
 on nothing but `httpx`.
 
-> **Status:** beta (0.5). Record/replay is proven for streaming (SSE) and
+> **Status:** beta (0.6.0). Record/replay is proven for streaming (SSE) and
 > non-streaming (JSON) responses on OpenAI and Anthropic, sync and async; the
 > API may still change in minor releases before 1.0. Migration translation
-> covers OpenAI ↔ Anthropic, text-only conversations (plus JSON mode) — tools,
-> images and strict `json_schema` become clearly-reasoned skipped rows.
+> covers OpenAI ↔ Anthropic conversations including **tool use** (definitions,
+> assistant tool calls, tool results) and JSON mode — images and strict
+> `json_schema` become clearly-reasoned skipped rows.
 >
-> **0.5 highlights:** a field-scoped `json` comparator
-> (`json:category,priority`), threshold-based CI gating
-> (`--strict --min-pass`), and judge verdicts cached into the corpus —
-> re-rendering a report on unchanged texts costs nothing. See
+> **0.6.0 highlights:** tool-calling conversations migrate cross-provider and
+> a new offline `toolcalls` comparator scores tool *selection + arguments*
+> (recorded tools are never executed); response **latency** is recorded by the
+> transports and reported baseline→target. Earlier: estimated-cost columns
+> (`--pricing`) from versioned pricing snapshots, a field-scoped `json`
+> comparator (`json:category,priority`), threshold-based CI gating
+> (`--strict --min-pass`), and judge verdicts cached into the corpus. See
 > [CHANGELOG](CHANGELOG.md).
 
 ## Install
@@ -78,13 +82,14 @@ runner re-asks every corpus prompt of a **target model** (cross-provider
 translation included: an OpenAI-recorded prompt can be re-asked of Claude),
 caches the answers back into the corpus, and scores baseline vs. target:
 
-| Comparator  | Needs network? | What it measures                                  |
-| ----------- | -------------- | ------------------------------------------------- |
-| `exact`     | no             | normalized string equality (classification-style) |
-| `fuzzy`     | no             | `difflib` sequence similarity                     |
-| `json`      | no             | structural field-by-field match of JSON payloads  |
-| `embedding` | OpenAI API     | cosine similarity of embeddings                   |
-| `judge`     | LLM API¹       | an LLM scores semantic equivalence                |
+| Comparator  | Needs network? | What it measures                                   |
+| ----------- | -------------- | -------------------------------------------------- |
+| `exact`     | no             | normalized string equality (classification-style)  |
+| `fuzzy`     | no             | `difflib` sequence similarity                      |
+| `json`      | no             | structural field-by-field match of JSON payloads   |
+| `toolcalls` | no             | which tools were called, with what arguments       |
+| `embedding` | OpenAI API     | cosine similarity of embeddings                    |
+| `judge`     | LLM API¹       | an LLM scores semantic equivalence                 |
 
 ¹ judge verdicts are cached into the corpus — only new (baseline, target)
 pairs cost an API call, and `agentrec report` (offline) replays cached
@@ -129,11 +134,77 @@ Recordings tagged with a category —
 breakdown in the report, with output-token columns that surface
 verbosity/cost differences between the models.
 
+**Estimated cost is a derived metric.** Tokens are what the cassettes record;
+`--pricing PROFILE` prices them at report time against versioned snapshots —
+dated, immutable JSON files of per-model rates (per token category: input,
+cached reads/writes, output). Built-in `anthropic-list` and `openai-list`
+profiles ship with the package; point `--pricing-dir` at your own snapshots
+to add profiles (OpenRouter, enterprise contracts) or shadow a built-in.
+`a+b` composes profiles for cross-provider runs, `--pricing` is repeatable
+for side-by-side views, and `--pricing-as-of latest|recorded|YYYY-MM-DD`
+picks whether to price at today's rates, at each cassette's recording date,
+or pinned for reproducing a historical report. Reports gain baseline→target
+cost totals, per-row/per-category columns, and a provenance section naming
+every snapshot used (with its sha256) — so the numbers stay reproducible
+after prices change. Estimates missing a rate are flagged, never silently
+zero, and cost never gates `--strict`.
+
+```bash
+agentrec report --corpus corpus --target claude-haiku-4-5 --compare json \
+    --pricing "anthropic-list+openai-list" --pricing-as-of latest
+```
+
 **JSON mode translates, it doesn't skip.** A baseline recorded with OpenAI's
 `response_format={"type": "json_object"}` migrates cleanly: re-emitted
 natively for OpenAI targets, and emulated on Anthropic via a system-prompt
 instruction (which also discourages the code fences). The strict `json_schema`
 variant stays an honest skip — a prompt nudge can't enforce a schema.
+
+### Tool calls
+
+Tool-using recordings migrate too. Tool definitions, assistant tool calls and
+tool results all have a provider-neutral form, so an agent step recorded
+against OpenAI (`tools` + `tool_calls` + `role: "tool"` messages) re-asks
+cleanly of Claude (`input_schema` + `tool_use` + `tool_result` blocks) and
+vice versa — `tool_choice` translates as well (`required` ↔ `any`, forced
+tool ↔ forced tool). The `toolcalls` comparator then scores **selection and
+arguments**: did the target call the same tools, in the same order, with the
+same argument values (field-by-field, like the `json` comparator)? Recorded
+tools are **never executed** — the comparison is about what the model decided
+to do, not what the tool would have returned. Two responses that both called
+no tools pass trivially; "didn't reach for a tool" is behaviour worth
+confirming too. For tool-calling rows the text comparators and the judge see
+the response's canonical rendering (text plus one line per call), so an
+empty-text tool call never trivially "matches".
+
+```bash
+agentrec migrate --corpus corpus --target claude-haiku-4-5 --compare "toolcalls,judge"
+```
+
+### Multi-turn conversations and agent transcripts: step-wise, by design
+
+A recorded multi-turn conversation (or agent loop) replays against the target
+as a **step-wise evaluation**: each recorded request carries the baseline's
+history — including the baseline model's own earlier replies, tool calls and
+tool results — and the target model is asked for *its next action given that
+history*. That is deliberate. Re-driving the whole loop with the target would
+need live tools and would diverge after the first differing step, telling you
+nothing attributable; holding the history fixed isolates exactly one
+question per row: *at this point in a real conversation, does the new model
+do what the old one did?* Every recorded turn of an agent loop becomes its
+own row, so a 6-step agent trace yields 6 independently-scored decisions.
+What this methodology does **not** measure is error recovery — how the target
+would handle the conversation *its own* earlier answers would have produced.
+
+### Latency
+
+The transports stamp every cassette with `latency_s` (request sent → response
+finished, plus `latency_first_chunk_s` for streams), and the migration runner
+times its live target calls, so reports show a per-row `Latency` column, a
+baseline→target mean with a ratio, and a per-category latency ratio. Read it
+as an indication, not a benchmark: the baseline number is recording-time
+provenance — whatever the network and provider load looked like when the
+cassette was recorded. Latency never gates `--strict`.
 
 ## How it works
 
@@ -145,8 +216,10 @@ agentrec/
   transport.py    # RecordingTransport / ReplayTransport / AutoTransport
   session.py      # async_client() + cassette — the ergonomic seam
   providers/      # OpenAI + Anthropic request/response dialects
-  comparators.py  # exact / fuzzy / json / embedding / judge response scoring
+  comparators.py  # exact / fuzzy / json / toolcalls / embedding / judge scoring
   migration.py    # run_migration() — replay the corpus against a candidate model
+  pricing.py      # versioned pricing snapshots → derived cost estimates
+  pricing_data/   # built-in list-price snapshots (anthropic-list, openai-list)
   report.py       # Markdown / HTML / console rendering
   cli.py          # agentrec migrate | report | annotate
 ```
@@ -166,8 +239,10 @@ agentrec/
 - **Request-derived keys:** interactions are keyed by a fingerprint
   (method + path + model + normalised body), so identical calls replay
   deterministically. The `semantic_key` that groups prompts for the migration
-  report is derived from the provider-neutral conversation instead — same
-  prompt against OpenAI or Anthropic, at any temperature, groups together.
+  report is derived from the provider-neutral conversation instead (system +
+  messages + tool definitions, with provider-minted tool-call ids normalised
+  away) — same prompt against OpenAI or Anthropic, at any temperature, groups
+  together.
 - **Best-effort secret hygiene:** `FileStore` always redacts auth headers, and
   scrubs *known* secret shapes from request bodies and summaries before
   anything touches disk. This is a safety net, not a guarantee — response

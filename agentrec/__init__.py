@@ -10,6 +10,7 @@ from .comparators import (
     JsonComparator,
     JudgeComparator,
     ParsedComparator,
+    ToolCallsComparator,
     build_comparators,
     parse_compare_spec,
 )
@@ -17,6 +18,7 @@ from .keying import Fingerprint, default_key, fingerprint, fingerprint_of
 from .migration import (
     CategoryBreakdown,
     GateResult,
+    LatencyStats,
     MigrationReport,
     RowResult,
     TokenTotals,
@@ -24,12 +26,27 @@ from .migration import (
     migration_id_for,
     run_migration,
 )
+from .pricing import (
+    CostEstimate,
+    CostTotals,
+    PricingCatalog,
+    PricingError,
+    PricingProfile,
+    PricingSnapshot,
+    RateRef,
+    ReportPricing,
+    ResolvedRate,
+    RowCost,
+    price_report,
+)
 from .providers import (
     Conversation,
     DecodedResponse,
     DecodeError,
     MissingAPIKeyError,
     ProviderAdapter,
+    TokenUsage,
+    ToolCall,
     UnsupportedRequestError,
     adapter_for_host,
     adapter_for_model,
@@ -37,6 +54,8 @@ from .providers import (
     conversation_of,
     decode_interaction,
     register,
+    render_response,
+    usage_of,
 )
 from .report import render_console, render_html, render_markdown
 from .session import (
@@ -95,6 +114,8 @@ __all__ = [
     "DecodeError",
     "MissingAPIKeyError",
     "ProviderAdapter",
+    "TokenUsage",
+    "ToolCall",
     "UnsupportedRequestError",
     "adapter_for_host",
     "adapter_for_model",
@@ -102,12 +123,27 @@ __all__ = [
     "conversation_of",
     "decode_interaction",
     "register",
+    "render_response",
+    "usage_of",
+    # Pricing (derived cost estimates)
+    "CostEstimate",
+    "CostTotals",
+    "PricingCatalog",
+    "PricingError",
+    "PricingProfile",
+    "PricingSnapshot",
+    "RateRef",
+    "ReportPricing",
+    "ResolvedRate",
+    "RowCost",
+    "price_report",
     # Comparators
     "Comparator",
     "ComparisonResult",
     "ExactMatchComparator",
     "FuzzyComparator",
     "JsonComparator",
+    "ToolCallsComparator",
     "EmbeddingComparator",
     "JudgeComparator",
     "ParsedComparator",
@@ -116,6 +152,7 @@ __all__ = [
     # Migration report
     "CategoryBreakdown",
     "GateResult",
+    "LatencyStats",
     "MigrationReport",
     "RowResult",
     "TokenTotals",

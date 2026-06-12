@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "profile": "anthropic-list",
+  "currency": "USD",
+  "effective": "2026-06-12",
+  "source": "https://platform.claude.com/docs/en/pricing",
+  "notes": "Official Anthropic list prices per million tokens, as published on the source page on the effective date. cache_read is 0.1x input; cache_write is the 5-minute-TTL rate (1.25x input). Verify against the source before billing decisions; price changes belong in a NEW dated snapshot file, never an edit.",
+  "models": [
+    {
+      "match": ["claude-fable-5", "claude-mythos-5"],
+      "unit": "per_mtok",
+      "rates": {"input": "10", "cache_read": "1", "cache_write": "12.50", "output": "50"}
+    },
+    {
+      "match": ["claude-opus-4-8", "claude-opus-4-7", "claude-opus-4-6", "claude-opus-4-5", "claude-opus-4-*"],
+      "unit": "per_mtok",
+      "rates": {"input": "5", "cache_read": "0.50", "cache_write": "6.25", "output": "25"}
+    },
+    {
+      "match": ["claude-sonnet-4-6", "claude-sonnet-4-5", "claude-sonnet-4-*"],
+      "unit": "per_mtok",
+      "rates": {"input": "3", "cache_read": "0.30", "cache_write": "3.75", "output": "15"}
+    },
+    {
+      "match": ["claude-haiku-4-5", "claude-haiku-4-5-*"],
+      "unit": "per_mtok",
+      "rates": {"input": "1", "cache_read": "0.10", "cache_write": "1.25", "output": "5"}
+    }
+  ]
+}

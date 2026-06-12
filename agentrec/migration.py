@@ -34,6 +34,7 @@ import asyncio
 import contextvars
 import datetime as _dt
 import re
+import time
 from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
 from typing import Callable, Dict, List, Optional, Tuple
@@ -45,12 +46,15 @@ from .keying import _sanitize, fingerprint_of
 from .providers import (
     DecodeError,
     MissingAPIKeyError,
+    TokenUsage,
     UnsupportedRequestError,
     adapter_for_model,
     adapter_for_provider,
     conversation_of,
     decode_interaction,
     format_conversation,
+    render_response,
+    usage_of,
 )
 from .store import FileStore
 from .transport import AutoTransport
@@ -103,24 +107,6 @@ def _preview(text: str, limit: int = 80) -> str:
     return flat if len(flat) <= limit else flat[: limit - 1] + "…"
 
 
-def _usage_tokens(usage: Optional[dict]) -> Tuple[Optional[int], Optional[int]]:
-    """(input, output) token counts from an OpenAI- or Anthropic-shaped usage dict."""
-    if not isinstance(usage, dict):
-        return None, None
-
-    def first_int(*keys: str) -> Optional[int]:
-        for key in keys:
-            value = usage.get(key)
-            if isinstance(value, int):
-                return value
-        return None
-
-    return (
-        first_int("input_tokens", "prompt_tokens"),
-        first_int("output_tokens", "completion_tokens"),
-    )
-
-
 @dataclass
 class RowResult:
     """Outcome for one logical prompt (one semantic_key)."""
@@ -139,6 +125,19 @@ class RowResult:
     target_text: Optional[str] = None
     target_in_tokens: Optional[int] = None
     target_out_tokens: Optional[int] = None
+    # Full per-category token breakdown (the *_in/_out ints above are derived
+    # views kept for compatibility) plus recording timestamps, so cost can be
+    # priced per-row at the date the tokens were actually bought.
+    baseline_usage: Optional[TokenUsage] = None
+    target_usage: Optional[TokenUsage] = None
+    baseline_recorded_at: Optional[str] = None
+    target_recorded_at: Optional[str] = None
+    # Wall-clock seconds, request sent → response finished.  The baseline's
+    # comes from its cassette (recording-time provenance, like recorded_at);
+    # the target's is measured live, or read from the migration cassette on
+    # a cached re-run.
+    baseline_latency_s: Optional[float] = None
+    target_latency_s: Optional[float] = None
     comparisons: List[ComparisonResult] = field(default_factory=list)
     status: str = "ok"  # "ok" | "skipped" | "error"
     reason: Optional[str] = None
@@ -176,6 +175,25 @@ class TokenTotals:
 
 
 @dataclass(frozen=True)
+class LatencyStats:
+    """Mean response latency, baseline vs target, over rows where both are known.
+
+    Informational only — it never gates ``--strict``.  Baseline latencies are
+    recording-time provenance (the network and load of whenever the cassette
+    was recorded), so read the ratio as an indication, not a benchmark.
+    """
+
+    rows: int
+    baseline_mean_s: float
+    target_mean_s: float
+
+    @property
+    def ratio(self) -> Optional[float]:
+        """target/baseline mean latency — <1 means the target answered faster."""
+        return self.target_mean_s / self.baseline_mean_s if self.baseline_mean_s else None
+
+
+@dataclass(frozen=True)
 class GateResult:
     """Outcome of one ``--min-pass`` threshold against a comparator's pass rate."""
 
@@ -195,6 +213,7 @@ class CategoryBreakdown:
     prompts: int
     aggregates: List[ComparatorAggregate]
     tokens: Optional[TokenTotals]
+    latency: Optional[LatencyStats] = None
 
 
 @dataclass
@@ -273,6 +292,22 @@ class MigrationReport:
             target_out=sum(row.target_out_tokens for row in counted),
         )
 
+    def latency_stats(self, rows: Optional[List[RowResult]] = None) -> Optional[LatencyStats]:
+        """Mean latency over rows where baseline AND target latency are known."""
+        pool = self.ok_rows if rows is None else rows
+        counted = [
+            row
+            for row in pool
+            if row.baseline_latency_s is not None and row.target_latency_s is not None
+        ]
+        if not counted:
+            return None
+        return LatencyStats(
+            rows=len(counted),
+            baseline_mean_s=sum(row.baseline_latency_s for row in counted) / len(counted),
+            target_mean_s=sum(row.target_latency_s for row in counted) / len(counted),
+        )
+
     def by_category(self) -> List[CategoryBreakdown]:
         """Per-category breakdown of the ok rows.
 
@@ -291,6 +326,7 @@ class MigrationReport:
                 prompts=len(rows),
                 aggregates=self.aggregates(rows),
                 tokens=self.token_totals(rows),
+                latency=self.latency_stats(rows),
             )
             for category, rows in sorted(groups.items())
         ]
@@ -451,9 +487,17 @@ async def run_migration(
         except DecodeError as exc:
             row.status, row.reason = "skipped", f"baseline undecodable: {exc}"
             return
-        row.baseline_text = baseline.text
+        # Rendered text (text + tool-call lines) so tool-calling rows display
+        # and compare on what the model decided to do.
+        row.baseline_text = render_response(baseline)
         row.baseline_model = baseline.model or fp.model
-        row.baseline_in_tokens, row.baseline_out_tokens = _usage_tokens(baseline.usage)
+        row.baseline_usage = usage_of(baseline)
+        row.baseline_in_tokens = row.baseline_usage.prompt_total
+        row.baseline_out_tokens = row.baseline_usage.output
+        recorded_at = interaction.metadata.get("recorded_at")
+        row.baseline_recorded_at = recorded_at if isinstance(recorded_at, str) else None
+        latency = interaction.metadata.get("latency_s")
+        row.baseline_latency_s = float(latency) if isinstance(latency, (int, float)) else None
 
         try:
             conversation = conversation_of(interaction)
@@ -473,8 +517,17 @@ async def run_migration(
         target = None
         if await store.has(row.migration_id):
             row.cached = True
+            recorded = await store.load(row.migration_id)
+            target_recorded_at = recorded.metadata.get("recorded_at")
+            row.target_recorded_at = (
+                target_recorded_at if isinstance(target_recorded_at, str) else None
+            )
+            target_latency = recorded.metadata.get("latency_s")
+            row.target_latency_s = (
+                float(target_latency) if isinstance(target_latency, (int, float)) else None
+            )
             try:
-                target = decode_interaction(await store.load(row.migration_id))
+                target = decode_interaction(recorded)
             except DecodeError as exc:
                 row.status, row.reason = "error", (
                     f"recorded migration response undecodable: {exc}; "
@@ -504,6 +557,7 @@ async def run_migration(
             _ROW_IDENTITY.set((row.migration_id, extra))
             payload = b""
             for attempt in range(max(0, retries) + 1):
+                attempt_start = time.monotonic()
                 try:
                     response = await client.post(url, headers=headers, json=body)
                     payload = await response.aread()
@@ -511,6 +565,7 @@ async def run_migration(
                     row.status, row.reason = "error", f"target call failed: {exc}"
                     return
                 if response.status_code == 200:
+                    row.target_latency_s = round(time.monotonic() - attempt_start, 4)
                     break
                 # Don't let a failure poison the cache: the transport recorded
                 # this response, so discard it before any retry or re-run.
@@ -533,9 +588,11 @@ async def run_migration(
                 row.status, row.reason = "error", f"target response undecodable: {exc}"
                 return
 
-        row.target_text = target.text
+        row.target_text = render_response(target)
         row.target_model = target.model or target_model
-        row.target_in_tokens, row.target_out_tokens = _usage_tokens(target.usage)
+        row.target_usage = usage_of(target)
+        row.target_in_tokens = row.target_usage.prompt_total
+        row.target_out_tokens = row.target_usage.output
         if target.finish_reason in ("max_tokens", "length"):
             # A truncated target makes every comparison (and the output-token
             # ratio) quietly unfair — surface it instead of letting the

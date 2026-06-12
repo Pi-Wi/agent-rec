@@ -242,8 +242,10 @@ def test_extract_openai_conversation_lifts_system():
     assert conv.messages[0]["content"] == "Classify: good"
 
 
-def test_extract_openai_rejects_tools_and_images():
+def test_extract_openai_rejects_images_and_malformed_tools():
     adapter = OpenAIAdapter()
+    # Tools are supported now, but a definition without a name is still a
+    # clearly-reasoned skip, not a silent pass-through.
     with pytest.raises(UnsupportedRequestError):
         adapter.extract_conversation(
             {"messages": [{"role": "user", "content": "hi"}], "tools": [{"type": "function"}]}
@@ -254,18 +256,41 @@ def test_extract_openai_rejects_tools_and_images():
         )
 
 
-def test_extract_anthropic_rejects_tool_blocks():
+def test_extract_anthropic_tool_result_blocks_become_tool_messages():
     adapter = AnthropicAdapter()
-    with pytest.raises(UnsupportedRequestError):
-        adapter.extract_conversation(
-            {
-                "model": "claude-haiku-4-5",
-                "max_tokens": 64,
-                "messages": [
-                    {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "x"}]}
-                ],
-            }
-        )
+    conv = adapter.extract_conversation(
+        {
+            "model": "claude-haiku-4-5",
+            "max_tokens": 64,
+            "messages": [
+                {"role": "user", "content": "weather in Paris?"},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": "Let me check."},
+                        {
+                            "type": "tool_use",
+                            "id": "toolu_1",
+                            "name": "get_weather",
+                            "input": {"city": "Paris"},
+                        },
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "tool_result", "tool_use_id": "toolu_1", "content": "18°C"}
+                    ],
+                },
+            ],
+        }
+    )
+    assert [m["role"] for m in conv.messages] == ["user", "assistant", "tool"]
+    assert conv.messages[1]["content"] == "Let me check."
+    assert conv.messages[1]["tool_calls"] == [
+        {"id": "toolu_1", "name": "get_weather", "arguments": {"city": "Paris"}}
+    ]
+    assert conv.messages[2] == {"role": "tool", "tool_call_id": "toolu_1", "content": "18°C"}
 
 
 def test_build_anthropic_request_cross_provider(monkeypatch):

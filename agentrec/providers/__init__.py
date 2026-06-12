@@ -24,8 +24,12 @@ from .base import (
     DecodeError,
     MissingAPIKeyError,
     ProviderAdapter,
+    TokenUsage,
+    ToolCall,
     UnsupportedRequestError,
     format_conversation,
+    generic_token_usage,
+    render_response,
     sse_data_lines,
 )
 from .openai import OpenAIAdapter
@@ -36,8 +40,11 @@ __all__ = [
     "DecodeError",
     "MissingAPIKeyError",
     "ProviderAdapter",
+    "TokenUsage",
+    "ToolCall",
     "UnsupportedRequestError",
     "format_conversation",
+    "render_response",
     "sse_data_lines",
     "OpenAIAdapter",
     "AnthropicAdapter",
@@ -49,6 +56,7 @@ __all__ = [
     "decode_interaction",
     "conversation_of",
     "build_summary",
+    "usage_of",
 ]
 
 _ADAPTERS: List[ProviderAdapter] = []
@@ -197,6 +205,21 @@ def decode_interaction(interaction: CapturedInteraction) -> DecodedResponse:
     return adapter.decode_response(payload, is_sse=_is_sse(interaction))
 
 
+def usage_of(decoded: DecodedResponse) -> TokenUsage:
+    """Disjoint :class:`TokenUsage` for a decoded response.
+
+    Resolves the response's provider adapter for its normalisation rules
+    (OpenAI nests cached/reasoning detail inside the totals, Anthropic keeps
+    cache traffic additive); an unknown provider degrades to the generic
+    input/output mapping.
+    """
+    try:
+        adapter = adapter_for_provider(decoded.provider)
+    except LookupError:
+        return generic_token_usage(decoded.usage)
+    return adapter.normalize_usage(decoded.usage)
+
+
 def conversation_of(interaction: CapturedInteraction) -> Conversation:
     """Provider-neutral conversation from a recorded interaction's request."""
     adapter = _adapter_for_interaction(interaction)
@@ -239,7 +262,9 @@ def build_summary(interaction: CapturedInteraction) -> dict:
         pass
     try:
         decoded = decode_interaction(interaction)
-        summary["response"] = decoded.text
+        # render_response: text plus tool-call lines, so a tool-calling
+        # cassette opens with what the model decided to do.
+        summary["response"] = render_response(decoded)
         model = model or decoded.model
     except Exception:
         pass

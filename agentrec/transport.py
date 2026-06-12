@@ -221,6 +221,7 @@ class RecordingTransport(httpx.AsyncBaseTransport):
         await request.aread()
         interaction_id = self._keyer(request)
 
+        start = time.monotonic()
         response = await self._inner.handle_async_request(request)
         if not self._record_errors and not _is_recordable(response.status_code):
             return response  # pass the failure through untouched, never cache it
@@ -234,9 +235,18 @@ class RecordingTransport(httpx.AsyncBaseTransport):
         )
 
         async def on_chunk(data: bytes, offset: float) -> None:
+            if not interaction.chunks:
+                interaction.metadata["latency_first_chunk_s"] = round(
+                    time.monotonic() - start, 4
+                )
             interaction.chunks.append(CapturedChunk(data=data, timestamp_offset=offset))
 
         async def on_done() -> None:
+            # Request sent → response stream finished.  Provenance, like
+            # recorded_at: lets a migration report put real numbers on the
+            # latency question (best-effort; an abandoned stream records the
+            # time until abandonment).
+            interaction.metadata["latency_s"] = round(time.monotonic() - start, 4)
             interaction.metadata["recorded_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
             await self._store.save(interaction_id, interaction)
 
@@ -408,6 +418,7 @@ class SyncRecordingTransport(httpx.BaseTransport):
         request.read()  # buffer the body so we can fingerprint it and still send it
         interaction_id = self._keyer(request)
 
+        start = time.monotonic()
         response = self._inner.handle_request(request)
         if not self._record_errors and not _is_recordable(response.status_code):
             return response
@@ -421,9 +432,14 @@ class SyncRecordingTransport(httpx.BaseTransport):
         )
 
         def on_chunk(data: bytes, offset: float) -> None:
+            if not interaction.chunks:
+                interaction.metadata["latency_first_chunk_s"] = round(
+                    time.monotonic() - start, 4
+                )
             interaction.chunks.append(CapturedChunk(data=data, timestamp_offset=offset))
 
         def on_done() -> None:
+            interaction.metadata["latency_s"] = round(time.monotonic() - start, 4)
             interaction.metadata["recorded_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
             self._store.save_sync(interaction_id, interaction)
 
