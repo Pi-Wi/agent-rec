@@ -1,0 +1,64 @@
+# Example GitHub Actions workflow: gate every prompt/model change against a
+# frozen corpus of recorded traffic. Copy into .github/workflows/ to use.
+#
+# The job is OFFLINE: `agentrec report` re-renders from answers and judge
+# verdicts already cached in the committed corpus, so it needs no API keys and
+# can never touch the network. It fails the build when the candidate model
+# stops matching the baseline behaviour your corpus recorded.
+#
+# Workflow:
+#   1. Commit a `corpus/` of recorded interactions to the repo (or restore it
+#      from an artifact / cache step before this runs).
+#   2. When you change a prompt or bump $CANDIDATE_MODEL, re-run
+#      `agentrec migrate ...` locally to refresh the cached target answers and
+#      commit them. CI then only verifies; it does not spend on API calls.
+#
+# See examples/generate_corpus_and_migrate.py to build the corpus in the first
+# place, and the "Recurring — the regression gate" section of the README.
+
+name: prompt-regression-gate
+
+on:
+  pull_request:
+    paths:
+      - "prompts/**"
+      - "corpus/**"
+      - "**/model_config*"
+
+env:
+  CANDIDATE_MODEL: claude-haiku-4-5
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install agentrec
+        run: pip install "agentrec[compression]"
+
+      - name: Gate behaviour against the recorded corpus (offline)
+        run: |
+          agentrec report \
+            --corpus corpus \
+            --target "$CANDIDATE_MODEL" \
+            --compare "exact,json:category,priority" \
+            --strict \
+            --min-pass exact=1.0 \
+            --min-pass "json:category,priority"=0.95 \
+            --format md \
+            --out migration-report
+        # Exit code 1 (any --min-pass threshold missed, or any errored row)
+        # fails the PR. The "Strict gate" section of migration-report.md names
+        # the thresholds and the actual pass rates.
+
+      - name: Upload the report
+        if: always() # publish even when the gate fails, so reviewers see why
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-report
+          path: migration-report.md

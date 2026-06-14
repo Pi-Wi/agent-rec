@@ -9,5 +9,4 @@ venv/
 .venv/
 corpus/
 migration-report__*
-examples/
 CLAUDE.local.md
