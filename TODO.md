@@ -6,26 +6,32 @@ use it** (provider coverage), and **how it presents itself** (positioning).
 
 ## P0 — positioning & first impression (cheap, highest leverage)
 
-- [ ] **Reposition the README around migration testing.** Lead with the
+- [x] **Reposition the README around migration testing.** Lead with the
   decision the tool supports ("will the new model break my prompts, and what
   will it cost?") and the zero-authoring dataset insight ("your recorded
   traffic is your eval set"). Demote record/replay to the "how the corpus is
   built" section, pitched as infrastructure plus a free side benefit
   (deterministic offline tests). Name the trigger events (deprecation notice,
   new model release, price change) in the first paragraph.
-- [ ] **Put a rendered sample report above the fold.** Screenshot of the HTML
+- [x] **Put a rendered sample report above the fold.** Screenshot of the HTML
   report (or a trimmed markdown report) right after the 30-second demo:
   record → `agentrec migrate` → `agentrec report --strict --min-pass`. The
   report is the product; today a repo visitor never sees one.
-- [ ] **Frame the recurring use case, not just the episodic one.** Migration
+  _(Done: real 100-prompt report committed to `docs/sample-report.{md,html}`,
+  trimmed excerpt embedded above the fold, full versions linked.)_
+- [x] **Frame the recurring use case, not just the episodic one.** Migration
   is a few-times-a-year event; "gate every prompt change and model swap in CI
   against your recorded corpus" is weekly. Same machinery (`semantic_key`
   groups across parameter changes) — document the prompt-regression workflow
   explicitly so the tool earns a permanent place in CI.
-- [ ] Add 2–3 runnable examples under `examples/` (currently gitignored —
+  _(Done: "Two ways to use it" + CI gate section in README.)_
+- [x] Add 2–3 runnable examples under `examples/` (currently gitignored —
   decide: ship curated examples or drop the ignore entry): a text corpus
   migration, a tool-calling agent step, a CI workflow snippet with
   `--strict --min-pass`.
+  _(Done: dropped the `examples/` ignore entry and shipped the curated set —
+  `generate_corpus_and_migrate.py` (text), `tool_calling_migration.py` (tools),
+  `ci-regression-gate.yml` (CI), plus `examples/README.md`.)_
 
 ## P1 — widen the funnel (the adoption bottleneck)
 

@@ -54,6 +54,18 @@
   keep their 0.5 keys.
 - Cassette summary blocks render tool calls in the `response` field, so a
   tool-calling cassette opens with what the model decided to do.
+- **README repositioned around migration/regression testing.** Leads with the
+  decision the tool supports ("will the new model break my prompts, and what
+  will it cost?") and the zero-authoring insight ("your recorded traffic is
+  your eval set"); a real 100-prompt sample report now sits above the fold
+  (committed to `docs/sample-report.{md,html}`), the episodic-vs-recurring
+  (CI gate) framing is explicit, and record/replay is demoted to a "how the
+  corpus is built" section.  *Why:* the report is the product, and a repo
+  visitor never saw one.
+- **Curated `examples/` now shipped** (was gitignored): a text-corpus
+  migration, a tool-calling agent step (`toolcalls` comparator), and a
+  copy-paste CI regression-gate workflow (`--strict --min-pass`), with an
+  `examples/README.md` index.
 
 ## Dev (0.5.1)
 
