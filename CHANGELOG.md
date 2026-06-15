@@ -1,5 +1,64 @@
 # Changelog
 
+## Dev (0.8.0)
+
+### Added
+- **`agentrec import` — corpus importers from observability exports.** A new
+  `import` subcommand (and `agentrec.import_corpus`) reads **Langfuse**,
+  **LangSmith** or **OpenTelemetry GenAI** exports
+  (`--source langfuse|langsmith|otel|auto`; JSON, JSONL or OTLP
+  `resourceSpans`) and writes cassettes the migration runner consumes exactly
+  like recorded ones — so a team already shipping traffic to an observability
+  backend can run a migration **without running the recorder in prod** (no
+  code change, no perf hit, no PII review of live recording). *Why:* getting
+  the corpus in is the adoption bottleneck, not the engine. An exported
+  interaction carries the prompt and the answer but not the original wire
+  bytes, so each becomes a **synthesized** cassette: one non-streaming JSON
+  request/response in the OpenAI chat-completions dialect, flagged
+  `imported: true` / `imported_from: <source>` in metadata (the real baseline
+  model id is preserved, so reports still name the model that answered). One
+  uniform dialect is deliberate — `semantic_key` is provider-neutral, so an
+  imported prompt and the same prompt recorded natively against another
+  provider group into one migration row. Best-effort and never fatal: a record
+  an importer can't parse becomes a skipped entry with a reason in the returned
+  `ImportSummary`, and non-text parts (images) are dropped from the synthesized
+  prompt. Imported ids (`imported__…`) are ordinary baselines. New exports:
+  `import_corpus`, `ImportSummary`, `ImportSourceError`, `IMPORT_PREFIX`.
+- **Gemini adapter — a third translation dialect.** `providers/gemini.py`
+  translates the `generateContent` REST shape both ways (`contents`/`parts`
+  with `user`/`model` roles, `systemInstruction`, `functionDeclarations` /
+  `functionCall` / `functionResponse` — tool results linked back to their call
+  *by name*, native JSON via `generationConfig.responseMimeType`) and decodes
+  its responses (one JSON document or an `alt=sse` stream). `usageMetadata`
+  normalizes into the disjoint token buckets (`promptTokenCount` is
+  cache-inclusive, `candidatesTokenCount` is output, `thoughtsTokenCount` is
+  informational reasoning). Registered by model prefix `gemini-` and host
+  `generativelanguage`, so OpenAI/Anthropic ↔ Gemini migrations run and
+  imported Gemini traffic decodes; non-text parts and non-object tool-call
+  arguments stay clearly-reasoned skips (same constraints as Anthropic). The
+  core paths — non-streaming and streaming (SSE) decoding, request building,
+  usage normalisation and tool calls — are **verified against the live API**
+  by `tests/test_live_gemini.py` (run against `gemini-2.5-flash`; skips
+  without a key); a couple of build-side translations (tool-result
+  `functionResponse`, JSON mode) remain offline-tested only. The Gemini SDK
+  does not route through httpx, so live *recording* is unavailable — seed a
+  corpus via `agentrec import` and/or use Gemini as a migration *target*.
+  Exported as `agentrec.providers.GeminiAdapter`.
+- README: documented the **production-recording story** ("Recording in
+  production (and why you might not)") and the new **import** path. The
+  importer is named as the recommended way to seed a corpus; the live-recording
+  guidance (sampling, `scrub_response_body=True`, `secret_patterns`, retention)
+  is there for when you must record in prod anyway.
+
+### Changed
+- **`_provider_from_host` now resolves through the adapter registry** instead
+  of hard-coded openai/anthropic host substrings, so a newly registered
+  adapter (Gemini, or a custom override) tags its recordings with the right
+  provider name without editing `keying.py`. The match is by the same host
+  substrings as before, so existing cassette ids and provider tags for OpenAI
+  and Anthropic are unchanged — and `semantic_key` is untouched (the
+  conversation canon did not change), so existing corpora keep their grouping.
+
 ## Dev (0.6.1)
 
 _Version bump to open the 0.6.1 development line; no functional changes yet._

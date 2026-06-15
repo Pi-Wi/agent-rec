@@ -35,21 +35,35 @@ use it** (provider coverage), and **how it presents itself** (positioning).
 
 ## P1 — widen the funnel (the adoption bottleneck)
 
-- [ ] **Corpus importers from observability exports.** `agentrec import`
+- [x] **Corpus importers from observability exports.** `agentrec import`
   for Langfuse/LangSmith exports and OTel GenAI spans → cassettes. This is
   the single highest-impact feature: it lets teams bring months of real
   production traffic to the migration runner **without running the recorder
   in prod** (no perf/PII objections, no code change). Design notes: imported
   interactions won't have raw SSE bytes — introduce a synthesized-JSON
   cassette form and mark provenance (`imported_from`) honestly.
-- [ ] **Gemini adapter** (third dialect). It's the first question under the
+  _(Done 0.8.0: `agentrec import --source langfuse|langsmith|otel|auto`;
+  `importers.py` synthesizes OpenAI-dialect JSON cassettes (`imported_from` /
+  `imported` metadata, `IMPORT_PREFIX`), best-effort with honest per-record
+  skips. Uniform dialect preserves cross-provider `semantic_key` grouping.)_
+- [x] **Gemini adapter** (third dialect). It's the first question under the
   migration positioning; OpenAI↔Anthropic↔Gemini is the triangle teams
   actually evaluate. Needs live verification against the API (tool calls,
   streaming, usage normalization). Check which SDK paths route through httpx;
   if none do, Gemini may be importer-only at first — that's still valuable.
-- [ ] **Document the prod-recording story** (even if the answer is "don't").
+  _(Done 0.8.0: `providers/gemini.py` (generateContent dialect — contents/
+  parts, systemInstruction, functionDeclarations/Call/Response, usageMetadata,
+  SSE) + offline tests. Core paths (non-streaming, streaming, tool calls,
+  usage) **live-verified** against gemini-2.5-flash via
+  `tests/test_live_gemini.py`; tool-result/JSON-mode build remain offline-only.
+  The Gemini SDK doesn't route through httpx, so import / use-as-target is the
+  path for getting Gemini traffic in.)_
+- [x] **Document the prod-recording story** (even if the answer is "don't").
   Sampling, `scrub_response_body=True`, `secret_patterns`, retention. If the
   importer ships first, point to it as the recommended path.
+  _(Done 0.8.0: README "Recording in production (and why you might not)" +
+  "Importing an existing observability export" sections; points at the
+  importer as the recommended path.)_
 
 ## P2 — complete the decision document
 

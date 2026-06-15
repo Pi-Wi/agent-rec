@@ -14,6 +14,12 @@ from .comparators import (
     build_comparators,
     parse_compare_spec,
 )
+from .importers import (
+    IMPORT_PREFIX,
+    ImportSourceError,
+    ImportSummary,
+    import_corpus,
+)
 from .keying import Fingerprint, default_key, fingerprint, fingerprint_of
 from .migration import (
     CategoryBreakdown,
@@ -159,6 +165,11 @@ __all__ = [
     "annotate_corpus",
     "migration_id_for",
     "run_migration",
+    # Corpus importers (observability exports → synthesized cassettes)
+    "IMPORT_PREFIX",
+    "ImportSourceError",
+    "ImportSummary",
+    "import_corpus",
     "render_console",
     "render_html",
     "render_markdown",

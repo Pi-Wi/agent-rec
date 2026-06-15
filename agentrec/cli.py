@@ -8,6 +8,8 @@ report    Re-render the report fully offline from already-recorded cassettes;
           allowed, plus judge served from corpus-cached verdicts.
 annotate  Backfill human-readable summary blocks and fingerprint metadata
           into existing cassettes.
+import     Turn an observability export (Langfuse / LangSmith / OpenTelemetry
+          GenAI spans) into synthesized cassettes the runner can migrate.
 """
 from __future__ import annotations
 
@@ -18,6 +20,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .comparators import OFFLINE_COMPARATOR_NAMES, build_comparators, parse_compare_spec
+from .importers import SOURCES, import_corpus
 from .migration import annotate_corpus, run_migration
 # PricingError subclasses ValueError, so a bad snapshot/--pricing-as-of value
 # lands in main()'s existing usage-error handler (exit 2).
@@ -110,6 +113,23 @@ def _parse(argv: Optional[List[str]]) -> argparse.Namespace:
         "annotate", help="backfill summary blocks and metadata into existing cassettes"
     )
     annotate.add_argument("--corpus", default="corpus", help="corpus directory (default: corpus)")
+
+    importer = sub.add_parser(
+        "import", help="import an observability export into the corpus as cassettes"
+    )
+    importer.add_argument("--corpus", default="corpus", help="corpus directory (default: corpus)")
+    importer.add_argument(
+        "--input", required=True, metavar="FILE",
+        help="export file to import (JSON, JSONL, or OTLP spans)",
+    )
+    importer.add_argument(
+        "--source", default="auto", choices=("auto", *SOURCES),
+        help="export format (default: auto-detect)",
+    )
+    importer.add_argument(
+        "--category", default=None,
+        help="report category to tag every imported row with (when the source carried none)",
+    )
 
     return parser.parse_args(argv)
 
@@ -233,6 +253,22 @@ async def _run_annotate(args: argparse.Namespace) -> int:
     return 0
 
 
+async def _run_import(args: argparse.Namespace) -> int:
+    summary = await import_corpus(
+        args.input, FileStore(args.corpus), source=args.source, category=args.category
+    )
+    print(
+        f"Imported {summary.imported_count} cassette(s) from {summary.source} export "
+        f"into {args.corpus} ({summary.skipped_count} skipped)"
+    )
+    # Surface the first few skip reasons so silent data loss is visible.
+    for ref, reason in summary.skipped[:10]:
+        print(f"  skipped {ref}: {reason}", file=sys.stderr)
+    if summary.skipped_count > 10:
+        print(f"  ... and {summary.skipped_count - 10} more", file=sys.stderr)
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     args = _parse(argv)
     try:
@@ -242,6 +278,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             return asyncio.run(_run_report_command(args, offline=True))
         if args.command == "annotate":
             return asyncio.run(_run_annotate(args))
+        if args.command == "import":
+            return asyncio.run(_run_import(args))
     except (ValueError, LookupError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 
 from ..capture import CapturedInteraction
 from .anthropic import AnthropicAdapter
+from .gemini import GeminiAdapter
 from .base import (
     Conversation,
     DecodedResponse,
@@ -48,6 +49,7 @@ __all__ = [
     "sse_data_lines",
     "OpenAIAdapter",
     "AnthropicAdapter",
+    "GeminiAdapter",
     "register",
     "adapters",
     "adapter_for_provider",
@@ -105,6 +107,7 @@ def adapter_for_host(host: str) -> Optional[ProviderAdapter]:
 
 register(OpenAIAdapter())
 register(AnthropicAdapter())
+register(GeminiAdapter())
 
 
 def _adapter_for_interaction(interaction: CapturedInteraction) -> ProviderAdapter:

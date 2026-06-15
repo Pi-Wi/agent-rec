@@ -16,12 +16,16 @@ the OpenAI SDK, the Anthropic SDK, LangChain, or any httpx-backed client), so
 the prompts you already run in development or production *are* the corpus you
 migrate against — no hand-authored test cases, no golden answers to maintain.
 
-> **Status:** beta (0.6.1). Migration translation covers OpenAI ↔ Anthropic
+> **Status:** beta (0.8.0). Migration translation covers OpenAI ↔ Anthropic
 > conversations including **tool use** (definitions, assistant tool calls, tool
-> results) and JSON mode; images and strict `json_schema` become
-> clearly-reasoned skipped rows. Record/replay is proven for streaming (SSE)
-> and non-streaming (JSON) on OpenAI and Anthropic, sync and async. The API may
-> still change in minor releases before 1.0. See [CHANGELOG](CHANGELOG.md).
+> results) and JSON mode; a **Gemini** dialect is included as a third
+> translation target (request/response, streaming and tool-call paths verified
+> against the live API — see `tests/test_live_gemini.py`). Images and strict
+> `json_schema` become clearly-reasoned skipped rows. Record/replay is proven for streaming (SSE) and non-streaming
+> (JSON) on OpenAI and Anthropic, sync and async — or **import** an existing
+> Langfuse / LangSmith / OpenTelemetry export as a corpus without running the
+> recorder at all. The API may still change in minor releases before 1.0. See
+> [CHANGELOG](CHANGELOG.md).
 
 ## The report is the product
 
@@ -268,6 +272,49 @@ Recordings tagged with a category —
 breakdown in the report. `agentrec annotate --corpus corpus` backfills
 summaries and metadata onto an existing corpus.
 
+### Importing an existing observability export
+
+Already shipping traffic to an LLM-observability backend? You don't need to run
+the recorder at all. `agentrec import` reads a **Langfuse**, **LangSmith** or
+**OpenTelemetry GenAI** export and writes cassettes the migration runner
+consumes like recorded ones:
+
+```bash
+agentrec import --source langfuse --input traces.jsonl --corpus corpus
+agentrec import --input otel-spans.json --corpus corpus   # --source auto-detected
+```
+
+An exported interaction has the prompt and the answer but not the original wire
+bytes, so an imported cassette is **synthesized**: one non-streaming JSON
+request/response in a canonical dialect, marked `imported_from` /
+`imported: true` in its metadata (the real baseline model id is preserved, so
+reports still name the model that answered). Because `semantic_key` is derived
+from the provider-neutral conversation, imported and natively-recorded prompts
+group together — so you can bring months of production traffic to a migration
+with no code change, no perf hit, and no PII review of live recording. A record
+an importer can't parse becomes a skipped entry with a reason, never a failed
+run.
+
+### Recording in production (and why you might not)
+
+The natural next question is "should I just run the recorder in prod?" Usually
+**no** — prefer the importer above: it needs no change in the hot path and no
+new place for prompts to land on disk. If you *do* record live, treat the
+corpus as sensitive:
+
+- **Sample.** You want coverage of each prompt *shape*, not every call. Gate
+  the `cassette` scope behind your own sampler and record a small fraction;
+  `semantic_key` grouping means one good recording per shape is enough for a
+  full migration corpus, so a low rate keeps both the corpus and the overhead
+  small.
+- **Scrub responses too.** `FileStore` redacts auth headers and scrubs known
+  secret shapes from request bodies by default, but response bodies are stored
+  verbatim (they are the replay source of truth). Pass
+  `scrub_response_body=True` for live corpora, and extend `secret_patterns=[...]`
+  with your organisation's token shapes.
+- **Set a retention policy.** Cassettes are plain files — rotate and expire
+  them like any other data export, and review a corpus before sharing it.
+
 ### Design notes
 
 ```
@@ -277,13 +324,14 @@ agentrec/
   store.py        # InMemoryStore + FileStore (human-readable JSON cassettes)
   transport.py    # RecordingTransport / ReplayTransport / AutoTransport
   session.py      # async_client() + cassette — the ergonomic seam
-  providers/      # OpenAI + Anthropic request/response dialects
+  providers/      # OpenAI + Anthropic + Gemini request/response dialects
   comparators.py  # exact / fuzzy / json / toolcalls / embedding / judge scoring
   migration.py    # run_migration() — replay the corpus against a candidate model
+  importers.py    # Langfuse / LangSmith / OTel exports → synthesized cassettes
   pricing.py      # versioned pricing snapshots → derived cost estimates
   pricing_data/   # built-in list-price snapshots (anthropic-list, openai-list)
   report.py       # Markdown / HTML / console rendering
-  cli.py          # agentrec migrate | report | annotate
+  cli.py          # agentrec migrate | report | annotate | import
 ```
 
 - **Tee, don't buffer:** the caller and the store see every chunk in order,

@@ -89,12 +89,22 @@ class Fingerprint:
 
 
 def _provider_from_host(host: str) -> str:
-    host = host.lower()
-    if "anthropic" in host:
-        return "anthropic"
-    if "openai" in host:
-        return "openai"
-    return host or "unknown"
+    """Provider name for a request host, resolved through the adapter registry.
+
+    Delegating to the registry keeps provider knowledge in the adapters: a
+    newly registered adapter (Gemini, or a custom override) tags its
+    recordings correctly without editing this module.  Falls back to the bare
+    host when no adapter matches.  (The match is by host substring, identical
+    to the previous hard-coded openai/anthropic checks, so existing cassette
+    ids are unchanged.)
+    """
+    # Deferred import: providers (lazily) imports keying for summaries.
+    from .providers import adapter_for_host
+
+    adapter = adapter_for_host(host)
+    if adapter is not None:
+        return adapter.name
+    return host.lower() or "unknown"
 
 
 def _canonical(obj) -> str:

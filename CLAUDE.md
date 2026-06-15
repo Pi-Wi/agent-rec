@@ -9,8 +9,10 @@ know where things live.
 Framework-agnostic **record/replay for LLM API traffic** (at the httpx
 transport layer, below any SDK) plus a **model-migration report** built on the
 recorded corpus: replay every recorded prompt against a target model,
-translate cross-provider (OpenAI ↔ Anthropic), score baseline vs. target with
-pluggable comparators, gate CI on pass rates, and derive cost/latency columns.
+translate cross-provider (OpenAI ↔ Anthropic ↔ Gemini), score baseline vs.
+target with pluggable comparators, gate CI on pass rates, and derive
+cost/latency columns. The corpus can also be **imported** from an
+observability export (Langfuse/LangSmith/OTel) instead of recorded.
 Core runtime dependency: `httpx` only. Python ≥ 3.10. Version lives in
 `pyproject.toml`; keep `CHANGELOG.md` updated in the same style (## Dev
 (x.y.z) / ### Added / ### Changed, bold lead-ins, *why* included).
@@ -27,12 +29,14 @@ Core runtime dependency: `httpx` only. Python ≥ 3.10. Version lives in
 | `providers/base.py` | provider-neutral forms | `ProviderAdapter` ABC (`extract_conversation` / `build_request` / `decode_response` / `normalize_usage`), `Conversation`, `DecodedResponse`, `ToolCall`, `TokenUsage`, `UnsupportedRequestError`, `DecodeError`, `MissingAPIKeyError`, `format_conversation`, `render_response`, `sse_data_lines` |
 | `providers/openai.py` | chat-completions dialect | tools/`tool_calls`/`role:"tool"`, SSE delta accumulation, o-series quirks (`max_completion_tokens`, no sampling params) |
 | `providers/anthropic.py` | Messages dialect | `tool_use`/`tool_result` blocks, `input_json_delta` accumulation, JSON-mode emulation via system-prompt suffix, role-alternation merging, `max_tokens` required |
+| `providers/gemini.py` | Gemini `generateContent` dialect | `contents`/`parts` (roles user/model), `systemInstruction`, `functionDeclarations`/`functionCall`/`functionResponse` (results linked by *name*), native JSON via `responseMimeType`, `usageMetadata`; core paths (non-stream/stream/tool-calls/usage) **live-verified** via `tests/test_live_gemini.py` (gemini-2.5-flash); tool-result/JSON-mode build still offline-only |
 | `providers/__init__.py` | registry + interaction helpers | `register` (later registrations win → override built-ins), `adapter_for_provider/model/host`, `decode_interaction`, `conversation_of`, `usage_of`, `build_summary`, content-encoding decompression |
 | `comparators.py` | response scoring | `exact`, `fuzzy`, `json` (field scope `json:a,b`), `toolcalls`, `embedding` (OpenAI API), `judge` (LLM, corpus-cached verdicts); `parse_compare_spec`, `build_comparators`, `OFFLINE_COMPARATOR_NAMES`, `JUDGE_PREFIX` |
 | `migration.py` | the runner | `run_migration()`, `RowResult`, `MigrationReport` (`.aggregates/.gates/.strict_passed/.token_totals/.latency_stats/.by_category`), `LatencyStats`, `annotate_corpus`, `MIGRATION_PREFIX`, retry/backoff on 429/431/5xx/529 |
+| `importers.py` | observability-export importers | `import_corpus()` (async), `ImportSummary`, Langfuse/LangSmith/OTel-GenAI parsers → **synthesized** OpenAI-dialect JSON cassettes (`IMPORT_PREFIX`, `imported_from`/`imported` metadata, honest per-record skips) |
 | `pricing.py` | derived cost estimates | `PricingCatalog.load(*dirs)`, `price_report()`, versioned immutable snapshots (`Decimal` math, sha256 provenance, `--pricing-as-of latest|recorded|YYYY-MM-DD`), built-ins in `pricing_data/` |
 | `report.py` | rendering | `render_markdown` / `render_html` (self-contained, no JS) / `render_console` (ASCII-safe) |
-| `cli.py` | `agentrec migrate \| report \| annotate` | `report` is the offline path (offline comparators + judge from cached verdicts only) |
+| `cli.py` | `agentrec migrate \| report \| annotate \| import` | `report` is the offline path (offline comparators + judge from cached verdicts only); `import` seeds a corpus from an observability export |
 
 ## Core invariants — do not break these
 
@@ -155,10 +159,25 @@ fenced output, malformed verdicts) are the house specialty.
 - Pricing snapshots are immutable dated JSON; never mutate one — add a new
   date. Profile name collisions: user `--pricing-dir` shadows built-ins.
 
+## Imported (synthesized) cassettes
+
+`agentrec import` writes cassettes that were never recorded: one synthesized
+non-streaming JSON request/response in the **OpenAI chat-completions dialect**
+(the universal shape), regardless of the source model's real provider. The
+true model id is kept on the body (reports name it); `metadata.provider` is
+`openai` (the synthesized wire dialect) and `imported`/`imported_from` flag the
+synthesis honestly. One uniform dialect is deliberate — `semantic_key` is
+provider-neutral, so imported and natively-recorded prompts group together.
+Imported ids (`imported__…`) are ordinary baselines (only `migration__`/`judge__`
+are excluded). Adding a source = one parser in `importers.py` + a `SOURCES`
+entry; parsers raise `_Skip(reason)` for a record they can't use (never fatal).
+
 ## Roadmap candidates (agreed direction, not yet built)
 
-Gemini adapter (third dialect); corpus importers from observability exports
-(Langfuse/LangSmith/OTel GenAI spans) so prod traffic can seed a corpus
-without running the recorder in prod; OpenRouter-fed pricing snapshot
-refresh; README repositioning around migration/regression testing with a
-rendered sample report up top.
+See `TODO.md` for the live roadmap. **Shipped** since this note was first
+written: Gemini adapter (0.8.0 — core paths live-verified via
+`tests/test_live_gemini.py`), observability-export importers (0.8.0), README
+repositioning (0.6.0).
+**Still open:** OpenRouter-fed pricing-snapshot refresh, latency for streamed
+targets, configurable judge model, an embedding comparator that doesn't require
+an OpenAI key, and the OpenAI Responses API (`/v1/responses`) dialect.
