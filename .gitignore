@@ -10,3 +10,4 @@ venv/
 corpus/
 migration-report__*
 CLAUDE.local.md
+.claude

@@ -16,7 +16,7 @@ the OpenAI SDK, the Anthropic SDK, LangChain, or any httpx-backed client), so
 the prompts you already run in development or production *are* the corpus you
 migrate against — no hand-authored test cases, no golden answers to maintain.
 
-> **Status:** beta (0.6.0). Migration translation covers OpenAI ↔ Anthropic
+> **Status:** beta (0.6.1). Migration translation covers OpenAI ↔ Anthropic
 > conversations including **tool use** (definitions, assistant tool calls, tool
 > results) and JSON mode; images and strict `json_schema` become
 > clearly-reasoned skipped rows. Record/replay is proven for streaming (SSE)

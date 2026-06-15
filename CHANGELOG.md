@@ -1,5 +1,9 @@
 # Changelog
 
+## Dev (0.6.1)
+
+_Version bump to open the 0.6.1 development line; no functional changes yet._
+
 ## Dev (0.6.0)
 
 ### Added
