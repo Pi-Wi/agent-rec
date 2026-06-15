@@ -58,6 +58,14 @@
   substrings as before, so existing cassette ids and provider tags for OpenAI
   and Anthropic are unchanged — and `semantic_key` is untouched (the
   conversation canon did not change), so existing corpora keep their grouping.
+- **Reports are written to a dedicated `reports/` directory by default**,
+  instead of the current working directory. `agentrec migrate|report` gain
+  `--out-dir DIR` (default `reports`, created if missing); `--out` still takes
+  an explicit base path and overrides it. *Why:* a run dropped timestamped
+  `migration-report__*.{md,html}` files loose in the repo root. This also fixes
+  report filenames for target ids containing a dot (e.g. `gemini-2.5-flash`),
+  which the previous `Path.with_suffix` handling truncated. The shipped
+  `examples/` write their reports under `reports/` too.
 
 ## Dev (0.6.1)
 

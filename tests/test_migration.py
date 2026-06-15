@@ -786,7 +786,9 @@ def test_cli_strict_min_pass_gates_and_renders(corpus: FileStore, monkeypatch, t
     assert cli_main(base_args + ["--min-pass", "judge=0.5"]) == 2
 
 
-def test_cli_report_accepts_json_comparator_offline(corpus: FileStore, monkeypatch, capsys):
+def test_cli_report_accepts_json_comparator_offline(
+    corpus: FileStore, monkeypatch, capsys, tmp_path: Path
+):
     """`json` is offline: the report command's gate must let it through."""
     import asyncio
 
@@ -796,11 +798,38 @@ def test_cli_report_accepts_json_comparator_offline(corpus: FileStore, monkeypat
     # No --strict: this corpus's answers are plain words, so the json
     # comparator degrades to an errored result per row — which is exactly
     # what --strict is meant to flag. Here we only prove the gate accepts it.
+    # --out-dir keeps the report under tmp_path (not the repo root).
+    out_dir = tmp_path / "reports"
     code = cli_main(
-        ["report", "--corpus", str(corpus.root), "--target", TARGET_MODEL, "--compare", "json"]
+        ["report", "--corpus", str(corpus.root), "--target", TARGET_MODEL,
+         "--compare", "json", "--out-dir", str(out_dir)]
     )
     assert code == 0
     assert "json" in capsys.readouterr().out
+    assert list(out_dir.glob("migration-report__*"))
+
+
+def test_cli_report_out_dir_default_and_dotted_target(
+    corpus: FileStore, monkeypatch, capsys, tmp_path: Path
+):
+    """Reports land in --out-dir, and a dotted target id is not truncated."""
+    import asyncio
+
+    asyncio.run(_seed_baseline(corpus))
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    out_dir = tmp_path / "out"
+    # gemini-2.5-flash has no recorded migration cassette here, so rows skip —
+    # but the report files are still written, which is what we're checking.
+    code = cli_main(
+        ["report", "--corpus", str(corpus.root), "--target", "gemini-2.5-flash",
+         "--compare", "exact", "--format", "both", "--out-dir", str(out_dir)]
+    )
+    assert code == 0
+    names = sorted(p.name for p in out_dir.glob("*"))
+    # Both formats written, and the dot in "2.5" did NOT truncate the name.
+    assert any(n.endswith(".md") and "gemini-2.5-flash" in n for n in names)
+    assert any(n.endswith(".html") and "gemini-2.5-flash" in n for n in names)
 
 
 def test_cli_report_rejects_online_comparators(corpus: FileStore, capsys):

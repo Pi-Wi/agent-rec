@@ -62,7 +62,13 @@ def _add_report_args(parser: argparse.ArgumentParser, *, default_compare: str) -
     )
     parser.add_argument(
         "--out", default=None,
-        help="output base path (extension added per format; default: migration-report__<target>__<timestamp>)",
+        help="explicit output base path (extension added per format); overrides "
+             "--out-dir. Default base name: migration-report__<target>__<timestamp>",
+    )
+    parser.add_argument(
+        "--out-dir", default="reports", metavar="DIR",
+        help="directory the report files are written to when --out is not given "
+             "(default: reports; created if missing)",
     )
     parser.add_argument(
         "--strict", action="store_true",
@@ -135,18 +141,27 @@ def _parse(argv: Optional[List[str]]) -> argparse.Namespace:
 
 
 def _write_reports(args: argparse.Namespace, report, pricing: List[ReportPricing]) -> List[Path]:
-    base = args.out or default_report_basename(args.target)
-    base_path = Path(base)
-    if base_path.suffix.lower() in (".md", ".html"):
-        base_path = base_path.with_suffix("")
-    written: List[Path] = []
+    if args.out:
+        base = Path(args.out)
+        # Strip a user-supplied .md/.html so we can add the per-format extension.
+        if base.suffix.lower() in (".md", ".html"):
+            base = base.with_name(base.stem)
+    else:
+        # Default: a dedicated reports directory, not the working directory.
+        base = Path(args.out_dir) / default_report_basename(args.target)
+    base.parent.mkdir(parents=True, exist_ok=True)
+    renderers = []
     if args.format in ("md", "both"):
-        path = base_path.with_suffix(".md")
-        path.write_text(render_markdown(report, pricing=pricing), encoding="utf-8")
-        written.append(path)
+        renderers.append((".md", render_markdown))
     if args.format in ("html", "both"):
-        path = base_path.with_suffix(".html")
-        path.write_text(render_html(report, pricing=pricing), encoding="utf-8")
+        renderers.append((".html", render_html))
+    written: List[Path] = []
+    for suffix, render in renderers:
+        # Concatenate the extension instead of Path.with_suffix: a target id like
+        # gemini-2.5-flash contains a dot that with_suffix would mistake for an
+        # extension and truncate the filename.
+        path = base.parent / (base.name + suffix)
+        path.write_text(render(report, pricing=pricing), encoding="utf-8")
         written.append(path)
     return written
 

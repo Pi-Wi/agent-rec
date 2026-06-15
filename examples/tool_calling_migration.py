@@ -150,13 +150,15 @@ async def main() -> int:
     comparators = build_comparators("toolcalls")
     report = await run_migration(store, args.target, comparators, concurrency=4)
 
-    base = ROOT / default_report_basename(f"{args.target}-tools")
+    reports_dir = ROOT / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    base = reports_dir / default_report_basename(f"{args.target}-tools")
     renderers = {".html": render_html, ".md": render_markdown}
     suffixes = {"html": (".html",), "md": (".md",), "all": (".md", ".html")}[args.format]
     print()
     _safe_print(render_console(report))
     for suffix in suffixes:
-        path = base.with_suffix(suffix)
+        path = base.parent / (base.name + suffix)
         path.write_text(renderers[suffix](report), encoding="utf-8")
         _safe_print(f"\nReport written: {path}")
     return 0

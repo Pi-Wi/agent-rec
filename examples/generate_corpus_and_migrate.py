@@ -304,12 +304,15 @@ async def main() -> int:
         )
 
     # --- Phase 3: render ----------------------------------------------------
-    base = Path(args.out) if args.out else ROOT / default_report_basename(args.target)
+    reports_dir = ROOT / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    base = Path(args.out) if args.out else reports_dir / default_report_basename(args.target)
     renderers = {".html": render_html, ".md": render_markdown}
     suffixes = {"html": (".html",), "md": (".md",), "all": (".md", ".html")}[args.format]
     written = []
     for suffix in suffixes:
-        path = base.with_suffix(suffix)
+        # base.name + suffix (not with_suffix): dot-safe for ids like gemini-2.5-flash.
+        path = base.parent / (base.name + suffix)
         path.write_text(renderers[suffix](report), encoding="utf-8")
         written.append(path)
 

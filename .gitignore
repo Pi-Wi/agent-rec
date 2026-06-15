@@ -8,6 +8,8 @@ dist/
 venv/
 .venv/
 corpus/
+corpus-support/
+reports/
 migration-report__*
 CLAUDE.local.md
 .claude
