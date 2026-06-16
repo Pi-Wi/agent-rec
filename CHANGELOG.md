@@ -1,5 +1,92 @@
 # Changelog
 
+## Dev (0.10.0)
+
+### Added
+- **Second-opinion judge — two LLM judges, disagreement flagged.** The `judge`
+  comparator now takes an optional second model (`--judge-model-2`, or
+  `$AGENTREC_JUDGE_MODEL_2`): both judges score every row, each verdict cached
+  on its own model, and the row passes only when *both* call the responses
+  equivalent. A split decision fails the row and is flagged `[judges
+  disagreed]` in the report — the gate-safe default for a corpus where a single
+  judge shouldn't quietly decide a CI pass/fail. *Why:* on gate-critical corpora
+  a lone LLM verdict is a single point of failure; a cheap second opinion
+  surfaces the rows worth a human's eyes. The single-judge path is byte-for-byte
+  unchanged (same result shape, same cache ids), so existing cached verdicts
+  stay valid.
+- **Configurable judge model from the environment.** The judge model resolves
+  `--judge-model` → `$AGENTREC_JUDGE_MODEL_1` (with the unsuffixed
+  `$AGENTREC_JUDGE_MODEL` accepted as an alias) → built-in default
+  (`claude-opus-4-8`), so the judge can be pinned once in `.env` instead of on
+  every command. Exposed as `agentrec.DEFAULT_JUDGE_MODEL`.
+
+### Changed
+- **Migration targets are now streamed.** The runner issues its target call as a
+  streaming request (`build_request(..., stream=True)` — `stream: true` for the
+  chat-completions/Anthropic dialects, the `streamGenerateContent?alt=sse`
+  endpoint for Gemini) and times the **real** first chunk, so a streamed
+  baseline's true time-to-first-chunk now compares against a real target TTFB
+  instead of a target whose first-chunk time was indistinguishable from its
+  total (TODO P2). Reports gain a `TTFB (mean)` totals row, a per-row `TTFB`
+  entry in the details, and a console line — shown only for rows where *both*
+  sides streamed. The response is re-decoded by its content type, so a target
+  that ignores `stream` and answers with a JSON body still decodes correctly;
+  the recorded migration cassette is the SSE stream (cached re-runs read its
+  TTFB from metadata). `stream`/`stream_options` stay out of a request's
+  cassette identity, so a prompt keys the same whether or not it was streamed.
+- `ProviderAdapter.build_request` grew a `stream: bool = False` keyword (default
+  off, so the judge/embedding/import callers are unchanged). `OpenAIAdapter`
+  adds `stream_options: {"include_usage": true}` when streaming so the report's
+  token columns stay populated for streamed targets; `MistralAdapter` overrides
+  this (Mistral streams usage by default and rejects `stream_options`) — a
+  fourth dialect hook (`_stream_body_fields`) alongside the existing three.
+
+## Dev (0.9.0)
+
+### Added
+- **Mistral adapter — a fourth translation dialect.** `providers/mistral.py`
+  adds Mistral (`api.mistral.ai/v1/chat/completions`) as a migration
+  source/target, so OpenAI ↔ Anthropic ↔ Gemini ↔ Mistral now all interoperate.
+  Mistral speaks the **same chat-completions dialect as OpenAI** (`messages`,
+  `tools` / `tool_calls`, SSE `chat.completion.chunk` deltas,
+  `prompt_tokens` / `completion_tokens` usage, native
+  `response_format: {"type": "json_object"}`), so the adapter subclasses
+  `OpenAIAdapter` and overrides only the three places Mistral genuinely
+  differs: it forces a tool call with `"any"` (OpenAI's `"required"`; both map
+  to the neutral `"required"`); it validates `tool_call_id` against
+  `^[a-zA-Z0-9]{9}$`, so an id carried over from another provider (Anthropic
+  `toolu_…`, OpenAI `call_…`) or synthesized for a hand-built conversation is
+  remapped to a stable 9-character form (call and result kept on one id); and
+  none of its models carry the o-series `max_completion_tokens` quirk (Magistral
+  reasons but bills the same way). Decoding, usage normalisation and
+  conversation extraction are inherited unchanged. The core paths —
+  non-streaming and streaming (SSE) decoding, request building, usage
+  normalisation and a forced tool call — are **verified against the live API**
+  by `tests/test_live_mistral.py` (run against `mistral-small-latest`; skips
+  without a key). *Why:* OpenAI ↔ Anthropic ↔ Gemini ↔ Mistral is the set teams
+  actually weigh, and Mistral was the cheapest dialect to add faithfully because
+  it reuses the chat-completions machinery the OpenAI adapter already
+  live-tests. Like Gemini, Mistral's SDK does not route through httpx, so seed a
+  corpus via `agentrec import` and/or use Mistral as a migration *target*.
+  Registered by host `mistral` and the `mistral-` / `open-mistral-` /
+  `open-mixtral-` / `codestral-` / `ministral-` / `pixtral-` / `magistral-` /
+  `devstral-` model prefixes. Exported as `agentrec.providers.MistralAdapter`.
+- **Built-in `mistral-list` pricing profile.** A dated snapshot
+  (`pricing_data/mistral-list/2026-06-16.json`) of Mistral La Plateforme list
+  prices, so `--pricing mistral-list` (or `--pricing openai-list+mistral-list`
+  for a cross-provider view) fills the cost columns for Mistral targets instead
+  of flagging them unpriced. Same discipline as the other snapshots: immutable,
+  dated, source-cited, verify-before-billing.
+
+### Changed
+- `OpenAIAdapter` grew three small, overridable dialect hooks
+  (`_extract_tool_choice`, `_is_reasoning_model`, `_wire_call_id`, plus the
+  `_required_tool_choice` token) so the Mistral subclass expresses its deltas
+  without forking the chat-completions decode/build code. The defaults are
+  no-ops: OpenAI's extracted conversations and built requests are byte-for-byte
+  unchanged, so existing cassettes, `semantic_key` grouping and record/replay
+  are untouched.
+
 ## Dev (0.8.0)
 
 ### Added

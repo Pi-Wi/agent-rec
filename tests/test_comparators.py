@@ -429,6 +429,115 @@ async def test_judge_lenient_parse_failure_is_an_error_not_a_crash(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# Two-judge (second-opinion) mode
+# ---------------------------------------------------------------------------
+
+
+def _per_model_judge_handler(verdicts: dict, calls: dict):
+    """Mock judge that answers per request model, counting calls per model."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        model = json.loads(request.content)["model"]
+        calls[model] = calls.get(model, 0) + 1
+        equivalent, score = verdicts[model]
+        verdict = json.dumps(
+            {"equivalent": equivalent, "score": score, "reason": f"{model} reason"}
+        )
+        return httpx.Response(
+            200,
+            json={
+                "model": model,
+                "content": [{"type": "text", "text": verdict}],
+                "stop_reason": "end_turn",
+            },
+        )
+
+    return handler
+
+
+async def test_two_judges_agree_pass_and_average(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    calls: dict = {}
+    handler = _per_model_judge_handler(
+        {"claude-opus-4-8": (True, 0.9), "claude-haiku-4-5": (True, 0.8)}, calls
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        judge = JudgeComparator(
+            http, judge_model="claude-opus-4-8", second_judge_model="claude-haiku-4-5"
+        )
+        result = await judge.compare("p", _resp("a"), _resp("b"))
+
+    assert result.passed is True
+    assert result.score == pytest.approx((0.9 + 0.8) / 2)
+    assert "claude-opus-4-8: equivalent" in result.detail
+    assert "claude-haiku-4-5: equivalent" in result.detail
+    assert "disagreed" not in result.detail
+    assert calls == {"claude-opus-4-8": 1, "claude-haiku-4-5": 1}
+
+
+async def test_two_judges_disagreement_fails_and_is_flagged(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    calls: dict = {}
+    handler = _per_model_judge_handler(
+        {"claude-opus-4-8": (True, 0.9), "claude-haiku-4-5": (False, 0.2)}, calls
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        judge = JudgeComparator(
+            http, judge_model="claude-opus-4-8", second_judge_model="claude-haiku-4-5"
+        )
+        result = await judge.compare("p", _resp("a"), _resp("b"))
+
+    # Gate-safe: a split decision does not pass, and the split is flagged.
+    assert result.passed is False
+    assert "[judges disagreed]" in result.detail
+    assert result.score == pytest.approx((0.9 + 0.2) / 2)
+
+
+async def test_two_judges_cache_independently(monkeypatch):
+    from agentrec import InMemoryStore
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    store = InMemoryStore()
+    calls: dict = {}
+    handler = _per_model_judge_handler(
+        {"claude-opus-4-8": (True, 0.9), "claude-haiku-4-5": (True, 0.7)}, calls
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        judge = JudgeComparator(
+            http,
+            judge_model="claude-opus-4-8",
+            second_judge_model="claude-haiku-4-5",
+            store=store,
+        )
+        first = await judge.compare("p", _resp("a"), _resp("b"))
+        second = await judge.compare("p", _resp("a"), _resp("b"))
+
+    # One buy per model on the first call; the second call is fully cached.
+    assert calls == {"claude-opus-4-8": 1, "claude-haiku-4-5": 1}
+    assert first.passed is True and second.passed is True
+    assert "[cached]" in second.detail
+    # Each model cached its verdict under its own id (texts are "a"/"b").
+    opus_id = judge.cache_id("a", "b", model="claude-opus-4-8")
+    haiku_id = judge.cache_id("a", "b", model="claude-haiku-4-5")
+    assert opus_id != haiku_id
+    assert await store.has(opus_id) and await store.has(haiku_id)
+    assert opus_id.startswith("judge__") and haiku_id.startswith("judge__")
+
+
+async def test_blank_second_judge_is_ignored(monkeypatch):
+    """An empty AGENTREC_JUDGE_MODEL_2 must not silently double the judge bill."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    calls: dict = {}
+    handler = _per_model_judge_handler({"claude-opus-4-8": (True, 0.9)}, calls)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        judge = JudgeComparator(http, judge_model="claude-opus-4-8", second_judge_model="")
+        result = await judge.compare("p", _resp("a"), _resp("b"))
+    assert result.passed is True
+    assert result.detail == "claude-opus-4-8 reason"  # single-judge detail shape
+    assert calls == {"claude-opus-4-8": 1}
+
+
+# ---------------------------------------------------------------------------
 # Spec parsing
 # ---------------------------------------------------------------------------
 

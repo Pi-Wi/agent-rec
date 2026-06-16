@@ -182,6 +182,7 @@ class GeminiAdapter(ProviderAdapter):
         model: str,
         *,
         max_tokens_default: int = 4096,
+        stream: bool = False,
     ) -> Tuple[str, Dict[str, str], dict]:
         contents = _messages_to_contents(conversation.messages)
         body: dict = {"contents": contents}
@@ -220,7 +221,12 @@ class GeminiAdapter(ProviderAdapter):
         if generation_config:
             body["generationConfig"] = generation_config
 
-        url = f"{_API_BASE}/{model}:generateContent"
+        # Streaming is a different endpoint (and ?alt=sse asks for the SSE wire
+        # form the decoder reads, not the default chunked-JSON-array form).
+        if stream:
+            url = f"{_API_BASE}/{model}:streamGenerateContent?alt=sse"
+        else:
+            url = f"{_API_BASE}/{model}:generateContent"
         headers = {
             "x-goog-api-key": self.api_key(),
             "Content-Type": "application/json",

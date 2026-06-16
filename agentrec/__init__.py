@@ -2,6 +2,7 @@ from importlib.metadata import PackageNotFoundError, version as _version
 
 from .capture import CapturedChunk, CapturedInteraction, CapturedRequest
 from .comparators import (
+    DEFAULT_JUDGE_MODEL,
     Comparator,
     ComparisonResult,
     EmbeddingComparator,
@@ -144,6 +145,7 @@ __all__ = [
     "RowCost",
     "price_report",
     # Comparators
+    "DEFAULT_JUDGE_MODEL",
     "Comparator",
     "ComparisonResult",
     "ExactMatchComparator",

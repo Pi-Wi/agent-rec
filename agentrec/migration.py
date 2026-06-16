@@ -158,6 +158,11 @@ class RowResult:
     # a cached re-run.
     baseline_latency_s: Optional[float] = None
     target_latency_s: Optional[float] = None
+    # Time-to-first-chunk (TTFB), same provenance as the totals above.  Present
+    # only when the call was streamed — the target now is (so its TTFB is a real
+    # number), and the baseline's is present when it was recorded streaming.
+    baseline_latency_first_chunk_s: Optional[float] = None
+    target_latency_first_chunk_s: Optional[float] = None
     comparisons: List[ComparisonResult] = field(default_factory=list)
     status: str = "ok"  # "ok" | "skipped" | "error"
     reason: Optional[str] = None
@@ -201,16 +206,30 @@ class LatencyStats:
     Informational only — it never gates ``--strict``.  Baseline latencies are
     recording-time provenance (the network and load of whenever the cassette
     was recorded), so read the ratio as an indication, not a benchmark.
+
+    The ``*_first_chunk_mean_s`` fields are the time-to-first-chunk (TTFB)
+    means over the ``first_chunk_rows`` subset where BOTH sides were streamed
+    (so the comparison is apples-to-apples); ``None`` when no row qualifies.
     """
 
     rows: int
     baseline_mean_s: float
     target_mean_s: float
+    first_chunk_rows: int = 0
+    baseline_first_chunk_mean_s: Optional[float] = None
+    target_first_chunk_mean_s: Optional[float] = None
 
     @property
     def ratio(self) -> Optional[float]:
         """target/baseline mean latency — <1 means the target answered faster."""
         return self.target_mean_s / self.baseline_mean_s if self.baseline_mean_s else None
+
+    @property
+    def first_chunk_ratio(self) -> Optional[float]:
+        """target/baseline mean TTFB — None unless both means are known."""
+        if not self.baseline_first_chunk_mean_s or self.target_first_chunk_mean_s is None:
+            return None
+        return self.target_first_chunk_mean_s / self.baseline_first_chunk_mean_s
 
 
 @dataclass(frozen=True)
@@ -313,7 +332,13 @@ class MigrationReport:
         )
 
     def latency_stats(self, rows: Optional[List[RowResult]] = None) -> Optional[LatencyStats]:
-        """Mean latency over rows where baseline AND target latency are known."""
+        """Mean latency over rows where baseline AND target latency are known.
+
+        TTFB means are computed over the (possibly smaller) subset of those
+        rows where both sides also carry a first-chunk time — i.e. both were
+        streamed — so a non-streamed baseline simply leaves the TTFB means out
+        rather than skewing them against the streamed target.
+        """
         pool = self.ok_rows if rows is None else rows
         counted = [
             row
@@ -322,10 +347,27 @@ class MigrationReport:
         ]
         if not counted:
             return None
+        ttfb = [
+            row
+            for row in counted
+            if row.baseline_latency_first_chunk_s is not None
+            and row.target_latency_first_chunk_s is not None
+        ]
         return LatencyStats(
             rows=len(counted),
             baseline_mean_s=sum(row.baseline_latency_s for row in counted) / len(counted),
             target_mean_s=sum(row.target_latency_s for row in counted) / len(counted),
+            first_chunk_rows=len(ttfb),
+            baseline_first_chunk_mean_s=(
+                sum(row.baseline_latency_first_chunk_s for row in ttfb) / len(ttfb)
+            )
+            if ttfb
+            else None,
+            target_first_chunk_mean_s=(
+                sum(row.target_latency_first_chunk_s for row in ttfb) / len(ttfb)
+            )
+            if ttfb
+            else None,
         )
 
     def by_category(self) -> List[CategoryBreakdown]:
@@ -520,6 +562,10 @@ async def run_migration(
         row.baseline_recorded_at = recorded_at if isinstance(recorded_at, str) else None
         latency = interaction.metadata.get("latency_s")
         row.baseline_latency_s = float(latency) if isinstance(latency, (int, float)) else None
+        first_chunk = interaction.metadata.get("latency_first_chunk_s")
+        row.baseline_latency_first_chunk_s = (
+            float(first_chunk) if isinstance(first_chunk, (int, float)) else None
+        )
 
         try:
             conversation = conversation_of(interaction)
@@ -548,6 +594,12 @@ async def run_migration(
             row.target_latency_s = (
                 float(target_latency) if isinstance(target_latency, (int, float)) else None
             )
+            target_first_chunk = recorded.metadata.get("latency_first_chunk_s")
+            row.target_latency_first_chunk_s = (
+                float(target_first_chunk)
+                if isinstance(target_first_chunk, (int, float))
+                else None
+            )
             try:
                 target = decode_interaction(recorded)
             except DecodeError as exc:
@@ -564,7 +616,8 @@ async def run_migration(
         else:
             try:
                 url, headers, body = target_adapter.build_request(
-                    conversation, target_model, max_tokens_default=max_tokens_default
+                    conversation, target_model, max_tokens_default=max_tokens_default,
+                    stream=True,
                 )
             except MissingAPIKeyError as exc:
                 row.status, row.reason = "error", str(exc)
@@ -578,16 +631,41 @@ async def run_migration(
                 extra["category"] = row.category
             _ROW_IDENTITY.set((row.migration_id, extra))
             payload = b""
+            is_sse = False
             for attempt in range(max(0, retries) + 1):
                 attempt_start = time.monotonic()
+                first_chunk_at: Optional[float] = None
                 try:
-                    response = await client.post(url, headers=headers, json=body)
-                    payload = await response.aread()
+                    # Stream the target so its time-to-first-chunk is a real,
+                    # comparable number (a streamed baseline reports true TTFB).
+                    # The AutoTransport tees the chunks into the corpus exactly
+                    # as it does for a recorded stream; we re-decode by content
+                    # type, so a target that ignores `stream` and answers with a
+                    # JSON body still decodes correctly.
+                    async with client.stream(
+                        "POST", url, headers=headers, json=body
+                    ) as response:
+                        if response.status_code == 200:
+                            buffer = bytearray()
+                            async for chunk in response.aiter_bytes():
+                                if first_chunk_at is None and chunk:
+                                    first_chunk_at = time.monotonic()
+                                buffer.extend(chunk)
+                            payload = bytes(buffer)
+                            is_sse = "text/event-stream" in response.headers.get(
+                                "content-type", ""
+                            ).lower()
+                        else:
+                            payload = await response.aread()
                 except httpx.HTTPError as exc:
                     row.status, row.reason = "error", f"target call failed: {exc}"
                     return
                 if response.status_code == 200:
-                    row.target_latency_s = round(time.monotonic() - attempt_start, 4)
+                    done = time.monotonic()
+                    row.target_latency_s = round(done - attempt_start, 4)
+                    row.target_latency_first_chunk_s = round(
+                        (first_chunk_at or done) - attempt_start, 4
+                    )
                     break
                 # Don't let a failure poison the cache: the transport recorded
                 # this response, so discard it before any retry or re-run.
@@ -605,7 +683,7 @@ async def run_migration(
                 )
                 return
             try:
-                target = target_adapter.decode_response(payload, is_sse=False)
+                target = target_adapter.decode_response(payload, is_sse=is_sse)
             except DecodeError as exc:
                 row.status, row.reason = "error", f"target response undecodable: {exc}"
                 return

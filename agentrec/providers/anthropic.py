@@ -258,6 +258,7 @@ class AnthropicAdapter(ProviderAdapter):
         model: str,
         *,
         max_tokens_default: int = 4096,
+        stream: bool = False,
     ) -> Tuple[str, Dict[str, str], dict]:
         body: dict = {
             "model": model,
@@ -294,6 +295,8 @@ class AnthropicAdapter(ProviderAdapter):
             body["system"] = system
         if conversation.temperature is not None:
             body["temperature"] = conversation.temperature
+        if stream:
+            body["stream"] = True
         headers = {
             "x-api-key": self.api_key(),
             "anthropic-version": _API_VERSION,

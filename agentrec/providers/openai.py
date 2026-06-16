@@ -74,18 +74,6 @@ def _extract_tools(body: dict) -> "list[dict] | None":
     return tools
 
 
-def _extract_tool_choice(body: dict) -> object:
-    """Neutral tool_choice from the OpenAI dialect."""
-    raw = body.get("tool_choice")
-    if raw is None or raw in ("auto", "none", "required"):
-        return raw
-    if isinstance(raw, dict) and raw.get("type") == "function":
-        name = (raw.get("function") or {}).get("name")
-        if name:
-            return {"name": name}
-    raise UnsupportedRequestError(f"unsupported tool_choice {raw!r}")
-
-
 def _content_to_text(content) -> str:
     """Plain text from a message ``content`` (string or list of text parts)."""
     if isinstance(content, str):
@@ -109,6 +97,55 @@ class OpenAIAdapter(ProviderAdapter):
     api_key_env = "OPENAI_API_KEY"
 
     chat_url = "https://api.openai.com/v1/chat/completions"
+
+    # --- dialect variation points ------------------------------------------
+    # Mistral speaks this exact chat-completions dialect with three narrow
+    # deltas; ``MistralAdapter`` subclasses this adapter and overrides only the
+    # hooks below.  For OpenAI they are no-ops, so its built requests and
+    # extracted conversations are byte-for-byte unchanged.
+
+    #: Wire spelling of "force a tool call": OpenAI "required", Mistral "any".
+    #: Used in both directions (extract reads it, build emits it).
+    _required_tool_choice = "required"
+
+    def _is_reasoning_model(self, model: str) -> bool:
+        """o-series models reject ``max_tokens`` and sampling params.
+
+        Subclasses whose models have no such quirk override this to ``False``.
+        """
+        return model.startswith(("o1", "o3", "o4"))
+
+    def _wire_call_id(self, call_id: str) -> str:
+        """Adapt a neutral tool-call id to this dialect's id rules.
+
+        Identity for OpenAI; Mistral remaps to its required 9-char form.  It
+        must stay a pure function of *call_id* so an assistant call and its
+        matching tool result keep the same id.
+        """
+        return call_id
+
+    def _stream_body_fields(self) -> dict:
+        """Body fields that turn a request into a streaming one for this dialect.
+
+        OpenAI omits ``usage`` from a stream unless asked, so it adds
+        ``stream_options: {"include_usage": True}`` to keep the migration
+        report's token columns populated for streamed targets.  Mistral streams
+        usage by default and rejects ``stream_options``, so it overrides this.
+        """
+        return {"stream": True, "stream_options": {"include_usage": True}}
+
+    def _extract_tool_choice(self, body: dict) -> object:
+        """Neutral ``tool_choice`` from the wire body."""
+        raw = body.get("tool_choice")
+        if raw is None or raw in ("auto", "none"):
+            return raw
+        if raw == self._required_tool_choice:
+            return "required"
+        if isinstance(raw, dict) and raw.get("type") == "function":
+            name = (raw.get("function") or {}).get("name")
+            if name:
+                return {"name": name}
+        raise UnsupportedRequestError(f"unsupported tool_choice {raw!r}")
 
     def extract_conversation(self, body: dict) -> Conversation:
         if not isinstance(body, dict) or not isinstance(body.get("messages"), list):
@@ -137,7 +174,7 @@ class OpenAIAdapter(ProviderAdapter):
             max_tokens=body.get("max_tokens") or body.get("max_completion_tokens"),
             response_format=response_format,
             tools=_extract_tools(body),
-            tool_choice=_extract_tool_choice(body),
+            tool_choice=self._extract_tool_choice(body),
         )
         for message in body["messages"]:
             role = message.get("role")
@@ -190,6 +227,7 @@ class OpenAIAdapter(ProviderAdapter):
         model: str,
         *,
         max_tokens_default: int = 4096,
+        stream: bool = False,
     ) -> Tuple[str, Dict[str, str], dict]:
         messages: list = []
         if conversation.system:
@@ -209,7 +247,7 @@ class OpenAIAdapter(ProviderAdapter):
                 messages.append(
                     {
                         "role": "tool",
-                        "tool_call_id": call_id,
+                        "tool_call_id": self._wire_call_id(call_id),
                         "content": message.get("content") or "",
                     }
                 )
@@ -224,7 +262,7 @@ class OpenAIAdapter(ProviderAdapter):
                     arguments = call.get("arguments")
                     out_calls.append(
                         {
-                            "id": call_id,
+                            "id": self._wire_call_id(call_id),
                             "type": "function",
                             "function": {
                                 "name": call.get("name"),
@@ -260,10 +298,13 @@ class OpenAIAdapter(ProviderAdapter):
             if isinstance(choice, dict):
                 body["tool_choice"] = {"type": "function", "function": {"name": choice["name"]}}
             else:
-                body["tool_choice"] = choice
+                # Neutral "required" takes this dialect's spelling ("any" on Mistral).
+                body["tool_choice"] = (
+                    self._required_tool_choice if choice == "required" else choice
+                )
         # o-series reasoning models reject max_tokens (use max_completion_tokens
         # instead) and 400 on sampling params like temperature.
-        reasoning = model.startswith(("o1", "o3", "o4"))
+        reasoning = self._is_reasoning_model(model)
         # max_tokens is optional on this API: only carry it over when the
         # baseline set it; never invent a cap the original call didn't have.
         if conversation.max_tokens is not None:
@@ -273,6 +314,8 @@ class OpenAIAdapter(ProviderAdapter):
         if conversation.response_format is not None:
             # Native JSON mode: re-emit on this provider's own dialect.
             body["response_format"] = {"type": "json_object"}
+        if stream:
+            body.update(self._stream_body_fields())
         headers = {
             "Authorization": f"Bearer {self.api_key()}",
             "Content-Type": "application/json",

@@ -19,6 +19,7 @@ from urllib.parse import urlsplit
 from ..capture import CapturedInteraction
 from .anthropic import AnthropicAdapter
 from .gemini import GeminiAdapter
+from .mistral import MistralAdapter
 from .base import (
     Conversation,
     DecodedResponse,
@@ -50,6 +51,7 @@ __all__ = [
     "OpenAIAdapter",
     "AnthropicAdapter",
     "GeminiAdapter",
+    "MistralAdapter",
     "register",
     "adapters",
     "adapter_for_provider",
@@ -108,6 +110,7 @@ def adapter_for_host(host: str) -> Optional[ProviderAdapter]:
 register(OpenAIAdapter())
 register(AnthropicAdapter())
 register(GeminiAdapter())
+register(MistralAdapter())
 
 
 def _adapter_for_interaction(interaction: CapturedInteraction) -> ProviderAdapter:

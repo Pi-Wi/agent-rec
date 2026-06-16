@@ -15,6 +15,7 @@ from agentrec.providers import (
     AnthropicAdapter,
     Conversation,
     MissingAPIKeyError,
+    MistralAdapter,
     OpenAIAdapter,
     UnsupportedRequestError,
     adapter_for_host,
@@ -23,6 +24,7 @@ from agentrec.providers import (
     build_summary,
     conversation_of,
     decode_interaction,
+    usage_of,
 )
 from agentrec.store import FileStore
 
@@ -438,11 +440,136 @@ def test_missing_api_key(monkeypatch):
 def test_registry_resolution():
     assert adapter_for_model("gpt-4o-mini").name == "openai"
     assert adapter_for_model("claude-haiku-4-5").name == "anthropic"
+    assert adapter_for_model("mistral-large-latest").name == "mistral"
+    assert adapter_for_model("open-mistral-nemo").name == "mistral"
+    assert adapter_for_model("magistral-medium-latest").name == "mistral"
     assert adapter_for_provider("ANTHROPIC").name == "anthropic"
+    assert adapter_for_provider("Mistral").name == "mistral"
     assert adapter_for_host("api.openai.com").name == "openai"
+    assert adapter_for_host("api.mistral.ai").name == "mistral"
     assert adapter_for_host("example.com") is None
     with pytest.raises(LookupError):
         adapter_for_model("mystery-model-9000")
+
+
+# ---------------------------------------------------------------------------
+# Mistral (the OpenAI chat-completions dialect with three narrow deltas)
+# ---------------------------------------------------------------------------
+
+
+def test_decode_mistral_json_routes_by_host():
+    """A Mistral response is OpenAI-shaped; routing is by the mistral.ai host."""
+    body = {
+        "model": "mistral-large-latest",
+        "choices": [
+            {"index": 0, "message": {"role": "assistant", "content": "bonjour"}, "finish_reason": "stop"}
+        ],
+        "usage": {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7},
+    }
+    interaction = _interaction(
+        url="https://api.mistral.ai/v1/chat/completions",
+        request_body={"model": "mistral-large-latest", "messages": [{"role": "user", "content": "hi"}]},
+        chunks=[json.dumps(body).encode()],
+        content_type=b"application/json",
+    )
+    decoded = decode_interaction(interaction)
+    assert decoded.provider == "mistral"
+    assert decoded.text == "bonjour"
+    # prompt_tokens/completion_tokens normalise onto the disjoint buckets.
+    usage = usage_of(decoded)
+    assert usage.input == 5 and usage.output == 2
+
+
+def test_mistral_tool_choice_any_round_trips_through_neutral_required(monkeypatch):
+    adapter = MistralAdapter()
+    # Mistral spells "force a tool call" as "any"; it maps to the neutral
+    # "required" the other dialects share.
+    conv = adapter.extract_conversation(
+        {
+            "model": "mistral-large-latest",
+            "messages": [{"role": "user", "content": "weather?"}],
+            "tools": [{"type": "function", "function": {"name": "get_weather"}}],
+            "tool_choice": "any",
+        }
+    )
+    assert conv.tool_choice == "required"
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "test-mistral-key")
+    _, headers, body = adapter.build_request(conv, "mistral-large-latest")
+    # ... and it goes back out on the wire as "any", not "required".
+    assert body["tool_choice"] == "any"
+    assert headers["Authorization"] == "Bearer test-mistral-key"
+
+
+def test_mistral_build_request_uses_max_tokens_even_for_reasoning_model(monkeypatch):
+    """No Mistral model has the o-series max_completion_tokens quirk (Magistral included)."""
+    monkeypatch.setenv("MISTRAL_API_KEY", "k")
+    conv = Conversation(messages=[{"role": "user", "content": "think"}], max_tokens=64, temperature=0.3)
+    url, _, body = MistralAdapter().build_request(conv, "magistral-medium-latest")
+    assert url == "https://api.mistral.ai/v1/chat/completions"
+    assert body["max_tokens"] == 64
+    assert "max_completion_tokens" not in body
+    assert body["temperature"] == 0.3  # sampling params are not dropped
+
+
+def test_mistral_remaps_tool_call_ids_to_nine_char_form(monkeypatch):
+    """Mistral rejects ids that are not ^[a-zA-Z0-9]{9}$; build must remap them,
+    keeping an assistant call and its tool result on the same id."""
+    import re
+
+    monkeypatch.setenv("MISTRAL_API_KEY", "k")
+    valid = re.compile(r"^[a-zA-Z0-9]{9}$")
+
+    # A recorded cross-provider (Anthropic-style) id, too long for Mistral.
+    conv = Conversation(
+        messages=[
+            {"role": "user", "content": "weather?"},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {"id": "toolu_01ABCDEFGHIJKLMNOP", "name": "get_weather", "arguments": {"city": "Paris"}}
+                ],
+            },
+            {"role": "tool", "tool_call_id": "toolu_01ABCDEFGHIJKLMNOP", "content": "18C"},
+        ]
+    )
+    _, _, body = MistralAdapter().build_request(conv, "mistral-large-latest")
+    call_id = body["messages"][1]["tool_calls"][0]["id"]
+    result_id = body["messages"][2]["tool_call_id"]
+    assert valid.match(call_id)
+    assert call_id == result_id  # linkage preserved under the remap
+
+    # Hand-built conversation with NO ids: synthesized, then remapped — still
+    # a valid 9-char id shared by the call and its result.
+    conv = Conversation(
+        messages=[
+            {"role": "assistant", "content": "", "tool_calls": [{"name": "f", "arguments": {}}]},
+            {"role": "tool", "content": "done"},
+        ]
+    )
+    _, _, body = MistralAdapter().build_request(conv, "mistral-small-latest")
+    call_id = body["messages"][0]["tool_calls"][0]["id"]
+    result_id = body["messages"][1]["tool_call_id"]
+    assert valid.match(call_id)
+    assert call_id == result_id
+
+
+def test_mistral_keeps_already_valid_nine_char_id(monkeypatch):
+    """A Mistral-recorded id (already 9 alphanumerics) is passed through as-is."""
+    monkeypatch.setenv("MISTRAL_API_KEY", "k")
+    conv = Conversation(
+        messages=[
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [{"id": "aB3dE6gH9", "name": "f", "arguments": {}}],
+            },
+            {"role": "tool", "tool_call_id": "aB3dE6gH9", "content": "ok"},
+        ]
+    )
+    _, _, body = MistralAdapter().build_request(conv, "mistral-large-latest")
+    assert body["messages"][0]["tool_calls"][0]["id"] == "aB3dE6gH9"
 
 
 # ---------------------------------------------------------------------------

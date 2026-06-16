@@ -301,7 +301,10 @@ def _openai_baseline(prompt: str = "name the sky color in one word") -> Captured
 def _gemini_target(text: str = "Blue") -> httpx.MockTransport:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.host == "generativelanguage.googleapis.com"
-        assert request.url.path.endswith(":generateContent")
+        # The runner streams its target calls: Gemini's stream endpoint, asking
+        # for the SSE wire form.  A JSON answer still decodes (by content-type).
+        assert request.url.path.endswith(":streamGenerateContent")
+        assert request.url.params.get("alt") == "sse"
         body = json.loads(request.content)
         assert "contents" in body
         return httpx.Response(200, json={

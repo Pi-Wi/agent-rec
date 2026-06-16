@@ -19,7 +19,10 @@ embedding similarity and judge verdicts side by side.
 * ``embedding`` — cosine similarity of OpenAI embeddings (live API call).
 * ``judge``     — an LLM scores semantic equivalence (live API call; verdicts
                   are cached into the corpus when a store is supplied, so a
-                  re-run on unchanged texts costs nothing).
+                  re-run on unchanged texts costs nothing).  Configurable model,
+                  and optionally a *second* judge for a second opinion — two
+                  judges run, each verdict cached on its own model, and a
+                  disagreement is flagged and fails (the gate-safe choice).
 
 The offline comparators tolerate a markdown code fence wrapping the whole
 payload (``` ```json … ``` ```): some target models fence structured output
@@ -59,6 +62,17 @@ ALL_COMPARATOR_NAMES = ("exact", "fuzzy", "json", "toolcalls", "embedding", "jud
 # Corpus-id prefix for cached judge verdicts; the migration runner excludes
 # these from the baseline set, like ``migration__`` cassettes.
 JUDGE_PREFIX = "judge__"
+
+# Judge model used when neither --judge-model nor AGENTREC_JUDGE_MODEL[_1] is set.
+DEFAULT_JUDGE_MODEL = "claude-opus-4-8"
+
+
+class _OfflineMiss(Exception):
+    """Internal: an offline judge has no cached verdict for *model* on this row."""
+
+    def __init__(self, model: str) -> None:
+        super().__init__(model)
+        self.model = model
 
 _WHITESPACE = re.compile(r"\s+")
 
@@ -525,16 +539,25 @@ def _judge_verdict(text: str) -> dict:
 class JudgeComparator(_HttpComparator):
     """LLM-as-judge equivalence verdicts, with corpus-cached results.
 
+    The judge model is configurable (``judge_model``).  Supply a
+    ``second_judge_model`` for a **second opinion**: both judges run, and the
+    row's verdict combines theirs — ``passed`` is True only when *both* call
+    the responses equivalent, so a disagreement (or a unanimous "not
+    equivalent") fails, the gate-safe choice for a second-opinion run.  A
+    disagreement is flagged ``[judges disagreed]`` in ``detail`` so a human
+    sees it while the gate still reads the boolean.
+
     When a *store* is supplied, each verdict is persisted as a corpus cassette
     keyed on ``(judge_model, baseline_text, target_text)`` — the same
     full-interaction shape as a ``migration__`` cassette — so re-rendering a
     report on unchanged texts replays the verdict instead of re-buying it.
-    With ``offline=True`` no socket is ever opened: rows without a cached
-    verdict degrade to errored comparisons.
+    Two judges cache independently (each on its own model), so existing
+    single-judge caches stay valid.  With ``offline=True`` no socket is ever
+    opened: rows without a cached verdict degrade to errored comparisons.
 
-    ``passed`` follows the judge's ``equivalent`` boolean.  When the verdict's
-    numeric score disagrees with the boolean (score ≥ 0.8 but
-    ``equivalent=false``, or score < 0.5 but ``equivalent=true``), the
+    With a single judge, ``passed`` follows the judge's ``equivalent`` boolean.
+    When the verdict's numeric score disagrees with the boolean (score ≥ 0.8
+    but ``equivalent=false``, or score < 0.5 but ``equivalent=true``), the
     inconsistency is flagged in ``detail`` so report readers see it.
     """
 
@@ -548,31 +571,46 @@ class JudgeComparator(_HttpComparator):
         self,
         http: Optional[httpx.AsyncClient] = None,
         *,
-        judge_model: str = "claude-opus-4-8",
+        judge_model: str = DEFAULT_JUDGE_MODEL,
+        second_judge_model: Optional[str] = None,
         store: Optional[InteractionStore] = None,
         offline: bool = False,
     ) -> None:
         super().__init__(http)
-        self._judge_model = judge_model
+        # One or two models, primary first.  A blank/duplicate second is ignored
+        # so a stray empty env var doesn't accidentally double the judge bill.
+        models = [judge_model]
+        if second_judge_model and second_judge_model != judge_model:
+            models.append(second_judge_model)
+        self._judge_models: Tuple[str, ...] = tuple(models)
         self._store = store
         self._offline = offline
 
-    def cache_id(self, baseline_text: str, target_text: str) -> str:
+    def cache_id(self, baseline_text: str, target_text: str, *, model: Optional[str] = None) -> str:
         """Deterministic corpus id for one (judge_model, baseline, target) verdict.
 
         Keyed on the compared texts, not the prompt: the prompt only frames
-        the comparison, and unchanged texts should reuse the verdict.
+        the comparison, and unchanged texts should reuse the verdict.  *model*
+        defaults to the primary judge, so a single-judge cache id is byte-for-
+        byte what earlier versions produced.
         """
-        digest = _digest(self._judge_model, baseline_text, target_text)[:32]
-        return f"{JUDGE_PREFIX}{_sanitize(self._judge_model)}__{digest}"
+        model = model or self._judge_models[0]
+        digest = _digest(model, baseline_text, target_text)[:32]
+        return f"{JUDGE_PREFIX}{_sanitize(model)}__{digest}"
 
-    def _result(self, verdict: dict, *, cached: bool) -> ComparisonResult:
-        equivalent = bool(verdict.get("equivalent"))
+    @staticmethod
+    def _score_of(verdict: dict) -> Tuple[float, bool]:
+        """``(clamped_score, explicit?)`` — explicit when the reply gave a number."""
         raw_score = verdict.get("score")
         explicit = isinstance(raw_score, (int, float)) and not isinstance(raw_score, bool)
+        equivalent = bool(verdict.get("equivalent"))
         score = float(raw_score) if explicit else (1.0 if equivalent else 0.0)
-        score = max(0.0, min(1.0, score))
-        detail = str(verdict.get("reason", "")) or f"judge {self._judge_model} verdict"
+        return max(0.0, min(1.0, score)), explicit
+
+    def _result(self, verdict: dict, *, model: str, cached: bool) -> ComparisonResult:
+        equivalent = bool(verdict.get("equivalent"))
+        score, explicit = self._score_of(verdict)
+        detail = str(verdict.get("reason", "")) or f"judge {model} verdict"
         if explicit and not equivalent and score >= self._INCONSISTENT_HIGH:
             detail += (
                 f" [inconsistent verdict: equivalent=false but score {score:.2f} >= "
@@ -589,8 +627,41 @@ class JudgeComparator(_HttpComparator):
             comparator=self.name, score=score, passed=equivalent, detail=detail
         )
 
+    def _combined_result(
+        self, per_judge: List[Tuple[str, dict, bool]]
+    ) -> ComparisonResult:
+        """Combine two+ judges' verdicts, flagging disagreement.
+
+        ``passed`` is True only when every judge calls the responses
+        equivalent; the score is the mean of theirs.  Each judge's verdict
+        (and its ``[cached]`` state) is listed in ``detail``, prefixed with
+        ``[judges disagreed]`` when they split.
+        """
+        equivalents = [bool(verdict.get("equivalent")) for _, verdict, _ in per_judge]
+        scores = [self._score_of(verdict)[0] for _, verdict, _ in per_judge]
+        passed = all(equivalents)
+        disagreed = any(equivalents) and not all(equivalents)
+        parts = []
+        for (model, verdict, cached), equivalent, score in zip(per_judge, equivalents, scores):
+            reason = str(verdict.get("reason", "")).strip()
+            piece = f"{model}: {'equivalent' if equivalent else 'not equivalent'} ({score:.2f})"
+            if reason:
+                piece += f" — {reason}"
+            if cached:
+                piece += " [cached]"
+            parts.append(piece)
+        detail = "; ".join(parts)
+        if disagreed:
+            detail = "[judges disagreed] " + detail
+        return ComparisonResult(
+            comparator=self.name,
+            score=sum(scores) / len(scores),
+            passed=passed,
+            detail=detail,
+        )
+
     async def _save_verdict(
-        self, cache_id: str, url: str, headers: Dict[str, str], body: dict,
+        self, model: str, cache_id: str, url: str, headers: Dict[str, str], body: dict,
         response: httpx.Response, payload: bytes,
     ) -> None:
         """Persist the judge call as a corpus cassette (best-effort).
@@ -623,7 +694,7 @@ class JudgeComparator(_HttpComparator):
         )
         interaction.metadata.update(
             {
-                "judge_model": self._judge_model,
+                "judge_model": model,
                 "judge_key": cache_id,
                 "recorded_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
             }
@@ -633,19 +704,21 @@ class JudgeComparator(_HttpComparator):
         except Exception:
             pass
 
-    async def compare(self, prompt, baseline, target) -> ComparisonResult:
-        # Rendered texts (text + tool-call lines): the judge sees what each
-        # model decided to do, and the cache key distinguishes differing tool
-        # calls.  Identical to .text for text-only responses, so existing
-        # cached verdicts stay valid.
-        baseline_text = _comparable_text(baseline)
-        target_text = _comparable_text(target)
-        cache_id = self.cache_id(baseline_text, target_text) if self._store else None
+    async def _verdict_for(
+        self, model: str, prompt: str, baseline_text: str, target_text: str
+    ) -> Tuple[dict, bool]:
+        """``(verdict, cached?)`` from one judge *model*.
 
+        Replays a cached verdict when present, else (online) buys and caches
+        one.  Raises :class:`_OfflineMiss` when offline with no cached verdict,
+        and lets a malformed-reply ``ValueError`` propagate (never cached) so
+        the runner degrades the whole comparison to an errored result.
+        """
+        cache_id = self.cache_id(baseline_text, target_text, model=model) if self._store else None
         if cache_id and await self._store.has(cache_id):
             try:
                 cached = decode_interaction(await self._store.load(cache_id))
-                return self._result(_judge_verdict(cached.text), cached=True)
+                return _judge_verdict(cached.text), True
             except Exception:
                 if self._offline:
                     raise  # the runner degrades this to an errored result
@@ -653,18 +726,9 @@ class JudgeComparator(_HttpComparator):
                 await self._store.discard(cache_id)
 
         if self._offline:
-            return ComparisonResult(
-                comparator=self.name,
-                score=0.0,
-                passed=None,
-                detail=(
-                    f"no cached verdict from judge {self._judge_model} for this row; "
-                    "run `agentrec migrate` (online) to record one"
-                ),
-                error=True,
-            )
+            raise _OfflineMiss(model)
 
-        adapter = adapter_for_model(self._judge_model)
+        adapter = adapter_for_model(model)
         conversation = Conversation(
             system=_JUDGE_SYSTEM,
             messages=[
@@ -680,7 +744,7 @@ class JudgeComparator(_HttpComparator):
             # No sampling params: the newest judge models reject them.
             max_tokens=1024,
         )
-        url, headers, body = adapter.build_request(conversation, self._judge_model)
+        url, headers, body = adapter.build_request(conversation, model)
         response = await self._post(url, headers, body)
         response.raise_for_status()
         payload = await response.aread()
@@ -689,8 +753,38 @@ class JudgeComparator(_HttpComparator):
         if cache_id:
             # Only after the verdict parsed: a cached malformed reply would be
             # replayed as the same failure forever.
-            await self._save_verdict(cache_id, url, headers, body, response, payload)
-        return self._result(verdict, cached=False)
+            await self._save_verdict(model, cache_id, url, headers, body, response, payload)
+        return verdict, False
+
+    async def compare(self, prompt, baseline, target) -> ComparisonResult:
+        # Rendered texts (text + tool-call lines): the judge sees what each
+        # model decided to do, and the cache key distinguishes differing tool
+        # calls.  Identical to .text for text-only responses, so existing
+        # cached verdicts stay valid.
+        baseline_text = _comparable_text(baseline)
+        target_text = _comparable_text(target)
+        per_judge: List[Tuple[str, dict, bool]] = []
+        for model in self._judge_models:
+            try:
+                verdict, cached = await self._verdict_for(
+                    model, prompt, baseline_text, target_text
+                )
+            except _OfflineMiss as miss:
+                return ComparisonResult(
+                    comparator=self.name,
+                    score=0.0,
+                    passed=None,
+                    detail=(
+                        f"no cached verdict from judge {miss.model} for this row; "
+                        "run `agentrec migrate` (online) to record one"
+                    ),
+                    error=True,
+                )
+            per_judge.append((model, verdict, cached))
+        if len(per_judge) == 1:
+            model, verdict, cached = per_judge[0]
+            return self._result(verdict, model=model, cached=cached)
+        return self._combined_result(per_judge)
 
 
 @dataclass(frozen=True)
@@ -764,7 +858,8 @@ def parse_compare_spec(spec: str) -> List[ParsedComparator]:
 def build_comparators(
     spec: str,
     *,
-    judge_model: str = "claude-opus-4-8",
+    judge_model: str = DEFAULT_JUDGE_MODEL,
+    second_judge_model: Optional[str] = None,
     embedding_model: str = "text-embedding-3-small",
     fuzzy_threshold: float = 0.8,
     embedding_threshold: float = 0.8,
@@ -777,7 +872,8 @@ def build_comparators(
 
     ``store`` enables judge-verdict caching into that corpus; ``offline=True``
     additionally forbids the judge from opening a socket (cached verdicts
-    only).
+    only).  ``second_judge_model`` adds a second-opinion judge (see
+    :class:`JudgeComparator`).
     """
     factories = {
         "exact": lambda entry: ExactMatchComparator(),
@@ -788,7 +884,11 @@ def build_comparators(
             http, model=embedding_model, threshold=embedding_threshold
         ),
         "judge": lambda entry: JudgeComparator(
-            http, judge_model=judge_model, store=store, offline=offline
+            http,
+            judge_model=judge_model,
+            second_judge_model=second_judge_model,
+            store=store,
+            offline=offline,
         ),
     }
     return [factories[entry.base](entry) for entry in parse_compare_spec(spec)]

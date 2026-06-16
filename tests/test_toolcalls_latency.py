@@ -722,3 +722,47 @@ def test_latency_stats_and_report_rendering():
     assert "| Latency (mean) |" in markdown  # consolidated totals table
     assert "2.00s→1.00s" in markdown  # per-row cell
     assert "9.00s→?" in markdown  # half-known latency still shown per row
+
+
+def test_ttfb_stats_only_count_rows_streamed_on_both_sides():
+    from agentrec.migration import MigrationReport
+    from agentrec.report import render_console, render_markdown
+
+    rows = [
+        RowResult(
+            semantic_key="k1", baseline_id="b1", migration_id="m1", prompt_preview="p1",
+            baseline_text="x", target_text="x",
+            baseline_latency_s=2.0, target_latency_s=1.0,
+            baseline_latency_first_chunk_s=0.4, target_latency_first_chunk_s=0.2,
+        ),
+        RowResult(
+            semantic_key="k2", baseline_id="b2", migration_id="m2", prompt_preview="p2",
+            baseline_text="y", target_text="y",
+            baseline_latency_s=4.0, target_latency_s=1.0,
+            baseline_latency_first_chunk_s=0.6, target_latency_first_chunk_s=0.2,
+        ),
+        RowResult(  # total latency known, but baseline never streamed: no TTFB
+            semantic_key="k3", baseline_id="b3", migration_id="m3", prompt_preview="p3",
+            baseline_text="z", target_text="z",
+            baseline_latency_s=3.0, target_latency_s=1.0,
+            target_latency_first_chunk_s=0.2,
+        ),
+    ]
+    report = MigrationReport(
+        target_model="claude-haiku-4-5", target_provider="anthropic", corpus="corpus",
+        generated_at="2026-06-12T00:00:00+00:00", comparator_names=["exact"], rows=rows,
+    )
+    stats = report.latency_stats()
+    assert stats.rows == 3  # all three have both total latencies
+    assert stats.first_chunk_rows == 2  # only two streamed on both sides
+    assert stats.baseline_first_chunk_mean_s == pytest.approx(0.5)
+    assert stats.target_first_chunk_mean_s == pytest.approx(0.2)
+    assert stats.first_chunk_ratio == pytest.approx(0.4)
+
+    markdown = render_markdown(report)
+    assert "| TTFB (mean) |" in markdown  # consolidated totals table
+    assert "0.40s→0.20s" in markdown  # per-row TTFB in the details meta line
+
+    console = render_console(report)
+    assert console.isascii(), "console output must be ASCII-safe on Windows terminals"
+    assert "TTFB baseline mean" in console

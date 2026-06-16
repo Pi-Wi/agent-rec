@@ -78,7 +78,11 @@ def _anthropic_answer(text: str = "Blue") -> httpx.MockTransport:
         body = json.loads(request.content)
         assert request.url.host == "api.anthropic.com"
         assert body["model"] == TARGET_MODEL
-        assert "stream" not in body and "temperature" not in body
+        # Temperature is dropped on this cross-provider run.  (This fixture is
+        # also reused by a direct-transport test that posts without streaming,
+        # so it stays neutral about `stream`; the streaming assertion lives in
+        # _openai_sse_answer.)
+        assert "temperature" not in body
         return httpx.Response(
             200,
             json={
@@ -87,6 +91,28 @@ def _anthropic_answer(text: str = "Blue") -> httpx.MockTransport:
                 "stop_reason": "end_turn",
                 "usage": {"input_tokens": 12, "output_tokens": 2},
             },
+        )
+
+    return httpx.MockTransport(handler)
+
+
+def _openai_sse_answer(parts=("Bl", "ue"), model: str = "gpt-4o") -> httpx.MockTransport:
+    """An OpenAI target that answers with a real SSE stream (text/event-stream)."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        # The runner asks for a stream, and (OpenAI dialect) for usage in it.
+        assert body.get("stream") is True
+        assert body.get("stream_options") == {"include_usage": True}
+        final = _openai_chunk(None, finish="stop")
+        final["usage"] = {"prompt_tokens": 5, "completion_tokens": 2}
+        payload = (
+            b"".join(_sse(_openai_chunk(part)) for part in parts)
+            + _sse(final)
+            + b"data: [DONE]\n\n"
+        )
+        return httpx.Response(
+            200, headers={"content-type": "text/event-stream"}, content=payload
         )
 
     return httpx.MockTransport(handler)
@@ -326,6 +352,39 @@ async def test_migration_rerun_is_served_from_corpus(corpus: FileStore, monkeypa
     assert row.status == "ok"
     assert row.cached is True
     assert row.target_text == "Blue"
+
+
+async def test_target_is_streamed_so_ttfb_is_real_and_cached(corpus: FileStore, monkeypatch):
+    """The runner streams its target call, so a real time-to-first-chunk is
+    captured, the recorded cassette is the SSE stream, and a cached re-run reads
+    the first-chunk time back from metadata."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    await _seed_baseline(corpus)
+
+    report = await run_migration(
+        corpus, "gpt-4o", build_comparators("exact"), inner_transport=_openai_sse_answer()
+    )
+    row = report.rows[0]
+    assert row.status == "ok" and row.cached is False
+    assert row.target_text == "Blue"  # SSE deltas reassembled
+    assert isinstance(row.target_latency_s, float)
+    assert isinstance(row.target_latency_first_chunk_s, float)
+    assert row.target_latency_first_chunk_s <= row.target_latency_s + 1e-9
+
+    # The recorded migration cassette is the SSE stream, stamped with a TTFB.
+    migration_id = migration_id_for(BASELINE_ID, "gpt-4o")
+    cassette = await corpus.load(migration_id)
+    assert isinstance(cassette.metadata.get("latency_first_chunk_s"), float)
+
+    # Cached re-run: no key, exploding network — TTFB comes from metadata.
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    rerun = await run_migration(
+        corpus, "gpt-4o", build_comparators("exact"), inner_transport=_raising_transport()
+    )
+    cached_row = rerun.rows[0]
+    assert cached_row.cached is True
+    assert cached_row.target_text == "Blue"
+    assert isinstance(cached_row.target_latency_first_chunk_s, float)
 
 
 async def test_offline_mode_skips_unrecorded_targets(corpus: FileStore):
@@ -587,6 +646,39 @@ async def test_judge_verdicts_are_cached_in_corpus_and_replayed_offline(
     assert "[cached]" in judge_result.detail
     # Judge cassettes are tooling artifacts, never baselines.
     assert [r.baseline_id for r in offline_report.rows] == [BASELINE_ID]
+
+
+def test_resolve_judge_models_precedence(monkeypatch):
+    """Primary/second judge resolution: flag → env (_1, then unsuffixed alias) → default."""
+    from argparse import Namespace
+
+    from agentrec.cli import _resolve_judge_models
+    from agentrec.comparators import DEFAULT_JUDGE_MODEL
+
+    for var in ("AGENTREC_JUDGE_MODEL", "AGENTREC_JUDGE_MODEL_1", "AGENTREC_JUDGE_MODEL_2"):
+        monkeypatch.delenv(var, raising=False)
+
+    # Nothing set: built-in default, no second judge.
+    assert _resolve_judge_models(
+        Namespace(judge_model=None, judge_model_2=None)
+    ) == (DEFAULT_JUDGE_MODEL, None)
+
+    # _1 wins over the unsuffixed alias; _2 enables the second opinion.
+    monkeypatch.setenv("AGENTREC_JUDGE_MODEL", "alias-model")
+    monkeypatch.setenv("AGENTREC_JUDGE_MODEL_1", "primary-model")
+    monkeypatch.setenv("AGENTREC_JUDGE_MODEL_2", "second-model")
+    assert _resolve_judge_models(
+        Namespace(judge_model=None, judge_model_2=None)
+    ) == ("primary-model", "second-model")
+
+    # Unsuffixed alias is used when _1 is absent.
+    monkeypatch.delenv("AGENTREC_JUDGE_MODEL_1", raising=False)
+    assert _resolve_judge_models(Namespace(judge_model=None, judge_model_2=None))[0] == "alias-model"
+
+    # Explicit flags beat the environment.
+    assert _resolve_judge_models(
+        Namespace(judge_model="flag-a", judge_model_2="flag-b")
+    ) == ("flag-a", "flag-b")
 
 
 async def test_migration_cassettes_are_excluded_as_baselines(corpus: FileStore, monkeypatch):

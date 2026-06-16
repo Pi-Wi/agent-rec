@@ -15,11 +15,17 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
-from .comparators import OFFLINE_COMPARATOR_NAMES, build_comparators, parse_compare_spec
+from .comparators import (
+    DEFAULT_JUDGE_MODEL,
+    OFFLINE_COMPARATOR_NAMES,
+    build_comparators,
+    parse_compare_spec,
+)
 from .importers import SOURCES, import_corpus
 from .migration import annotate_corpus, run_migration
 # PricingError subclasses ValueError, so a bad snapshot/--pricing-as-of value
@@ -48,7 +54,16 @@ def _add_report_args(parser: argparse.ArgumentParser, *, default_compare: str) -
         default=None,
         help="override the provider inferred from the target model id",
     )
-    parser.add_argument("--judge-model", default="claude-opus-4-8", help="model for the judge comparator")
+    parser.add_argument(
+        "--judge-model", default=None,
+        help="model for the judge comparator (overrides $AGENTREC_JUDGE_MODEL_1 / "
+             f"$AGENTREC_JUDGE_MODEL; default: {DEFAULT_JUDGE_MODEL})",
+    )
+    parser.add_argument(
+        "--judge-model-2", default=None, metavar="MODEL",
+        help="add a second judge for a second opinion (overrides "
+             "$AGENTREC_JUDGE_MODEL_2); a disagreement is flagged and fails the row",
+    )
     parser.add_argument(
         "--embedding-model", default="text-embedding-3-small", help="model for the embedding comparator"
     )
@@ -192,6 +207,25 @@ def _price_report(args: argparse.Namespace, report) -> List[ReportPricing]:
     ]
 
 
+def _resolve_judge_models(args: argparse.Namespace) -> Tuple[str, Optional[str]]:
+    """The primary and optional second judge model for this run.
+
+    Precedence per slot is explicit CLI flag → environment variable → (primary
+    only) built-in default.  The primary env var is ``AGENTREC_JUDGE_MODEL_1``,
+    with the unsuffixed ``AGENTREC_JUDGE_MODEL`` accepted as an alias; the
+    second judge is ``AGENTREC_JUDGE_MODEL_2`` (set it to enable a second
+    opinion).  Empty env vars are ignored.
+    """
+    primary = (
+        args.judge_model
+        or os.environ.get("AGENTREC_JUDGE_MODEL_1")
+        or os.environ.get("AGENTREC_JUDGE_MODEL")
+        or DEFAULT_JUDGE_MODEL
+    )
+    second = args.judge_model_2 or os.environ.get("AGENTREC_JUDGE_MODEL_2") or None
+    return primary, second
+
+
 def _parse_min_pass(items: List[str], comparator_names: List[str]) -> Dict[str, float]:
     """Parse repeated ``--min-pass COMPARATOR=RATE`` flags against the run's
     comparators.  ``rpartition`` on ``=``: comparator names may contain
@@ -239,9 +273,11 @@ async def _run_report_command(args: argparse.Namespace, *, offline: bool) -> int
         args.compare = ",".join(entry.name for entry in parsed)
 
     store = FileStore(args.corpus)
+    judge_model, second_judge_model = _resolve_judge_models(args)
     comparators = build_comparators(
         args.compare,
-        judge_model=args.judge_model,
+        judge_model=judge_model,
+        second_judge_model=second_judge_model,
         embedding_model=args.embedding_model,
         fuzzy_threshold=args.fuzzy_threshold,
         embedding_threshold=args.embedding_threshold,

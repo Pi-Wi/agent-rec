@@ -6,9 +6,9 @@ A deprecation notice, a new model release, a price change: something forces you
 to consider swapping the LLM under a working product, and the honest answer is
 usually "we'll find out in production." agentrec turns that into a report. It
 **replays your recorded API traffic against a candidate model**, translates
-across providers where needed (OpenAI ↔ Anthropic), scores every response
-against what the old model produced, and prices the difference — so the
-model-swap decision comes with evidence instead of a shrug.
+across providers where needed (OpenAI ↔ Anthropic ↔ Gemini ↔ Mistral), scores
+every response against what the old model produced, and prices the difference —
+so the model-swap decision comes with evidence instead of a shrug.
 
 The dataset is the part you don't have to build. **Your recorded traffic is
 your eval set:** agentrec records LLM calls at the httpx transport layer (below
@@ -16,16 +16,17 @@ the OpenAI SDK, the Anthropic SDK, LangChain, or any httpx-backed client), so
 the prompts you already run in development or production *are* the corpus you
 migrate against — no hand-authored test cases, no golden answers to maintain.
 
-> **Status:** beta (0.8.0). Migration translation covers OpenAI ↔ Anthropic
+> **Status:** beta (0.9.0). Migration translation covers OpenAI ↔ Anthropic
 > conversations including **tool use** (definitions, assistant tool calls, tool
-> results) and JSON mode; a **Gemini** dialect is included as a third
-> translation target (request/response, streaming and tool-call paths verified
-> against the live API — see `tests/test_live_gemini.py`). Images and strict
-> `json_schema` become clearly-reasoned skipped rows. Record/replay is proven for streaming (SSE) and non-streaming
-> (JSON) on OpenAI and Anthropic, sync and async — or **import** an existing
-> Langfuse / LangSmith / OpenTelemetry export as a corpus without running the
-> recorder at all. The API may still change in minor releases before 1.0. See
-> [CHANGELOG](CHANGELOG.md).
+> results) and JSON mode; **Gemini** and **Mistral** are included as third and
+> fourth translation dialects (request/response, streaming and tool-call paths
+> verified against the live API — see `tests/test_live_gemini.py` and
+> `tests/test_live_mistral.py`). Images and strict `json_schema` become
+> clearly-reasoned skipped rows. Record/replay is proven for streaming (SSE) and
+> non-streaming (JSON) on OpenAI and Anthropic, sync and async — or **import** an
+> existing Langfuse / LangSmith / OpenTelemetry export as a corpus without
+> running the recorder at all. The API may still change in minor releases before
+> 1.0. See [CHANGELOG](CHANGELOG.md).
 
 ## The report is the product
 
@@ -147,7 +148,11 @@ into the corpus, and scores baseline vs. target with one or more comparators:
 
 ¹ judge verdicts are cached into the corpus — only new (baseline, target) pairs
 cost an API call, and `agentrec report` (offline) replays cached verdicts
-without a socket.
+without a socket. The judge model is configurable (`--judge-model`, or
+`$AGENTREC_JUDGE_MODEL_1` / `$AGENTREC_JUDGE_MODEL` in `.env`); for a gate-critical
+corpus add a **second opinion** with `--judge-model-2` (`$AGENTREC_JUDGE_MODEL_2`)
+— both judges must call the responses equivalent for the row to pass, and a
+disagreement is flagged `[judges disagreed]` so a human can look.
 
 The offline comparators (`exact`, `fuzzy`, `json`) tolerate a markdown code
 fence wrapping the whole payload — a target that emits ```` ```json … ``` ````
@@ -218,8 +223,9 @@ the conversation *its own* earlier answers would have produced.
 **Cost is a derived metric.** Tokens are what the cassettes record; `--pricing
 PROFILE` prices them at report time against versioned snapshots — dated,
 immutable JSON files of per-model rates (per token category: input, cached
-reads/writes, output). Built-in `anthropic-list` and `openai-list` profiles ship
-with the package; point `--pricing-dir` at your own snapshots to add profiles
+reads/writes, output). Built-in `anthropic-list`, `openai-list` and
+`mistral-list` profiles ship with the package; point `--pricing-dir` at your own
+snapshots to add profiles
 (OpenRouter, enterprise contracts) or shadow a built-in. `a+b` composes profiles
 for cross-provider runs, `--pricing` is repeatable for side-by-side views, and
 `--pricing-as-of latest|recorded|YYYY-MM-DD` picks whether to price at today's
@@ -237,12 +243,15 @@ agentrec report --corpus corpus --target claude-haiku-4-5 --compare json \
 ### Latency
 
 The transports stamp every cassette with `latency_s` (request sent → response
-finished, plus `latency_first_chunk_s` for streams), and the migration runner
-times its live target calls, so reports show a per-row `Latency` column, a
-baseline→target mean with a ratio, and a per-category latency ratio. Read it as
-an indication, not a benchmark: the baseline number is recording-time provenance
-— whatever the network and provider load looked like when the cassette was
-recorded. Latency never gates `--strict`.
+finished) plus `latency_first_chunk_s` for streams, and the migration runner
+**streams its target calls**, so a target's time-to-first-chunk is a real number
+— comparable to a streamed baseline's, not an artifact of a non-streaming call.
+Reports show a per-row `Latency` column, baseline→target means with ratios for
+both total latency and TTFB (the latter over rows that were streamed on both
+sides), and a per-category latency ratio. Read it as an indication, not a
+benchmark: the baseline number is recording-time provenance — whatever the
+network and provider load looked like when the cassette was recorded. Latency
+never gates `--strict`.
 
 ## How the corpus is built: record / replay
 
@@ -332,12 +341,12 @@ agentrec/
   store.py        # InMemoryStore + FileStore (human-readable JSON cassettes)
   transport.py    # RecordingTransport / ReplayTransport / AutoTransport
   session.py      # async_client() + cassette — the ergonomic seam
-  providers/      # OpenAI + Anthropic + Gemini request/response dialects
+  providers/      # OpenAI + Anthropic + Gemini + Mistral request/response dialects
   comparators.py  # exact / fuzzy / json / toolcalls / embedding / judge scoring
   migration.py    # run_migration() — replay the corpus against a candidate model
   importers.py    # Langfuse / LangSmith / OTel exports → synthesized cassettes
   pricing.py      # versioned pricing snapshots → derived cost estimates
-  pricing_data/   # built-in list-price snapshots (anthropic-list, openai-list)
+  pricing_data/   # built-in list-price snapshots (anthropic-list, openai-list, mistral-list)
   report.py       # Markdown / HTML / console rendering
   cli.py          # agentrec migrate | report | annotate | import
 ```

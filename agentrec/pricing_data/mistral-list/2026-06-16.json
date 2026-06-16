@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "profile": "mistral-list",
+  "currency": "USD",
+  "effective": "2026-06-16",
+  "source": "https://mistral.ai/pricing",
+  "notes": "Mistral La Plateforme list prices per million tokens for the chat models, as published on the source page. Mistral bills input/output only (no separate cache-token rate in the list table). Maintainers: verify against the source page and add a NEW dated snapshot file on any change, never edit this one.",
+  "models": [
+    {
+      "match": ["mistral-large-latest", "mistral-large-2*", "pixtral-large-latest", "pixtral-large-2*", "open-mixtral-8x22b"],
+      "unit": "per_mtok",
+      "rates": {"input": "2", "output": "6"}
+    },
+    {
+      "match": ["mistral-medium-latest", "mistral-medium-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.40", "output": "2"}
+    },
+    {
+      "match": ["mistral-small-latest", "mistral-small-2*", "devstral-small-latest", "devstral-small-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.10", "output": "0.30"}
+    },
+    {
+      "match": ["mistral-saba-latest", "mistral-saba-2*", "codestral-latest", "codestral-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.30", "output": "0.90"}
+    },
+    {
+      "match": ["ministral-3b-latest", "ministral-3b-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.04", "output": "0.04"}
+    },
+    {
+      "match": ["ministral-8b-latest", "ministral-8b-2*", "open-mistral-nemo", "open-mistral-nemo-2*", "pixtral-12b", "pixtral-12b-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.15", "output": "0.15"}
+    },
+    {
+      "match": ["magistral-medium-latest", "magistral-medium-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "2", "output": "5"}
+    },
+    {
+      "match": ["magistral-small-latest", "magistral-small-2*"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.50", "output": "1.50"}
+    },
+    {
+      "match": ["open-mistral-7b"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.25", "output": "0.25"}
+    },
+    {
+      "match": ["open-mixtral-8x7b"],
+      "unit": "per_mtok",
+      "rates": {"input": "0.70", "output": "0.70"}
+    }
+  ]
+}

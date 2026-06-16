@@ -285,8 +285,17 @@ class ProviderAdapter(ABC):
         model: str,
         *,
         max_tokens_default: int = 4096,
+        stream: bool = False,
     ) -> Tuple[str, Dict[str, str], dict]:
-        """(url, headers, json_body) for a fresh, non-streaming request."""
+        """(url, headers, json_body) for a fresh request, with fresh env auth.
+
+        ``stream=True`` produces this dialect's *streaming* form (so the caller
+        can measure a real time-to-first-chunk, comparable to a streamed
+        baseline's): for the chat-completions dialects that means
+        ``stream: true`` in the body, for Gemini the ``streamGenerateContent``
+        endpoint.  ``stream``/``stream_options`` are excluded from a request's
+        cassette identity (see :mod:`agentrec.keying`), so the same prompt keys
+        the same whether it was recorded streaming or not."""
 
     @abstractmethod
     def decode_response(self, payload: bytes, *, is_sse: bool) -> DecodedResponse:

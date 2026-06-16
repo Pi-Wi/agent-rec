@@ -119,6 +119,19 @@ def _fmt_latency(row: RowResult) -> str:
     return f"{_fmt_seconds(row.baseline_latency_s)}→{_fmt_seconds(row.target_latency_s)}"
 
 
+def _fmt_first_chunk(row: RowResult) -> str:
+    """Per-row TTFB cell, e.g. ``0.30s→0.12s`` ('–' when nothing is known)."""
+    if (
+        row.baseline_latency_first_chunk_s is None
+        and row.target_latency_first_chunk_s is None
+    ):
+        return "–"
+    return (
+        f"{_fmt_seconds(row.baseline_latency_first_chunk_s)}"
+        f"→{_fmt_seconds(row.target_latency_first_chunk_s)}"
+    )
+
+
 _LATENCY_CAVEAT = (
     "Baseline latencies are recording-time provenance (whenever each cassette "
     "was recorded); read the ratio as an indication, not a benchmark."
@@ -146,6 +159,14 @@ def _totals_rows(
             ("Latency (mean)", _fmt_seconds(latency.baseline_mean_s),
              _fmt_seconds(latency.target_mean_s), _fmt_ratio(latency.ratio))
         )
+        # TTFB only when both sides streamed (the runner streams targets, so
+        # this appears whenever the baseline was recorded streaming too).
+        if latency.first_chunk_rows and latency.baseline_first_chunk_mean_s is not None:
+            rows.append(
+                ("TTFB (mean)", _fmt_seconds(latency.baseline_first_chunk_mean_s),
+                 _fmt_seconds(latency.target_first_chunk_mean_s),
+                 _fmt_ratio(latency.first_chunk_ratio))
+            )
     for entry in pricings:
         cost_totals = entry.totals(report.ok_rows)
         if cost_totals is None:
@@ -385,6 +406,11 @@ def render_markdown(
                 meta += f" · out tokens {_fmt_out_tokens(row)}"
             if row.baseline_latency_s is not None or row.target_latency_s is not None:
                 meta += f" · latency {_fmt_latency(row)}"
+            if (
+                row.baseline_latency_first_chunk_s is not None
+                or row.target_latency_first_chunk_s is not None
+            ):
+                meta += f" · TTFB {_fmt_first_chunk(row)}"
             lines.append(meta)
             for note in row.notes:
                 lines.append(f"- _{note}_")
@@ -666,6 +692,11 @@ def render_html(
                 meta += f" · out tokens {esc(_fmt_out_tokens(row))}"
             if row.baseline_latency_s is not None or row.target_latency_s is not None:
                 meta += f" · latency {esc(_fmt_latency(row))}"
+            if (
+                row.baseline_latency_first_chunk_s is not None
+                or row.target_latency_first_chunk_s is not None
+            ):
+                meta += f" · TTFB {esc(_fmt_first_chunk(row))}"
             parts.append(meta + "</p>")
             for note in row.notes:
                 parts.append(f"<p class='note'>{esc(note)}</p>")
@@ -768,6 +799,12 @@ def render_console(report: MigrationReport, *, pricing: PricingArg = None) -> st
             f"target mean {latency.target_mean_s:.2f}s ({latency.ratio:.2f}x; "
             "baseline is recording-time provenance)"
         )
+        if latency.first_chunk_ratio is not None:
+            lines.append(
+                f"  TTFB baseline mean {latency.baseline_first_chunk_mean_s:.2f}s -> "
+                f"target mean {latency.target_first_chunk_mean_s:.2f}s "
+                f"({latency.first_chunk_ratio:.2f}x; both sides streamed)"
+            )
     for entry in _pricing_list(pricing):
         lines.append("  " + _pricing_summary(entry, report, arrow="->", times="x"))
     for row in report.skipped_rows + report.error_rows:
