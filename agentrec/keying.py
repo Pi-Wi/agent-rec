@@ -149,8 +149,11 @@ def _conversation_canon(host: str, body: dict) -> Optional[str]:
     blocks, tool_use blocks vs. tool_calls arrays), so the same logical prompt
     hashes identically across providers.  Sampling parameters are deliberately
     not part of the canon; tool definitions ARE (they shape the answer like a
-    system prompt does), while an explicit ``tool_choice: auto`` equals the
-    default.  Returns None when no adapter matches the host or the request
+    system prompt does — minus the ``strict`` formatting flag), while an
+    explicit ``tool_choice: auto`` equals the default.  Output-format knobs
+    (``response_format`` / ``parallel_tool_calls``) are excluded too: the same
+    prompt asked with and without them is the same question.  Returns None when
+    no adapter matches the host or the request
     uses features the adapter cannot translate (images, …) — callers then
     fall back to the generic body hash.
 
@@ -172,7 +175,15 @@ def _conversation_canon(host: str, body: dict) -> Optional[str]:
         "messages": [_canon_message(message) for message in conversation.messages],
     }
     if conversation.tools:
-        canon["tools"] = conversation.tools
+        # Only the three fields that shape the answer (like a system prompt
+        # does) define identity.  A tool's ``strict`` flag is a how-to-format
+        # knob, not part of what is being asked — projecting it out keeps the
+        # canon (and so the semantic key) byte-identical for every corpus
+        # recorded before strict was carried.
+        canon["tools"] = [
+            {key: tool[key] for key in ("name", "description", "parameters") if key in tool}
+            for tool in conversation.tools
+        ]
     if conversation.tool_choice not in (None, "auto"):
         canon["tool_choice"] = conversation.tool_choice
     return _canonical(canon)

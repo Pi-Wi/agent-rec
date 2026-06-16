@@ -82,3 +82,18 @@ class MistralAdapter(OpenAIAdapter):
         # Mistral already returns a final usage chunk when streaming and rejects
         # OpenAI's stream_options field, so only flip the stream flag.
         return {"stream": True}
+
+    # Mistral shares OpenAI's wire shape but not its structured-output / tool
+    # fidelity features: no `parallel_tool_calls` param, no per-function
+    # `strict`, and its `json_schema` mode isn't live-verified here.  So a
+    # Mistral target drops the first two (the runner notes it) and skips a
+    # strict-schema request rather than risk an unfaithful translation.  These
+    # can be promoted later if/when each is verified against the live API.
+    def carries_parallel_tool_calls(self) -> bool:
+        return False
+
+    def carries_function_strict(self) -> bool:
+        return False
+
+    def _carries_json_schema(self) -> bool:
+        return False

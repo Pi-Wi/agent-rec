@@ -16,13 +16,15 @@ the OpenAI SDK, the Anthropic SDK, LangChain, or any httpx-backed client), so
 the prompts you already run in development or production *are* the corpus you
 migrate against — no hand-authored test cases, no golden answers to maintain.
 
-> **Status:** beta (0.9.0). Migration translation covers OpenAI ↔ Anthropic
+> **Status:** beta (0.11.0). Migration translation covers OpenAI ↔ Anthropic
 > conversations including **tool use** (definitions, assistant tool calls, tool
 > results) and JSON mode; **Gemini** and **Mistral** are included as third and
 > fourth translation dialects (request/response, streaming and tool-call paths
 > verified against the live API — see `tests/test_live_gemini.py` and
-> `tests/test_live_mistral.py`). Images and strict `json_schema` become
-> clearly-reasoned skipped rows. Record/replay is proven for streaming (SSE) and
+> `tests/test_live_mistral.py`). Strict `json_schema` structured output migrates
+> faithfully OpenAI→OpenAI (and `parallel_tool_calls` / function `strict` ride or
+> are dropped-with-a-note); it becomes a clearly-reasoned skipped row only on a
+> target that can't enforce a schema, as images still do. Record/replay is proven for streaming (SSE) and
 > non-streaming (JSON) on OpenAI and Anthropic, sync and async — or **import** an
 > existing Langfuse / LangSmith / OpenTelemetry export as a corpus without
 > running the recorder at all. The API may still change in minor releases before

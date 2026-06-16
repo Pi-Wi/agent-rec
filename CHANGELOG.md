@@ -1,5 +1,56 @@
 # Changelog
 
+## Dev (0.11.0)
+
+### Added
+- **Structured-output & tool-call fidelity — three knobs the runner used to drop
+  silently now ride or skip honestly (TODO P3).** A recorded request's strict
+  `response_format: {"type": "json_schema", ...}`, its `parallel_tool_calls`
+  flag, and each function's `strict: true` are captured into the neutral
+  `Conversation` and re-emitted when the target speaks them: **OpenAI→OpenAI no
+  longer skips a strict-schema prompt**, and carries the verbatim schema,
+  `parallel_tool_calls`, and per-tool `strict`. A target that can't enforce a
+  requested schema (Anthropic, Gemini, Mistral) raises `UnsupportedRequestError`
+  from `build_request` → an **honest skipped row** ("target cannot represent
+  request: …") rather than a prompt nudge pretending to enforce a contract.
+  `parallel_tool_calls` and `strict` aren't fatal cross-provider — they're
+  dropped, but **noted on the row** (`parallel_tool_calls=… not carried to
+  anthropic`; `function strict-schema enforcement dropped …`), alongside the
+  existing temperature-drop note. *Why:* these were the P3 "silently dropped"
+  fidelity gaps; the project's contract is that nothing changes a request's
+  meaning without saying so. Two new `ProviderAdapter` capability predicates
+  (`carries_parallel_tool_calls` / `carries_function_strict`, default `False`,
+  `True` on `OpenAIAdapter`, back to `False` on `MistralAdapter`) let the runner
+  decide what to note without hard-coding provider names.
+
+### Changed
+- **Build-time skips are caught, not crashes.** The migration runner now turns
+  an `UnsupportedRequestError` from `build_request` into a skipped row (it
+  previously caught only `MissingAPIKeyError` there). This closes a latent gap:
+  the already-documented "unparseable recorded tool-argument JSON, Anthropic/
+  Gemini target" skip was raised at build time but never caught, so it would
+  have propagated out of `run_migration` instead of skipping the one row.
+- **`semantic_key` caveat — strict-`json_schema` baselines regroup once.** Such
+  requests used to fail extraction (json_schema was rejected) and fell back to
+  the generic body-hash key; now they extract into a proper conversation and key
+  on it, so an OpenAI baseline recorded with `response_format: json_schema`
+  lands in the **same** group as the equivalent plain-text prompt (the intended
+  grouping). Only these requests change key — text-only and tool-call corpora
+  are byte-for-byte unchanged. Carrying a tool's `strict` flag does **not**
+  change any key: it rides inside the tool dict but is projected out of the
+  semantic-key canon (verified by tests), as are `parallel_tool_calls` and
+  `response_format` (a format choice was never the question being asked).
+- **Anthropic `tool_choice: {"type": "none"}` verified live (TODO P3).** New
+  `tests/test_live_anthropic.py` drives the Anthropic-target path against the
+  real `/v1/messages` API and confirms `none` is accepted and suppresses tool
+  calls — paired with a forced-call control on identical input, so the contrast
+  (forced → a call, none → none) is the proof, not a single well-formed request.
+  Live note recorded in the test: with its only tool suppressed, Haiku may
+  return empty content (`stop_reason: end_turn`) — model disposition, decoded
+  faithfully, not a bug — so the test asserts call suppression, not a non-empty
+  answer. An offline round-trip test (`extract` ↔ `build`) covers the wire
+  spelling without a key.
+
 ## Dev (0.10.0)
 
 ### Added

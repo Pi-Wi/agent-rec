@@ -114,14 +114,24 @@ class Conversation:
 
     ``tools`` are the request's tool definitions in neutral form
     (``[{"name", "description", "parameters"}, ...]``, ``parameters`` being
-    the JSON schema).  ``tool_choice`` is ``None`` (provider default),
-    ``"auto"``, ``"required"``, ``"none"`` or ``{"name": <tool>}`` (forced).
+    the JSON schema).  A tool may also carry ``"strict": bool`` — OpenAI's
+    strict-schema function flag; it rides *inside* the tool dict but is held
+    out of the prompt's semantic identity (see :mod:`agentrec.keying`), so the
+    same tool with and without strict groups together.  ``tool_choice`` is
+    ``None`` (provider default), ``"auto"``, ``"required"``, ``"none"`` or
+    ``{"name": <tool>}`` (forced).
 
-    ``response_format`` is the provider-neutral "the caller asked for a JSON
-    object".  Only ``{"type": "json_object"}`` is carried; providers with a
-    native JSON mode re-emit it, others emulate it via the system prompt.
-    It is *not* part of the prompt's semantic identity: the same prompt with
-    and without JSON mode groups under one ``semantic_key``.
+    ``response_format`` is the provider-neutral "the caller asked for
+    structured output".  Two shapes are carried: ``{"type": "json_object"}``
+    (free-form JSON mode — providers with a native mode re-emit it, others
+    emulate it via the system prompt) and
+    ``{"type": "json_schema", "json_schema": {...}}`` (a *strict* schema —
+    re-emitted only on targets that enforce it natively; non-native targets
+    raise :class:`UnsupportedRequestError` from ``build_request` rather than
+    pretend a prompt nudge enforces a schema).  ``parallel_tool_calls`` is the
+    neutral copy of OpenAI's same-named flag.  None of these three are part of
+    the prompt's semantic identity: the same prompt with and without them
+    groups under one ``semantic_key``.
     """
 
     system: Optional[str] = None
@@ -131,6 +141,7 @@ class Conversation:
     response_format: Optional[dict] = None
     tools: Optional[List[dict]] = None
     tool_choice: Optional[object] = None
+    parallel_tool_calls: Optional[bool] = None
 
 
 def generic_token_usage(usage: Optional[dict]) -> TokenUsage:
@@ -270,6 +281,20 @@ class ProviderAdapter(ABC):
         knowledge); providers with cache/reasoning detail override it.
         """
         return generic_token_usage(usage)
+
+    # --- target capabilities ------------------------------------------------
+    # The migration runner consults these so it can note *honestly* on a row
+    # when a field the baseline set cannot ride to this target — versus
+    # silently dropping it.  Defaults say "this dialect does not carry it";
+    # an adapter whose ``build_request`` re-emits the field overrides to True.
+
+    def carries_parallel_tool_calls(self) -> bool:
+        """Whether ``build_request`` preserves ``parallel_tool_calls``."""
+        return False
+
+    def carries_function_strict(self) -> bool:
+        """Whether ``build_request`` preserves per-tool ``strict`` schema flags."""
+        return False
 
     @abstractmethod
     def extract_conversation(self, body: dict) -> Conversation:

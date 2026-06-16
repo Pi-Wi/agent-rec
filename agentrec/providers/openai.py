@@ -32,11 +32,12 @@ from .base import (
 # makes the whole request unsupported rather than silently changing its
 # meaning.  ``tools``/``tool_choice`` are supported (captured into the neutral
 # Conversation); the *legacy* functions API is not — modern recordings don't
-# use it.  ``response_format`` is NOT here: ``{"type": "json_object"}`` is
-# captured as the neutral ``Conversation.response_format``.  The
-# ``json_schema`` variant stays unsupported — strict structured output can't
-# be faithfully emulated on providers without it, and a prompt nudge does not
-# enforce a schema.
+# use it.  ``response_format`` is NOT here: both ``{"type": "json_object"}``
+# and the strict ``{"type": "json_schema", ...}`` variant are captured as the
+# neutral ``Conversation.response_format``.  ``json_schema`` is carried (not
+# rejected) so OpenAI→OpenAI migrations keep their schema; the *build* side
+# raises on targets that cannot enforce one, rather than pretend a prompt nudge
+# does (see ``_response_format_body`` and the Anthropic/Gemini adapters).
 _UNSUPPORTED_FIELDS = ("functions", "function_call")
 
 
@@ -70,6 +71,11 @@ def _extract_tools(body: dict) -> "list[dict] | None":
             tool["description"] = function["description"]
         if function.get("parameters") is not None:
             tool["parameters"] = function["parameters"]
+        if function.get("strict") is not None:
+            # Strict-schema flag: carried inside the tool, held out of the
+            # semantic key (see agentrec.keying), re-emitted only on targets
+            # that honour it (see OpenAIAdapter.carries_function_strict).
+            tool["strict"] = function["strict"]
         tools.append(tool)
     return tools
 
@@ -134,6 +140,40 @@ class OpenAIAdapter(ProviderAdapter):
         """
         return {"stream": True, "stream_options": {"include_usage": True}}
 
+    # --- structured-output / tool-call fidelity (OpenAI carries all three) ---
+    # These distinguish genuine OpenAI from the dialects that merely share its
+    # wire shape.  Mistral subclasses this adapter but does not speak OpenAI's
+    # strict-schema, parallel-tool-calls or json_schema features, so it
+    # overrides them back to False — the build then drops/skips honestly and
+    # the migration runner notes the drop on the row.
+
+    def carries_parallel_tool_calls(self) -> bool:
+        return True
+
+    def carries_function_strict(self) -> bool:
+        return True
+
+    def _carries_json_schema(self) -> bool:
+        """Whether this target enforces ``response_format: json_schema`` natively."""
+        return True
+
+    def _response_format_body(self, response_format: dict) -> dict:
+        """Wire ``response_format`` for this dialect (or raise if unsupported).
+
+        ``json_object`` is OpenAI's free-form JSON mode (re-emitted as-is).
+        ``json_schema`` is strict structured output: re-emitted verbatim on a
+        target that enforces it, otherwise an :class:`UnsupportedRequestError`
+        — a skipped row beats silently downgrading a schema contract.
+        """
+        if response_format.get("type") == "json_schema":
+            if not self._carries_json_schema():
+                raise UnsupportedRequestError(
+                    "request asks for strict json_schema structured output, which "
+                    f"{self.name} does not enforce natively"
+                )
+            return {"type": "json_schema", "json_schema": response_format["json_schema"]}
+        return {"type": "json_object"}
+
     def _extract_tool_choice(self, body: dict) -> object:
         """Neutral ``tool_choice`` from the wire body."""
         raw = body.get("tool_choice")
@@ -164,6 +204,16 @@ class OpenAIAdapter(ProviderAdapter):
             )
             if format_type == "json_object":
                 response_format = {"type": "json_object"}
+            elif format_type == "json_schema":
+                # Strict structured output.  Carry the whole json_schema object
+                # (name + schema + strict) so a same-dialect target re-emits it
+                # verbatim; a target that can't enforce it skips at build time.
+                schema = requested_format.get("json_schema")
+                if not isinstance(schema, dict):
+                    raise UnsupportedRequestError(
+                        "response_format json_schema has no json_schema object"
+                    )
+                response_format = {"type": "json_schema", "json_schema": schema}
             elif format_type != "text":
                 raise UnsupportedRequestError(
                     f"request uses response_format type {format_type!r}"
@@ -175,6 +225,7 @@ class OpenAIAdapter(ProviderAdapter):
             response_format=response_format,
             tools=_extract_tools(body),
             tool_choice=self._extract_tool_choice(body),
+            parallel_tool_calls=body.get("parallel_tool_calls"),
         )
         for message in body["messages"]:
             role = message.get("role")
@@ -282,17 +333,25 @@ class OpenAIAdapter(ProviderAdapter):
                 messages.append({"role": role, "content": message.get("content")})
         body: dict = {"model": model, "messages": messages}
         if conversation.tools:
-            body["tools"] = [
-                {
-                    "type": "function",
-                    "function": {
-                        key: tool[key]
-                        for key in ("name", "description", "parameters")
-                        if key in tool
-                    },
+            carry_strict = self.carries_function_strict()
+            out_tools = []
+            for tool in conversation.tools:
+                function = {
+                    key: tool[key]
+                    for key in ("name", "description", "parameters")
+                    if key in tool
                 }
-                for tool in conversation.tools
-            ]
+                if carry_strict and tool.get("strict") is not None:
+                    function["strict"] = tool["strict"]
+                out_tools.append({"type": "function", "function": function})
+            body["tools"] = out_tools
+            # parallel_tool_calls only makes sense alongside tools; carry the
+            # baseline's flag when this dialect honours it (Mistral does not).
+            if (
+                conversation.parallel_tool_calls is not None
+                and self.carries_parallel_tool_calls()
+            ):
+                body["parallel_tool_calls"] = conversation.parallel_tool_calls
         choice = conversation.tool_choice
         if choice is not None:
             if isinstance(choice, dict):
@@ -312,8 +371,9 @@ class OpenAIAdapter(ProviderAdapter):
         if conversation.temperature is not None and not reasoning:
             body["temperature"] = conversation.temperature
         if conversation.response_format is not None:
-            # Native JSON mode: re-emit on this provider's own dialect.
-            body["response_format"] = {"type": "json_object"}
+            # Native JSON mode (or strict json_schema); raises for a target
+            # that cannot enforce a requested schema.
+            body["response_format"] = self._response_format_body(conversation.response_format)
         if stream:
             body.update(self._stream_body_fields())
         headers = {

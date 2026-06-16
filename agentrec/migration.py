@@ -580,6 +580,27 @@ async def run_migration(
         if cross_provider and conversation.temperature is not None:
             conversation.temperature = None
             row.notes.append("temperature dropped in cross-provider translation")
+        # Tool-call fidelity knobs the baseline set that this target won't carry
+        # are *dropped* (not skipped) — but never silently: note them so a reader
+        # knows the translated call may behave differently here.  build_request
+        # gates the actual emission on the same capability, so OpenAI→OpenAI
+        # carries them and produces no note.
+        if (
+            conversation.parallel_tool_calls is not None
+            and not target_adapter.carries_parallel_tool_calls()
+        ):
+            row.notes.append(
+                f"parallel_tool_calls={conversation.parallel_tool_calls} not carried to "
+                f"{target_adapter.name}; the target may parallelize tool calls differently"
+            )
+        if (
+            conversation.tools
+            and any(tool.get("strict") for tool in conversation.tools)
+            and not target_adapter.carries_function_strict()
+        ):
+            row.notes.append(
+                f"function strict-schema enforcement dropped translating to {target_adapter.name}"
+            )
 
         # --- Target (cache, or live via the shared AutoTransport) --------
         target = None
@@ -621,6 +642,13 @@ async def run_migration(
                 )
             except MissingAPIKeyError as exc:
                 row.status, row.reason = "error", str(exc)
+                return
+            except UnsupportedRequestError as exc:
+                # The target dialect can't faithfully represent this request
+                # (e.g. a strict json_schema, or tool-call arguments that never
+                # parsed to an object).  An honest skipped row — not a crash —
+                # mirrors the extract-time skip handled above.
+                row.status, row.reason = "skipped", f"target cannot represent request: {exc}"
                 return
             extra: Dict[str, object] = {
                 "migrated_from": row.baseline_id,

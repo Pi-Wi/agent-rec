@@ -259,6 +259,77 @@ async def test_migration_end_to_end_cross_provider(corpus: FileStore, monkeypatc
     assert report.live_count == 1 and report.cached_count == 0
 
 
+def _tooled_baseline(*, strict: bool, parallel: bool) -> CapturedInteraction:
+    """An OpenAI streaming baseline whose request carries a strict tool and
+    parallel_tool_calls — the knobs a non-OpenAI target can't carry."""
+    function = {"name": "f", "parameters": {"type": "object"}}
+    if strict:
+        function["strict"] = True
+    body = {
+        "model": "gpt-4o-mini",
+        "stream": True,
+        "messages": [{"role": "user", "content": PROMPT}],
+        "tools": [{"type": "function", "function": function}],
+        "parallel_tool_calls": parallel,
+    }
+    final = _openai_chunk(None, finish="stop")
+    final["usage"] = {"prompt_tokens": 7, "completion_tokens": 3}
+    return CapturedInteraction(
+        request=CapturedRequest(
+            method="POST",
+            url="https://api.openai.com/v1/chat/completions",
+            headers=[(b"content-type", b"application/json")],
+            content=json.dumps(body).encode(),
+        ),
+        response_status=200,
+        response_headers=[(b"content-type", b"text/event-stream; charset=utf-8")],
+        response_extensions={},
+        chunks=[CapturedChunk(data=_sse(_openai_chunk("Blue"))), CapturedChunk(data=_sse(final)),
+                CapturedChunk(data=b"data: [DONE]\n\n")],
+    )
+
+
+async def test_json_schema_baseline_skips_on_non_native_target(corpus: FileStore, monkeypatch):
+    """A strict-json_schema prompt migrated to Anthropic is an honest skipped
+    row (not a crash): build_request raises, the runner catches it, no network."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    await corpus.save(
+        BASELINE_ID,
+        _baseline_interaction(
+            response_format={
+                "type": "json_schema",
+                "json_schema": {"name": "t", "schema": {"type": "object"}},
+            }
+        ),
+    )
+    # _raising_transport would blow up if the runner tried to call the network;
+    # a clean skip never reaches it.
+    report = await run_migration(
+        corpus, TARGET_MODEL, build_comparators("exact"), inner_transport=_raising_transport()
+    )
+    assert len(report.rows) == 1
+    row = report.rows[0]
+    assert row.status == "skipped"
+    assert "json_schema" in row.reason
+    assert not await corpus.has(migration_id_for(BASELINE_ID, TARGET_MODEL))
+
+
+async def test_parallel_and_strict_dropped_are_noted_cross_provider(corpus: FileStore, monkeypatch):
+    """Cross-provider, the untranslatable tool knobs are dropped — but noted on
+    the row, never silently."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    await corpus.save(BASELINE_ID, _tooled_baseline(strict=True, parallel=False))
+
+    report = await run_migration(
+        corpus, TARGET_MODEL, build_comparators("exact"), inner_transport=_anthropic_answer("Blue")
+    )
+    row = report.rows[0]
+    assert row.status == "ok"  # the request itself translates; only the knobs drop
+    notes = " | ".join(row.notes)
+    assert "parallel_tool_calls" in notes
+    assert "strict-schema" in notes
+
+
 async def test_category_and_tokens_flow_into_report(corpus: FileStore, monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     await _seed_baseline(corpus)

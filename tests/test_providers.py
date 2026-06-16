@@ -346,16 +346,92 @@ def test_extract_openai_response_format_json_object_is_captured():
     assert conv.response_format is None
 
 
-def test_extract_openai_rejects_json_schema_response_format():
+_JSON_SCHEMA = {
+    "name": "ticket",
+    "schema": {"type": "object", "properties": {"priority": {"type": "string"}}},
+    "strict": True,
+}
+
+
+def test_extract_openai_carries_json_schema_response_format():
+    """Strict json_schema is now captured (not rejected) so it can ride to a
+    native target; the whole json_schema object is preserved verbatim."""
     adapter = OpenAIAdapter()
+    conv = adapter.extract_conversation(
+        {
+            "model": "gpt-4o-mini",
+            "response_format": {"type": "json_schema", "json_schema": _JSON_SCHEMA},
+            "messages": [{"role": "user", "content": "Triage this ticket."}],
+        }
+    )
+    assert conv.response_format == {"type": "json_schema", "json_schema": _JSON_SCHEMA}
+
+    # A json_schema response_format with no json_schema object is still a skip.
     with pytest.raises(UnsupportedRequestError, match="json_schema"):
         adapter.extract_conversation(
             {
                 "model": "gpt-4o-mini",
-                "response_format": {"type": "json_schema", "json_schema": {"name": "t"}},
+                "response_format": {"type": "json_schema"},
                 "messages": [{"role": "user", "content": "hi"}],
             }
         )
+
+
+def test_openai_reemits_json_schema_but_anthropic_and_mistral_skip(monkeypatch):
+    """OpenAI→OpenAI keeps the schema; targets without native enforcement skip."""
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    monkeypatch.setenv("MISTRAL_API_KEY", "k")
+    conv = Conversation(
+        messages=[{"role": "user", "content": "hi"}],
+        response_format={"type": "json_schema", "json_schema": _JSON_SCHEMA},
+    )
+    _, _, body = OpenAIAdapter().build_request(conv, "gpt-4o")
+    assert body["response_format"] == {"type": "json_schema", "json_schema": _JSON_SCHEMA}
+
+    for adapter, model in (
+        (AnthropicAdapter(), "claude-haiku-4-5"),
+        (MistralAdapter(), "mistral-large-latest"),
+    ):
+        with pytest.raises(UnsupportedRequestError, match="json_schema"):
+            adapter.build_request(conv, model)
+
+
+def test_openai_carries_function_strict_and_parallel_tool_calls_mistral_drops(monkeypatch):
+    """strict + parallel_tool_calls ride to an OpenAI target, drop on Mistral."""
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    monkeypatch.setenv("MISTRAL_API_KEY", "k")
+    conv = Conversation(
+        messages=[{"role": "user", "content": "weather?"}],
+        tools=[{"name": "get_weather", "parameters": {"type": "object"}, "strict": True}],
+        parallel_tool_calls=False,
+    )
+    _, _, body = OpenAIAdapter().build_request(conv, "gpt-4o")
+    assert body["tools"][0]["function"]["strict"] is True
+    assert body["parallel_tool_calls"] is False
+
+    # Mistral shares the wire shape but not these features: both are dropped.
+    _, _, body = MistralAdapter().build_request(conv, "mistral-large-latest")
+    assert "strict" not in body["tools"][0]["function"]
+    assert "parallel_tool_calls" not in body
+
+
+def test_extract_openai_captures_strict_and_parallel_tool_calls():
+    conv = OpenAIAdapter().extract_conversation(
+        {
+            "model": "gpt-4o",
+            "messages": [{"role": "user", "content": "hi"}],
+            "tools": [
+                {
+                    "type": "function",
+                    "function": {"name": "f", "parameters": {"type": "object"}, "strict": True},
+                }
+            ],
+            "parallel_tool_calls": False,
+        }
+    )
+    assert conv.tools[0]["strict"] is True
+    assert conv.parallel_tool_calls is False
 
 
 def test_build_openai_request_reemits_json_mode(monkeypatch):
@@ -397,6 +473,26 @@ def test_build_anthropic_request_emulates_json_mode(monkeypatch):
     assert "system" not in body
 
 
+def test_anthropic_tool_choice_none_round_trips(monkeypatch):
+    """`tool_choice: none` (tools are available but the model may not call them)
+    round-trips through the neutral form onto Anthropic's {"type": "none"}.
+    The live counterpart is tests/test_live_anthropic.py."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    adapter = AnthropicAdapter()
+    conv = adapter.extract_conversation(
+        {
+            "model": "claude-haiku-4-5",
+            "max_tokens": 64,
+            "tools": [{"name": "get_weather", "input_schema": {"type": "object"}}],
+            "tool_choice": {"type": "none"},
+            "messages": [{"role": "user", "content": "hi"}],
+        }
+    )
+    assert conv.tool_choice == "none"
+    _, _, body = adapter.build_request(conv, "claude-haiku-4-5")
+    assert body["tool_choice"] == {"type": "none"}
+
+
 def test_response_format_does_not_change_semantic_key():
     """JSON mode is a format knob: same prompt, with and without, must group."""
     import httpx
@@ -423,6 +519,43 @@ def test_response_format_does_not_change_semantic_key():
     assert plain.semantic_key == json_mode.semantic_key
     # Record/replay still distinguishes the two concrete requests.
     assert plain.cassette_id != json_mode.cassette_id
+
+
+def _openai_fp(body: dict):
+    import httpx
+
+    from agentrec.keying import fingerprint
+
+    return fingerprint(
+        httpx.Request(
+            "POST",
+            "https://api.openai.com/v1/chat/completions",
+            content=json.dumps(body).encode(),
+        )
+    )
+
+
+def test_json_schema_and_parallel_tool_calls_do_not_change_semantic_key():
+    """The structured-output / tool knobs are format choices, not the question:
+    a prompt asked with and without them must land in one semantic group."""
+    base = {"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "Triage."}]}
+    plain = _openai_fp(base)
+    schema = _openai_fp({**base, "response_format": {"type": "json_schema", "json_schema": _JSON_SCHEMA}})
+    parallel = _openai_fp({**base, "parallel_tool_calls": False})
+    assert plain.semantic_key == schema.semantic_key == parallel.semantic_key
+    # ...but each concrete request still records to its own cassette.
+    assert len({plain.cassette_id, schema.cassette_id, parallel.cassette_id}) == 3
+
+
+def test_function_strict_does_not_change_semantic_key():
+    """Carrying a tool's strict flag must not re-key existing tool corpora."""
+    tool_no_strict = {"type": "function", "function": {"name": "f", "parameters": {"type": "object"}}}
+    tool_strict = {"type": "function", "function": {**tool_no_strict["function"], "strict": True}}
+    body = {"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "go"}]}
+    without = _openai_fp({**body, "tools": [tool_no_strict]})
+    with_strict = _openai_fp({**body, "tools": [tool_strict]})
+    assert without.semantic_key == with_strict.semantic_key
+    assert without.cassette_id != with_strict.cassette_id
 
 
 def test_missing_api_key(monkeypatch):

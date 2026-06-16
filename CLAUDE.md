@@ -61,9 +61,14 @@ bold lead-ins, *why* included).
    hash.
 5. **Honest skips.** Anything not faithfully translatable raises
    `UnsupportedRequestError` → a *skipped row with a reason*, never a silent
-   behavior change. Skipped today: images/non-text blocks, strict `json_schema`,
-   legacy OpenAI functions API, server-side Anthropic tools, `n>1`, unparseable
-   recorded tool-argument JSON (Anthropic/Gemini targets only).
+   behavior change. Raised at **extract** (the runner already skipped these) or
+   at **build** time (the runner catches it there too now, turning it into the
+   same skipped row instead of crashing). Skipped today: images/non-text blocks,
+   strict `json_schema` *on a target without native enforcement* (OpenAI→OpenAI
+   carries it), legacy OpenAI functions API, server-side Anthropic tools, `n>1`,
+   unparseable recorded tool-argument JSON (Anthropic/Gemini targets only).
+   Soft-dropped-with-a-note (not skipped): `parallel_tool_calls` and per-tool
+   `strict` when the target can't carry them (`carries_*` adapter predicates).
 6. **Comparators degrade, never crash** — exceptions become
    `ComparisonResult(error=True)` on that row.
 7. **Derived metrics never gate.** Tokens are canonical/recorded; cost and
@@ -182,9 +187,11 @@ parsers raise `_Skip(reason)` (never fatal).
 
 ## Roadmap
 
-See `TODO.md` for the live roadmap. **Shipped:** streamed-target latency + TTFB
-and a configurable / second-opinion judge (0.10.0), Mistral adapter +
-`mistral-list` pricing (0.9.0, live-verified), Gemini adapter + importers
-(0.8.0), README repositioning (0.6.0). **Still open:** OpenAI Responses API
-(`/v1/responses`) dialect, strict `json_schema` / `parallel_tool_calls`
-fidelity, images/multimodal, project hygiene (CONTRIBUTING, CI Windows runner).
+See `TODO.md` for the live roadmap. **Shipped:** structured-output & tool-call
+fidelity — strict `json_schema` (carried OpenAI→OpenAI, honest-skip elsewhere),
+`parallel_tool_calls` and function `strict` (carried or dropped-with-a-note)
+(0.11.0); streamed-target latency + TTFB and a configurable / second-opinion
+judge (0.10.0), Mistral adapter + `mistral-list` pricing (0.9.0, live-verified),
+Gemini adapter + importers (0.8.0), README repositioning (0.6.0). **Still open:**
+OpenAI Responses API (`/v1/responses`) dialect, images/multimodal, project
+hygiene (CONTRIBUTING, CI Windows runner).

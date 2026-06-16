@@ -28,19 +28,31 @@ coverage), and **how it presents itself** (positioning).
   `$AGENTREC_JUDGE_MODEL`) and takes an optional **second opinion**
   (`--judge-model-2` / `$AGENTREC_JUDGE_MODEL_2`): both judges must agree for a
   row to pass, and disagreements are flagged for gate-critical corpora.
+- **Structured-output & tool-call fidelity (0.11.0):** strict `json_schema`,
+  `parallel_tool_calls` and function `strict: true` are no longer silently
+  dropped. The neutral `Conversation` carries all three; OpenAI→OpenAI re-emits
+  them faithfully (a strict-schema prompt no longer skips), a target without
+  native schema enforcement raises a clean build-time skip, and the two
+  non-fatal knobs are dropped *with a note on the row* cross-provider. The runner
+  now catches `UnsupportedRequestError` at build time (closing a latent crash
+  path for the unparseable-tool-args skip). Decided per P3: **carry
+  same-dialect, note the drop otherwise** — never silent.
 
 ## P3 — translation-fidelity gaps (known honest skips to revisit)
 
 - [ ] OpenAI **Responses API** (`/v1/responses`) adapter — chat-completions only
   today; new SDK versions default to Responses for some features.
-- [ ] `parallel_tool_calls` and function `strict: true` are silently dropped —
-  decide: carry (same-provider), note on the row, or keep dropping with rationale.
-- [ ] Strict `json_schema` migration for targets that support it natively
-  (OpenAI→OpenAI should not need to skip).
 - [ ] Images/multimodal — the largest honest-skip category; even same-provider
   pass-through would unlock vision corpora.
-- [ ] Anthropic `tool_choice: {"type": "none"}` is emitted but untested live —
-  verify in the next live-test run.
+- [x] Anthropic `tool_choice: {"type": "none"}` (0.11.0) — verified live
+  (`tests/test_live_anthropic.py`): the API accepts the spelling and suppresses
+  tool calls (paired with a forced-call control on identical input). Live note:
+  with the only tool off the table, Haiku may answer with empty content — model
+  disposition, faithfully decoded, not an adapter bug.
+- [x] `parallel_tool_calls` and function `strict: true` (0.11.0) — carried
+  same-dialect, dropped-with-a-note otherwise.
+- [x] Strict `json_schema` migration for native targets (0.11.0) — OpenAI→OpenAI
+  carries the schema; non-native targets skip honestly.
 
 ## P4 — project hygiene & distribution
 

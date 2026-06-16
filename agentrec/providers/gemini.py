@@ -217,6 +217,15 @@ class GeminiAdapter(ProviderAdapter):
         if conversation.temperature is not None:
             generation_config["temperature"] = conversation.temperature
         if conversation.response_format is not None:
+            # Gemini honours responseMimeType for free-form JSON.  A strict
+            # json_schema would have to be translated to Gemini's responseSchema
+            # (a different, narrower schema dialect); until that is built and
+            # live-verified, skip honestly rather than emit a half-faithful one.
+            if conversation.response_format.get("type") == "json_schema":
+                raise UnsupportedRequestError(
+                    "strict json_schema structured output is not translated to "
+                    "Gemini responseSchema yet"
+                )
             generation_config["responseMimeType"] = _JSON_MIME
         if generation_config:
             body["generationConfig"] = generation_config

@@ -9,6 +9,11 @@ auth is ``x-api-key`` plus an ``anthropic-version`` header; the newest models
 reject sampling parameters, so ``temperature`` is only forwarded when the
 recorded conversation carried one (the migration runner already drops it for
 cross-provider runs).
+
+The Anthropic-target path (``build_request`` → live POST → decode) is exercised
+against the real ``/v1/messages`` API by ``tests/test_live_anthropic.py``,
+which in particular pins ``tool_choice: {"type": "none"}`` — the spelling is
+accepted live and suppresses tool calls (skips without a key).
 """
 from __future__ import annotations
 
@@ -287,9 +292,16 @@ class AnthropicAdapter(ProviderAdapter):
                     "type": {"auto": "auto", "required": "any", "none": "none"}[choice]
                 }
         # JSON mode is emulated via the system prompt.  Composed locally into
-        # the body only: the shared Conversation must never be mutated.
+        # the body only: the shared Conversation must never be mutated.  A
+        # strict json_schema request is *not* emulated — a prompt nudge cannot
+        # enforce a schema, so the request skips honestly rather than pretend.
         system = conversation.system
         if conversation.response_format is not None:
+            if conversation.response_format.get("type") == "json_schema":
+                raise UnsupportedRequestError(
+                    "strict json_schema structured output cannot be faithfully "
+                    "emulated on Anthropic (no native schema enforcement)"
+                )
             system = f"{system}\n\n{_JSON_MODE_SUFFIX}" if system else _JSON_MODE_SUFFIX
         if system:
             body["system"] = system
