@@ -216,6 +216,43 @@ def _fmt_scalar(value) -> str:
     return json.dumps(value)
 
 
+# Diffs shown in a comparator's detail are capped so one wildly-divergent row
+# can't produce a kilobyte of text; the JSON and tool-call comparators share
+# both the cap and the field-by-field walk below.
+_MAX_DIFFS = 6
+
+
+def _cap_diffs(diffs: List[str], limit: int = _MAX_DIFFS) -> List[str]:
+    """First *limit* diffs, with a ``… (+N more)`` tail when truncated."""
+    shown = diffs[:limit]
+    if len(diffs) > limit:
+        shown.append(f"… (+{len(diffs) - limit} more)")
+    return shown
+
+
+def _union_paths(baseline_fields: Dict[str, object], target_fields: Dict[str, object]) -> List[str]:
+    """Every leaf path across both maps: baseline order first, then target-only."""
+    return list(baseline_fields) + [path for path in target_fields if path not in baseline_fields]
+
+
+def _classify_path(
+    path: str, baseline_fields: Dict[str, object], target_fields: Dict[str, object]
+) -> Tuple[str, Optional[str]]:
+    """Classify one leaf path as ``match`` / ``missing`` / ``extra`` / ``mismatch``.
+
+    Returns ``(kind, change)`` where *change* is the ``baseline→target``
+    rendering for a value mismatch (``None`` otherwise); each caller supplies
+    its own wording for the missing/extra/mismatch cases.
+    """
+    if path not in target_fields:
+        return "missing", None
+    if path not in baseline_fields:
+        return "extra", None
+    if _scalars_match(baseline_fields[path], target_fields[path]):
+        return "match", None
+    return "mismatch", f"{_fmt_scalar(baseline_fields[path])}→{_fmt_scalar(target_fields[path])}"
+
+
 class JsonComparator(Comparator):
     """Field-by-field comparison of JSON payloads.
 
@@ -240,8 +277,6 @@ class JsonComparator(Comparator):
 
     name = "json"
 
-    _MAX_DIFFS = 6
-
     def __init__(self, fields: Optional[Sequence[str]] = None) -> None:
         self._fields: Tuple[str, ...] = tuple(fields) if fields else ()
         if self._fields:
@@ -252,13 +287,6 @@ class JsonComparator(Comparator):
             path == field or path.startswith(field + ".") or path.startswith(field + "[")
             for field in self._fields
         )
-
-    @classmethod
-    def _capped(cls, diffs: List[str]) -> List[str]:
-        shown = diffs[: cls._MAX_DIFFS]
-        if len(diffs) > cls._MAX_DIFFS:
-            shown.append(f"… (+{len(diffs) - cls._MAX_DIFFS} more)")
-        return shown
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
         try:
@@ -290,21 +318,17 @@ class JsonComparator(Comparator):
         info_diffs: List[str] = []  # out-of-scope mismatches: reported, not scored
         matched = 0
         total = 0
-        all_paths = list(baseline_fields) + [
-            path for path in target_fields if path not in baseline_fields
-        ]
+        all_paths = _union_paths(baseline_fields, target_fields)
         for path in all_paths:
-            if path not in target_fields:
+            kind, change = _classify_path(path, baseline_fields, target_fields)
+            if kind == "missing":
                 diff = f"missing in target: {path}"
-            elif path not in baseline_fields:
+            elif kind == "extra":
                 diff = f"extra in target: {path}"
-            elif _scalars_match(baseline_fields[path], target_fields[path]):
+            elif kind == "match":
                 diff = None
             else:
-                diff = (
-                    f"{path}: {_fmt_scalar(baseline_fields[path])}"
-                    f"→{_fmt_scalar(target_fields[path])}"
-                )
+                diff = f"{path}: {change}"
             if not self._fields or self._in_scope(path):
                 total += 1
                 if diff is None:
@@ -340,11 +364,11 @@ class JsonComparator(Comparator):
         if passed:
             detail = f"all {total}{scoped} fields match" if total else "both payloads are empty JSON"
         else:
-            detail = "; ".join(self._capped(diffs))
+            detail = "; ".join(_cap_diffs(diffs))
         if unmatched_scopes:
             detail += f" · scoped fields absent from both payloads: {', '.join(unmatched_scopes)}"
         if info_diffs:
-            detail += " · out of scope (informational): " + "; ".join(self._capped(info_diffs))
+            detail += " · out of scope (informational): " + "; ".join(_cap_diffs(info_diffs))
         return ComparisonResult(
             comparator=self.name, score=score, passed=passed, detail=detail
         )
@@ -364,8 +388,6 @@ class ToolCallsComparator(Comparator):
     """
 
     name = "toolcalls"
-
-    _MAX_DIFFS = 6
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
         baseline_calls = list(baseline.tool_calls)
