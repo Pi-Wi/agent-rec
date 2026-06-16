@@ -25,7 +25,13 @@ from .migration import annotate_corpus, run_migration
 # PricingError subclasses ValueError, so a bad snapshot/--pricing-as-of value
 # lands in main()'s existing usage-error handler (exit 2).
 from .pricing import PricingCatalog, ReportPricing, price_report
-from .report import default_report_basename, render_console, render_html, render_markdown
+from .report import (
+    DEFAULT_MAX_DETAIL_ROWS,
+    default_report_basename,
+    render_console,
+    render_html,
+    render_markdown,
+)
 from .store import FileStore
 
 
@@ -69,6 +75,11 @@ def _add_report_args(parser: argparse.ArgumentParser, *, default_compare: str) -
         "--out-dir", default="reports", metavar="DIR",
         help="directory the report files are written to when --out is not given "
              "(default: reports; created if missing)",
+    )
+    parser.add_argument(
+        "--max-detail-rows", type=int, default=DEFAULT_MAX_DETAIL_ROWS, metavar="N",
+        help="cap the per-row Details section at N entries (failing rows first); "
+             f"0 means no cap (default: {DEFAULT_MAX_DETAIL_ROWS})",
     )
     parser.add_argument(
         "--strict", action="store_true",
@@ -161,7 +172,10 @@ def _write_reports(args: argparse.Namespace, report, pricing: List[ReportPricing
         # gemini-2.5-flash contains a dot that with_suffix would mistake for an
         # extension and truncate the filename.
         path = base.parent / (base.name + suffix)
-        path.write_text(render(report, pricing=pricing), encoding="utf-8")
+        path.write_text(
+            render(report, pricing=pricing, max_detail_rows=args.max_detail_rows),
+            encoding="utf-8",
+        )
         written.append(path)
     return written
 

@@ -1,8 +1,9 @@
 """
 Render a :class:`~agentrec.migration.MigrationReport` for humans.
 
-* ``render_markdown`` — verdict line, per-comparator summary table, per-category
-  breakdown, per-prompt results table, collapsible full-text details.
+* ``render_markdown`` — one consolidated summary (verdict table + totals),
+  per-category breakdown, per-prompt results table, collapsible details
+  (failures first, capped).
 * ``render_html``     — self-contained single file (inline CSS, no JS) with
   color-coded scores, the category breakdown and side-by-side panels; the
   primary artifact.
@@ -13,14 +14,18 @@ from __future__ import annotations
 import datetime as _dt
 import html as _html
 from decimal import Decimal
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 from .keying import _sanitize
 from .migration import ComparatorAggregate, MigrationReport, RowResult
 from .pricing import ReportPricing
+from .providers.base import _fmt_tool_arguments
 
 #: Renderers accept one ReportPricing or a list (one cost view per profile).
 PricingArg = Optional[Union[ReportPricing, Sequence[ReportPricing]]]
+
+#: Default cap on per-row Details entries before the rest are summarised.
+DEFAULT_MAX_DETAIL_ROWS = 25
 
 
 def _pricing_list(pricing: PricingArg) -> List[ReportPricing]:
@@ -120,23 +125,60 @@ _LATENCY_CAVEAT = (
 )
 
 
-def _verdict(report: MigrationReport) -> str:
-    parts = []
-    if report.min_pass:
-        parts.append(
-            "strict gate " + ("PASSED" if report.strict_passed else "FAILED")
+def _totals_rows(
+    report: MigrationReport, pricings: List[ReportPricing]
+) -> Tuple[List[Tuple[str, str, str, str]], bool]:
+    """Rows for the consolidated totals table: (metric, baseline, target, ratio).
+
+    Returns the rows plus whether a latency row is present (the caller appends
+    the recording-time caveat only then).
+    """
+    rows: List[Tuple[str, str, str, str]] = []
+    totals = report.token_totals()
+    if totals:
+        rows.append(
+            ("Output tokens", f"{totals.baseline_out:,}", f"{totals.target_out:,}",
+             _fmt_ratio(totals.ratio))
         )
-    for agg in report.aggregates():
-        if agg.compared == 0:
-            parts.append(f"{agg.comparator}: no results")
-        elif agg.pass_rate is not None:
-            parts.append(
-                f"{agg.comparator} {agg.passed}/{agg.passed + agg.failed} passed"
-                f" · mean {_fmt_score(agg.mean_score)}"
-            )
+    latency = report.latency_stats()
+    if latency:
+        rows.append(
+            ("Latency (mean)", _fmt_seconds(latency.baseline_mean_s),
+             _fmt_seconds(latency.target_mean_s), _fmt_ratio(latency.ratio))
+        )
+    for entry in pricings:
+        cost_totals = entry.totals(report.ok_rows)
+        if cost_totals is None:
+            rows.append((f"Est. cost ({entry.profile})", "–", "–", "no rows priced"))
         else:
-            parts.append(f"{agg.comparator} mean {_fmt_score(agg.mean_score)}")
-    return " · ".join(parts) if parts else "no comparators run"
+            rows.append((
+                f"Est. cost ({entry.profile})",
+                _fmt_money(cost_totals.baseline_total, cost_totals.currency),
+                _fmt_money(cost_totals.target_total, cost_totals.currency),
+                _fmt_ratio(cost_totals.ratio),
+            ))
+    return rows, latency is not None
+
+
+def _row_failed(row: RowResult) -> bool:
+    return any(c.error or c.passed is False for c in row.comparisons)
+
+
+def _row_mean(row: RowResult) -> float:
+    scores = [c.score for c in row.comparisons if c.score is not None]
+    return sum(scores) / len(scores) if scores else 0.0
+
+
+def _ordered_detail_rows(rows: List[RowResult]) -> List[Tuple[int, RowResult]]:
+    """``(original_index, row)`` pairs, failing rows first then lowest mean score.
+
+    The index keeps detail headers aligned with the Results table, while the
+    ordering floats the rows worth reading to the top of a capped Details list.
+    """
+    return sorted(
+        enumerate(rows, 1),
+        key=lambda item: (0 if _row_failed(item[1]) else 1, _row_mean(item[1])),
+    )
 
 
 def _comparison_cell(row: RowResult, name: str) -> str:
@@ -171,65 +213,86 @@ def _md_fence(text: str) -> str:
     return f"{fence}text\n{text}\n{fence}"
 
 
-def render_markdown(report: MigrationReport, *, pricing: PricingArg = None) -> str:
+def _has_tool_calls(row: RowResult) -> bool:
+    return bool(row.baseline_tool_calls or row.target_tool_calls)
+
+
+def _md_tool_calls(calls) -> List[str]:
+    """A bullet per tool call: ``- `name`(args)`` (canonical arg rendering)."""
+    return [
+        f"- `{_md_escape_cell(call.name)}`({_md_escape_cell(_fmt_tool_arguments(call.arguments))})"
+        for call in calls
+    ]
+
+
+def _md_response_detail(side: str, model, text: str, tool_calls) -> List[str]:
+    """A collapsible block for one response side: prose, then any tool calls.
+
+    Tool calls render as their own list rather than inlined into the prose, so
+    a tool-calling step reads as *what the model decided to do* — and an
+    empty-text tool call doesn't look like an empty response.
+    """
+    out = [f"<details><summary>{side} ({model or '?'})</summary>", ""]
+    if text or not tool_calls:
+        out += [_md_fence(text), ""]
+    if tool_calls:
+        out += ["**Tool calls:**", "", *_md_tool_calls(tool_calls), ""]
+    out += ["</details>"]
+    return out
+
+
+def render_markdown(
+    report: MigrationReport,
+    *,
+    pricing: PricingArg = None,
+    max_detail_rows: int = DEFAULT_MAX_DETAIL_ROWS,
+) -> str:
     lines: List[str] = []
     baselines = ", ".join(report.baseline_models) or "unknown"
     breakdown = report.by_category()
-    totals = report.token_totals()
     pricings = _pricing_list(pricing)
     category_rows = _rows_by_category(report) if (pricings and breakdown) else {}
     lines.append(f"# Migration Report — {baselines} → {report.target_model}")
     lines.append("")
-    lines.append(f"- **Corpus:** `{report.corpus or '<memory>'}`")
-    lines.append(f"- **Target:** `{report.target_model}` ({report.target_provider})")
-    lines.append(f"- **Generated:** {report.generated_at}")
-    lines.append(f"- **Comparators:** {', '.join(report.comparator_names)}")
+
+    # One consolidated Summary: a metadata line, the comparator verdict table,
+    # and a baseline→target totals table — replacing the old header bullets,
+    # the verdict blockquote and a separate summary table that all overlapped.
     lines.append(
-        f"- **Prompts:** {len(report.ok_rows)} compared "
-        f"({report.cached_count} from corpus cache, {report.live_count} live), "
-        f"{len(report.skipped_rows)} skipped, {len(report.error_rows)} errored"
+        f"`{report.corpus or '<memory>'}` · target `{report.target_model}` "
+        f"({report.target_provider}) · generated {report.generated_at} · "
+        f"comparators {', '.join(report.comparator_names)}"
     )
-    if totals:
-        lines.append(
-            f"- **Output tokens:** baseline {totals.baseline_out:,} → "
-            f"target {totals.target_out:,} ({_fmt_ratio(totals.ratio)}, "
-            f"over {totals.rows} prompts)"
-        )
-    latency = report.latency_stats()
-    if latency:
-        lines.append(
-            f"- **Latency:** baseline mean {_fmt_seconds(latency.baseline_mean_s)} → "
-            f"target mean {_fmt_seconds(latency.target_mean_s)} "
-            f"({_fmt_ratio(latency.ratio)}, over {latency.rows} prompts). "
-            f"_{_LATENCY_CAVEAT}_"
-        )
-    for entry in pricings:
-        cost_totals = entry.totals(report.ok_rows)
-        if cost_totals is None:
-            lines.append(f"- **Est. cost ({entry.profile}):** no rows priced")
-        else:
-            ratio = "" if cost_totals.ratio is None else f"{cost_totals.ratio:.2f}×, "
-            lines.append(
-                f"- **Est. cost ({entry.profile}):** baseline "
-                f"{_fmt_money(cost_totals.baseline_total, cost_totals.currency)} → target "
-                f"{_fmt_money(cost_totals.target_total, cost_totals.currency)} "
-                f"({ratio}over {cost_totals.rows} priced rows)"
-            )
     lines.append("")
-    lines.append(f"> **Verdict:** {_verdict(report)}")
+    lines.append(
+        f"**{len(report.ok_rows)} compared** "
+        f"({report.cached_count} cached, {report.live_count} live) · "
+        f"{len(report.skipped_rows)} skipped · {len(report.error_rows)} errored"
+    )
     lines.append("")
 
     lines.append("## Summary")
     lines.append("")
-    lines.append("| Comparator | Compared | Passed | Pass rate | Mean score |")
-    lines.append("|---|---:|---:|---:|---:|")
+    lines.append("| Comparator | Passed | Pass rate | Mean score |")
+    lines.append("|---|---:|---:|---:|")
     for agg in report.aggregates():
         passed = "–" if agg.pass_rate is None else f"{agg.passed}/{agg.passed + agg.failed}"
         lines.append(
-            f"| {agg.comparator} | {agg.compared} | {passed} "
+            f"| {agg.comparator} | {passed} "
             f"| {_fmt_rate(agg.pass_rate)} | {_fmt_score(agg.mean_score)} |"
         )
     lines.append("")
+
+    totals_rows, has_latency = _totals_rows(report, pricings)
+    if totals_rows:
+        lines.append("| Metric | Baseline | Target | Ratio |")
+        lines.append("|---|---:|---:|---:|")
+        for metric, base, target, ratio in totals_rows:
+            lines.append(f"| {metric} | {base} | {target} | {ratio} |")
+        lines.append("")
+        if has_latency:
+            lines.append(f"_{_LATENCY_CAVEAT}_")
+            lines.append("")
 
     gates = report.gates()
     if gates:
@@ -285,7 +348,10 @@ def render_markdown(report: MigrationReport, *, pricing: PricingArg = None) -> s
         lines.append("| " + " | ".join(header) + " |")
         lines.append("|" + "---|" * len(header))
         for index, row in enumerate(report.ok_rows, 1):
-            cells = [str(index), _md_escape_cell(row.prompt_preview)]
+            preview = _md_escape_cell(row.prompt_preview)
+            if _has_tool_calls(row):
+                preview = f"🔧 {preview}"  # this step involves tool calls
+            cells = [str(index), preview]
             if breakdown:
                 cells.append(row.category or "–")
             cells += [
@@ -299,10 +365,16 @@ def render_markdown(report: MigrationReport, *, pricing: PricingArg = None) -> s
             lines.append("| " + " | ".join(cells) + " |")
         lines.append("")
 
+        ordered = _ordered_detail_rows(report.ok_rows)
+        shown = ordered if max_detail_rows <= 0 else ordered[:max_detail_rows]
+        omitted = len(ordered) - len(shown)
         lines.append("## Details")
         lines.append("")
-        for index, row in enumerate(report.ok_rows, 1):
-            lines.append(f"### {index}. {row.prompt_preview}")
+        lines.append("_Failing rows first, then lowest mean score._")
+        lines.append("")
+        for index, row in shown:
+            marker = "🔧 " if _has_tool_calls(row) else ""
+            lines.append(f"### {index}. {marker}{row.prompt_preview}")
             lines.append("")
             meta = (
                 f"`{row.baseline_id}` → `{row.migration_id}` · semantic key `{row.semantic_key}`"
@@ -328,16 +400,20 @@ def render_markdown(report: MigrationReport, *, pricing: PricingArg = None) -> s
             lines.append(_md_fence(row.prompt_text))
             lines.append("")
             lines.append("</details>")
-            lines.append(f"<details><summary>Baseline ({row.baseline_model})</summary>")
+            lines.extend(
+                _md_response_detail("Baseline", row.baseline_model, row.baseline_text,
+                                    row.baseline_tool_calls)
+            )
+            lines.extend(
+                _md_response_detail("Target", row.target_model, row.target_text or "",
+                                    row.target_tool_calls)
+            )
             lines.append("")
-            lines.append(_md_fence(row.baseline_text))
-            lines.append("")
-            lines.append("</details>")
-            lines.append(f"<details><summary>Target ({row.target_model})</summary>")
-            lines.append("")
-            lines.append(_md_fence(row.target_text or ""))
-            lines.append("")
-            lines.append("</details>")
+        if omitted:
+            lines.append(
+                f"_… {omitted} more row{'s' if omitted != 1 else ''} omitted; see the "
+                "Results table or pass `--max-detail-rows 0`._"
+            )
             lines.append("")
 
     leftovers = report.skipped_rows + report.error_rows
@@ -417,11 +493,33 @@ def _html_cell_class(row: RowResult, name: str) -> str:
     return ""
 
 
-def render_html(report: MigrationReport, *, pricing: PricingArg = None) -> str:
+def _html_response_pane(side: str, model, text: str, tool_calls) -> str:
+    """One side of the side-by-side detail panes: prose then a tool-call list."""
+    esc = _html.escape
+    out = [f"<div class='pane'><p><b>{side} ({esc(model or '?')})</b></p>"]
+    if text or not tool_calls:
+        out.append(f"<pre>{esc(text)}</pre>")
+    if tool_calls:
+        out.append("<p><b>Tool calls</b></p><ul>")
+        for call in tool_calls:
+            out.append(
+                f"<li><code>{esc(call.name)}</code>"
+                f"(<code>{esc(_fmt_tool_arguments(call.arguments))}</code>)</li>"
+            )
+        out.append("</ul>")
+    out.append("</div>")
+    return "".join(out)
+
+
+def render_html(
+    report: MigrationReport,
+    *,
+    pricing: PricingArg = None,
+    max_detail_rows: int = DEFAULT_MAX_DETAIL_ROWS,
+) -> str:
     esc = _html.escape
     baselines = ", ".join(report.baseline_models) or "unknown"
     breakdown = report.by_category()
-    totals = report.token_totals()
     pricings = _pricing_list(pricing)
     category_rows = _rows_by_category(report) if (pricings and breakdown) else {}
     parts: List[str] = []
@@ -429,44 +527,41 @@ def render_html(report: MigrationReport, *, pricing: PricingArg = None) -> str:
     parts.append(f"<title>Migration Report — {esc(report.target_model)}</title>")
     parts.append(f"<style>{_CSS}</style></head><body>")
     parts.append(f"<h1>Migration Report — {esc(baselines)} → {esc(report.target_model)}</h1>")
-    meta = (
+    parts.append(
         "<p class='meta'>"
         f"Corpus <code>{esc(report.corpus or '<memory>')}</code> · "
         f"target <code>{esc(report.target_model)}</code> ({esc(report.target_provider)}) · "
         f"generated {esc(report.generated_at)} · "
         f"comparators: {esc(', '.join(report.comparator_names))}<br>"
-        f"{len(report.ok_rows)} prompts compared ({report.cached_count} cached, "
-        f"{report.live_count} live), {len(report.skipped_rows)} skipped, "
-        f"{len(report.error_rows)} errored"
+        f"<b>{len(report.ok_rows)} compared</b> ({report.cached_count} cached, "
+        f"{report.live_count} live) · {len(report.skipped_rows)} skipped · "
+        f"{len(report.error_rows)} errored</p>"
     )
-    if totals:
-        meta += (
-            f"<br>output tokens: baseline {totals.baseline_out:,} → "
-            f"target {totals.target_out:,} ({esc(_fmt_ratio(totals.ratio))} "
-            f"over {totals.rows} prompts)"
-        )
-    latency = report.latency_stats()
-    if latency:
-        meta += (
-            f"<br>latency: baseline mean {esc(_fmt_seconds(latency.baseline_mean_s))} → "
-            f"target mean {esc(_fmt_seconds(latency.target_mean_s))} "
-            f"({esc(_fmt_ratio(latency.ratio))} over {latency.rows} prompts; "
-            f"{esc(_LATENCY_CAVEAT)})"
-        )
-    for entry in pricings:
-        meta += "<br>" + esc(_pricing_summary(entry, report))
-    parts.append(meta + "</p>")
-    parts.append(f"<div class='verdict'>{esc(_verdict(report))}</div>")
 
-    parts.append("<h2>Summary</h2><table><tr><th>Comparator</th><th>Compared</th>"
+    # One consolidated Summary: the comparator verdict table plus a
+    # baseline→target totals table (tokens / latency / cost).
+    parts.append("<h2>Summary</h2><table><tr><th>Comparator</th>"
                  "<th>Passed</th><th>Pass rate</th><th>Mean score</th></tr>")
     for agg in report.aggregates():
         passed = "–" if agg.pass_rate is None else f"{agg.passed}/{agg.passed + agg.failed}"
         parts.append(
-            f"<tr><td>{esc(agg.comparator)}</td><td>{agg.compared}</td><td>{passed}</td>"
+            f"<tr><td>{esc(agg.comparator)}</td><td>{passed}</td>"
             f"<td>{_fmt_rate(agg.pass_rate)}</td><td>{_fmt_score(agg.mean_score)}</td></tr>"
         )
     parts.append("</table>")
+
+    totals_rows, has_latency = _totals_rows(report, pricings)
+    if totals_rows:
+        parts.append("<table><tr><th>Metric</th><th>Baseline</th>"
+                     "<th>Target</th><th>Ratio</th></tr>")
+        for metric, base, target, ratio in totals_rows:
+            parts.append(
+                f"<tr><td>{esc(metric)}</td><td>{esc(base)}</td>"
+                f"<td>{esc(target)}</td><td>{esc(ratio)}</td></tr>"
+            )
+        parts.append("</table>")
+        if has_latency:
+            parts.append(f"<p class='note'>{esc(_LATENCY_CAVEAT)}</p>")
 
     gates = report.gates()
     if gates:
@@ -530,7 +625,10 @@ def render_html(report: MigrationReport, *, pricing: PricingArg = None) -> str:
             parts.append(f"<th>Cost ({esc(entry.profile)})</th>")
         parts.append("<th>Cached</th></tr>")
         for index, row in enumerate(report.ok_rows, 1):
-            parts.append(f"<tr><td>{index}</td><td>{esc(row.prompt_preview)}</td>")
+            preview = esc(row.prompt_preview)
+            if _has_tool_calls(row):
+                preview += " <span class='tag'>tools</span>"
+            parts.append(f"<tr><td>{index}</td><td>{preview}</td>")
             if breakdown:
                 tag = f"<span class='tag'>{esc(row.category)}</span>" if row.category else "–"
                 parts.append(f"<td>{tag}</td>")
@@ -547,9 +645,16 @@ def render_html(report: MigrationReport, *, pricing: PricingArg = None) -> str:
             parts.append(f"<td>{'yes' if row.cached else 'live'}</td></tr>")
         parts.append("</table>")
 
+        ordered = _ordered_detail_rows(report.ok_rows)
+        shown = ordered if max_detail_rows <= 0 else ordered[:max_detail_rows]
+        omitted = len(ordered) - len(shown)
         parts.append("<h2>Details</h2>")
-        for index, row in enumerate(report.ok_rows, 1):
-            parts.append(f"<details><summary>{index}. {esc(row.prompt_preview)}</summary>")
+        parts.append("<p class='note'>Failing rows first, then lowest mean score.</p>")
+        for index, row in shown:
+            marker = "🔧 " if _has_tool_calls(row) else ""
+            parts.append(
+                f"<details><summary>{marker}{index}. {esc(row.prompt_preview)}</summary>"
+            )
             meta = (
                 f"<p class='meta'><code>{esc(row.baseline_id)}</code> → "
                 f"<code>{esc(row.migration_id)}</code> · semantic key "
@@ -573,15 +678,17 @@ def render_html(report: MigrationReport, *, pricing: PricingArg = None) -> str:
             parts.append("</ul>")
             parts.append(f"<p><b>Prompt</b></p><pre>{esc(row.prompt_text)}</pre>")
             parts.append("<div class='panes'>")
-            parts.append(
-                f"<div class='pane'><p><b>Baseline ({esc(row.baseline_model or '?')})</b></p>"
-                f"<pre>{esc(row.baseline_text)}</pre></div>"
-            )
-            parts.append(
-                f"<div class='pane'><p><b>Target ({esc(row.target_model)})</b></p>"
-                f"<pre>{esc(row.target_text or '')}</pre></div>"
-            )
+            parts.append(_html_response_pane(
+                "Baseline", row.baseline_model, row.baseline_text, row.baseline_tool_calls))
+            parts.append(_html_response_pane(
+                "Target", row.target_model, row.target_text or "", row.target_tool_calls))
             parts.append("</div></details>")
+        if omitted:
+            parts.append(
+                f"<p class='note'>… {omitted} more "
+                f"row{'s' if omitted != 1 else ''} omitted; see the Results table "
+                "or pass <code>--max-detail-rows 0</code>.</p>"
+            )
 
     leftovers = report.skipped_rows + report.error_rows
     if leftovers:

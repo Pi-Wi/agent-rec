@@ -46,6 +46,7 @@ from .keying import _sanitize, fingerprint_of
 from .providers import (
     DecodeError,
     MissingAPIKeyError,
+    ToolCall,
     TokenUsage,
     UnsupportedRequestError,
     adapter_for_model,
@@ -53,7 +54,6 @@ from .providers import (
     conversation_of,
     decode_interaction,
     format_conversation,
-    render_response,
     usage_of,
 )
 from .store import FileStore
@@ -107,6 +107,21 @@ def _preview(text: str, limit: int = 80) -> str:
     return flat if len(flat) <= limit else flat[: limit - 1] + "…"
 
 
+def _prompt_preview(conversation, limit: int = 80) -> str:
+    """A scannable one-line preview of what this row actually asks.
+
+    Previews the *last user message* — the request being answered — so rows
+    that share a system prompt (the common pipeline-corpus case) don't all
+    collapse to an identical ``[system] …`` prefix.  Falls back to the full
+    conversation rendering only when there is no user message (e.g. a turn
+    that is purely tool results).
+    """
+    for message in reversed(conversation.messages):
+        if message.get("role") == "user" and message.get("content"):
+            return _preview(message["content"], limit)
+    return _preview(format_conversation(conversation), limit)
+
+
 @dataclass
 class RowResult:
     """Outcome for one logical prompt (one semantic_key)."""
@@ -118,11 +133,16 @@ class RowResult:
     prompt_text: str = ""
     category: Optional[str] = None  # from the baseline's metadata, if tagged
     baseline_model: Optional[str] = None
+    # ``*_text`` is the response's prose only (display); tool calls are carried
+    # structured in ``*_tool_calls`` so the report can render them as a
+    # distinct block instead of inlining ``[tool_call] …`` lines into the prose.
     baseline_text: str = ""
+    baseline_tool_calls: Tuple[ToolCall, ...] = ()
     baseline_in_tokens: Optional[int] = None
     baseline_out_tokens: Optional[int] = None
     target_model: str = ""
     target_text: Optional[str] = None
+    target_tool_calls: Tuple[ToolCall, ...] = ()
     target_in_tokens: Optional[int] = None
     target_out_tokens: Optional[int] = None
     # Full per-category token breakdown (the *_in/_out ints above are derived
@@ -487,9 +507,11 @@ async def run_migration(
         except DecodeError as exc:
             row.status, row.reason = "skipped", f"baseline undecodable: {exc}"
             return
-        # Rendered text (text + tool-call lines) so tool-calling rows display
-        # and compare on what the model decided to do.
-        row.baseline_text = render_response(baseline)
+        # Prose for display; tool calls kept structured for a distinct render.
+        # (Comparators score the decoded objects directly, so dropping the
+        # inlined tool-call lines here doesn't change scoring or judge caching.)
+        row.baseline_text = baseline.text
+        row.baseline_tool_calls = tuple(baseline.tool_calls)
         row.baseline_model = baseline.model or fp.model
         row.baseline_usage = usage_of(baseline)
         row.baseline_in_tokens = row.baseline_usage.prompt_total
@@ -505,7 +527,7 @@ async def run_migration(
             row.status, row.reason = "skipped", f"unsupported request: {exc}"
             return
         row.prompt_text = format_conversation(conversation)
-        row.prompt_preview = _preview(row.prompt_text)
+        row.prompt_preview = _prompt_preview(conversation)
 
         source_adapter = adapter_for_provider(fp.provider) if fp.provider else None
         cross_provider = source_adapter is None or source_adapter.name != target_adapter.name
@@ -588,7 +610,8 @@ async def run_migration(
                 row.status, row.reason = "error", f"target response undecodable: {exc}"
                 return
 
-        row.target_text = render_response(target)
+        row.target_text = target.text
+        row.target_tool_calls = tuple(target.tool_calls)
         row.target_model = target.model or target_model
         row.target_usage = usage_of(target)
         row.target_in_tokens = row.target_usage.prompt_total

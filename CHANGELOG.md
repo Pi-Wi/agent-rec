@@ -51,6 +51,29 @@
   is there for when you must record in prod anyway.
 
 ### Changed
+- **Migration report cleaned up for readability.** The per-prompt `Prompt`
+  preview (Results table and Details headers) now shows the *last user
+  message* instead of the conversation rendering — corpora that share one
+  system prompt previously collapsed every row to an identical `[system] …`
+  prefix that truncated before any distinguishing content. The redundant
+  header bullet list, `> Verdict` blockquote and standalone summary table are
+  merged into **one `## Summary`** (a compact metadata line, the comparator
+  verdict table, and a baseline→target totals table for tokens/latency/cost).
+  The `## Details` section now renders **failing rows first** (then lowest
+  mean score) and is **capped at 25 entries** by default — `--max-detail-rows
+  N` raises or removes the cap (`0` = all), with the omitted rows noted. *Why:*
+  a 100-row report was an unscannable wall of identical previews and
+  triplicated summary numbers.
+- **Tool calls render as structured data, not inlined text.** `RowResult`
+  carries `baseline_tool_calls` / `target_tool_calls` (tuples of `ToolCall`),
+  and the report shows each side's prose plus a dedicated **Tool calls** block
+  (name + arguments) in the Details panes; tool-calling rows are flagged in the
+  Results table. The `*_text` fields now hold the response's prose only.
+  *Why:* tool calls were flattened into the prose as `[tool_call] …` lines and
+  dumped into the same code block, with no signal in the Results table — you
+  could not tell a tool-calling step from prose at a glance. Comparators and
+  the judge are unaffected: they score the decoded responses directly, so
+  scoring and judge-verdict caching are unchanged.
 - **`_provider_from_host` now resolves through the adapter registry** instead
   of hard-coded openai/anthropic host substrings, so a newly registered
   adapter (Gemini, or a custom override) tags its recordings with the right

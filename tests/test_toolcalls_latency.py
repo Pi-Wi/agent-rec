@@ -623,8 +623,11 @@ def test_migration_of_tool_calling_baseline(tmp_path, monkeypatch):
     comparison = row.comparisons[0]
     assert comparison.comparator == "toolcalls"
     assert comparison.passed is True
-    assert "[tool_call] get_weather" in row.baseline_text
-    assert "[tool_call] get_weather" in (row.target_text or "")
+    # Tool calls are carried structured (not inlined into the prose text), so
+    # the report can render them as a distinct block.
+    assert [c.name for c in row.baseline_tool_calls] == ["get_weather"]
+    assert [c.name for c in row.target_tool_calls] == ["get_weather"]
+    assert row.baseline_tool_calls[0].arguments == {"city": "Paris"}
     assert row.baseline_latency_s == 2.5
     assert isinstance(row.target_latency_s, float)
 
@@ -716,6 +719,6 @@ def test_latency_stats_and_report_rendering():
     assert stats.ratio == pytest.approx(1 / 3)
 
     markdown = render_markdown(report)
-    assert "**Latency:**" in markdown
+    assert "| Latency (mean) |" in markdown  # consolidated totals table
     assert "2.00s→1.00s" in markdown  # per-row cell
     assert "9.00s→?" in markdown  # half-known latency still shown per row

@@ -38,11 +38,19 @@ it:
 
 > # Migration Report — gpt-4o-mini → claude-haiku-4-5
 >
-> - **Prompts:** 100 compared (100 from corpus cache, 0 live), 0 skipped, 0 errored
-> - **Output tokens:** baseline 1,435 → target 3,059 (2.13×)
-> - **Est. cost (anthropic-list+openai-list):** baseline $0.001658 → target $0.020655 (12.46×)
+> `corpus` · target `claude-haiku-4-5` (anthropic) · comparators exact, fuzzy
 >
-> **Verdict:** exact 22/100 passed · fuzzy 48/100 passed
+> **100 compared** (100 cached, 0 live) · 0 skipped · 0 errored
+>
+> | Comparator | Passed | Pass rate | Mean score |
+> |---|---:|---:|---:|
+> | exact | 22/100 | 22% | 0.22 |
+> | fuzzy | 48/100 | 48% | 0.65 |
+>
+> | Metric | Baseline | Target | Ratio |
+> |---|---:|---:|---:|
+> | Output tokens | 1,435 | 3,059 | 2.13× |
+> | Est. cost (anthropic-list+openai-list) | $0.001658 | $0.020655 | 12.46× |
 >
 > ### By category — _pass rate · mean score; tokens & cost are target/baseline ratios_
 >

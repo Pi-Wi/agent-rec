@@ -405,14 +405,14 @@ async def test_renderers_show_cost_and_provenance(corpus: FileStore, monkeypatch
     pricing = price_report(report, _test_profile())
 
     markdown = render_markdown(report, pricing=[pricing])
-    assert "**Est. cost (test-list):**" in markdown
+    assert "| Est. cost (test-list) |" in markdown  # consolidated totals table
     assert "Cost (test-list)" in markdown  # per-row column
     assert "## Pricing" in markdown
     assert "test-list@2026-01-01" in markdown
     assert pricing.snapshots[0].digest[:12] in markdown
 
     html = render_html(report, pricing=[pricing])
-    assert "est. cost (test-list)" in html
+    assert "Est. cost (test-list)" in html
     assert "Pricing" in html and pricing.snapshots[0].digest[:12] in html
 
     console = render_console(report, pricing=[pricing])

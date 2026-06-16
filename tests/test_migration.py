@@ -707,7 +707,7 @@ async def test_render_markdown_html_console(corpus: FileStore, monkeypatch):
     assert PROMPT in markdown
     assert "## By category" in markdown
     assert "classify" in markdown
-    assert "**Output tokens:**" in markdown
+    assert "| Output tokens |" in markdown  # consolidated totals table
 
     html = render_html(report)
     assert html.startswith("<!doctype html>")
