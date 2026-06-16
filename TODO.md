@@ -58,9 +58,10 @@ coverage), and **how it presents itself** (positioning).
 
 - [ ] CONTRIBUTING.md (test conventions, invariants pointer to CLAUDE.md,
   snapshot-contribution process).
-- [ ] CI: publish the sample HTML report as a build artifact; add a Windows runner
-  (suite is developed on Windows but CI should prove it).
-- [ ] PyPI metadata: description still says "record/replay" — align with the
-  migration positioning (keywords already include gemini/mistral).
+- [ ] CI: publish the sample HTML report as a build artifact. (The Windows
+  runner is already in `.github/workflows/ci.yml` — the matrix proves the suite
+  on ubuntu + windows across 3.10–3.13.)
+- [x] PyPI metadata: description now leads with the migration positioning
+  (keywords already include gemini/mistral).
 - [ ] Launch blog post / Show HN around a real migration story — the report
   artifact is the hook.

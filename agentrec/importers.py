@@ -538,6 +538,27 @@ def _otel_messages_from_attr(value: Any) -> List[dict]:
     return []
 
 
+def _otel_role_messages(
+    attrs: Dict[str, Any], events_attrs: Dict[str, Any], prefix: str
+) -> List[dict]:
+    """Messages for one gen_ai role (``gen_ai.prompt`` / ``gen_ai.completion``).
+
+    Tries the indexed form (``{prefix}.{i}.role``) then the single-attribute
+    form (a JSON string / list under ``{prefix}``), first on the span's own
+    attributes and then on its merged event attributes (the older
+    content-capture form) — the first non-empty result wins.
+    """
+    for source in (attrs, events_attrs):
+        messages = _otel_indexed_messages(source, prefix)
+        if messages:
+            return messages
+        if prefix in source:
+            messages = _otel_messages_from_attr(source[prefix])
+            if messages:
+                return messages
+    return []
+
+
 def _parse_otel(span: dict) -> ImportedRecord:
     """One OpenTelemetry GenAI span (semantic-convention attributes/events)."""
     attrs = _otel_attrs(span)
@@ -548,13 +569,7 @@ def _parse_otel(span: dict) -> ImportedRecord:
 
     events_attrs = _otel_event_attrs(span)
 
-    prompt_raw = _otel_indexed_messages(attrs, "gen_ai.prompt")
-    if not prompt_raw and "gen_ai.prompt" in attrs:
-        prompt_raw = _otel_messages_from_attr(attrs["gen_ai.prompt"])
-    if not prompt_raw:
-        prompt_raw = _otel_indexed_messages(events_attrs, "gen_ai.prompt")
-    if not prompt_raw and "gen_ai.prompt" in events_attrs:
-        prompt_raw = _otel_messages_from_attr(events_attrs["gen_ai.prompt"])
+    prompt_raw = _otel_role_messages(attrs, events_attrs, "gen_ai.prompt")
     messages = [m for m in (_coerce_message(r) for r in prompt_raw) if m is not None]
     if not messages:
         raise _Skip("no usable prompt messages")
@@ -562,13 +577,7 @@ def _parse_otel(span: dict) -> ImportedRecord:
     if not rest:
         raise _Skip("prompt has only a system message")
 
-    completion_raw = _otel_indexed_messages(attrs, "gen_ai.completion")
-    if not completion_raw and "gen_ai.completion" in attrs:
-        completion_raw = _otel_messages_from_attr(attrs["gen_ai.completion"])
-    if not completion_raw:
-        completion_raw = _otel_indexed_messages(events_attrs, "gen_ai.completion")
-    if not completion_raw and "gen_ai.completion" in events_attrs:
-        completion_raw = _otel_messages_from_attr(events_attrs["gen_ai.completion"])
+    completion_raw = _otel_role_messages(attrs, events_attrs, "gen_ai.completion")
     response_text = _content_text(completion_raw[0].get("content")) if completion_raw else ""
     tool_calls = (
         _coerce_tool_calls(completion_raw[0].get("tool_calls")) if completion_raw else []

@@ -289,6 +289,10 @@ class JsonComparator(Comparator):
         )
 
     async def compare(self, prompt, baseline, target) -> ComparisonResult:
+        # Compare the response's prose (``.text``), not ``_comparable_text`` (which
+        # appends tool-call lines): a JSON-mode/structured response is the JSON
+        # body, and a tool-calling step is the ``toolcalls`` comparator's job —
+        # appending non-JSON tool-call lines here would only break json.loads.
         try:
             baseline_value = json.loads(_strip_fence(baseline.text))
         except ValueError as exc:
@@ -424,19 +428,17 @@ class ToolCallsComparator(Comparator):
             _flatten_json(t_call.arguments, "", t_fields)
             matched = 0
             total = 0
-            for path in list(b_fields) + [p for p in t_fields if p not in b_fields]:
+            for path in _union_paths(b_fields, t_fields):
                 total += 1
-                if path not in t_fields:
-                    diffs.append(f"call[{index}] {b_call.name}: missing in target: {path}")
-                elif path not in b_fields:
-                    diffs.append(f"call[{index}] {b_call.name}: extra in target: {path}")
-                elif _scalars_match(b_fields[path], t_fields[path]):
+                kind, change = _classify_path(path, b_fields, t_fields)
+                if kind == "match":
                     matched += 1
+                elif kind == "missing":
+                    diffs.append(f"call[{index}] {b_call.name}: missing in target: {path}")
+                elif kind == "extra":
+                    diffs.append(f"call[{index}] {b_call.name}: extra in target: {path}")
                 else:
-                    diffs.append(
-                        f"call[{index}] {b_call.name}.{path}: "
-                        f"{_fmt_scalar(b_fields[path])}→{_fmt_scalar(t_fields[path])}"
-                    )
+                    diffs.append(f"call[{index}] {b_call.name}.{path}: {change}")
             scores.append(matched / total if total else 1.0)
 
         score = sum(scores) / len(scores)
@@ -445,10 +447,7 @@ class ToolCallsComparator(Comparator):
             names = ", ".join(call.name for call in baseline_calls)
             detail = f"tool calls match ({names})"
         else:
-            shown = diffs[: self._MAX_DIFFS]
-            if len(diffs) > self._MAX_DIFFS:
-                shown.append(f"… (+{len(diffs) - self._MAX_DIFFS} more)")
-            detail = "; ".join(shown)
+            detail = "; ".join(_cap_diffs(diffs))
         return ComparisonResult(comparator=self.name, score=score, passed=passed, detail=detail)
 
 

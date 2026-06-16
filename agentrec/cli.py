@@ -10,6 +10,8 @@ annotate  Backfill human-readable summary blocks and fingerprint metadata
           into existing cassettes.
 import     Turn an observability export (Langfuse / LangSmith / OpenTelemetry
           GenAI spans) into synthesized cassettes the runner can migrate.
+profiles  List the available pricing profiles (built-in plus --pricing-dir),
+          for use with the migrate/report --pricing flag.
 """
 from __future__ import annotations
 
@@ -20,6 +22,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from . import __version__
 from .comparators import (
     DEFAULT_JUDGE_MODEL,
     OFFLINE_COMPARATOR_NAMES,
@@ -129,6 +132,7 @@ def _parse(argv: Optional[List[str]]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="agentrec", description="Record/replay LLM corpus tooling and migration reports."
     )
+    parser.add_argument("--version", action="version", version=f"agentrec {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     migrate = sub.add_parser(
@@ -161,6 +165,14 @@ def _parse(argv: Optional[List[str]]) -> argparse.Namespace:
     importer.add_argument(
         "--category", default=None,
         help="report category to tag every imported row with (when the source carried none)",
+    )
+
+    profiles = sub.add_parser(
+        "profiles", help="list available pricing profiles (built-in plus --pricing-dir)"
+    )
+    profiles.add_argument(
+        "--pricing-dir", action="append", default=[], metavar="DIR",
+        help="directory of pricing snapshots to list alongside the built-ins (repeatable)",
     )
 
     return parser.parse_args(argv)
@@ -334,6 +346,22 @@ async def _run_import(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_profiles(args: argparse.Namespace) -> int:
+    """List the pricing profiles a ``--pricing`` flag can name."""
+    catalog = PricingCatalog.load(*args.pricing_dir)
+    names = catalog.profile_names
+    if not names:
+        print("no pricing profiles found")
+        return 0
+    print("Available pricing profiles (pass to --pricing; 'a+b' composes them):")
+    for name in names:
+        profile = catalog.profile(name)
+        dates = ", ".join(snapshot.effective.isoformat() for snapshot in profile.snapshots)
+        # ASCII-safe, like render_console: a plain hyphen survives a Windows code page.
+        print(f"  {name} ({profile.currency}) - snapshot(s): {dates}")
+    return 0
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     args = _parse(argv)
     try:
@@ -345,6 +373,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             return asyncio.run(_run_annotate(args))
         if args.command == "import":
             return asyncio.run(_run_import(args))
+        if args.command == "profiles":
+            return _run_profiles(args)
     except (ValueError, LookupError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

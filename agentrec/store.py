@@ -16,7 +16,7 @@ import base64
 import hashlib
 import json
 import re
-from abc import ABC, abstractmethod
+from abc import ABC
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -24,13 +24,29 @@ from .capture import CapturedChunk, CapturedInteraction, CapturedRequest
 
 
 class InteractionStore(ABC):
-    @abstractmethod
-    async def save(self, interaction_id: str, interaction: CapturedInteraction) -> None:
-        ...
+    """Persistence contract for captured interactions.
 
-    @abstractmethod
+    Implement **either** the synchronous trio (``save_sync`` / ``load_sync`` /
+    ``discard_sync``) — the common case, and what both built-in stores do — **or**
+    the async methods (``save`` / ``load`` / ``discard``).  Each async method
+    delegates to its sync twin by default, so a synchronous store implements the
+    ``*_sync`` methods once and gets the async interface (used by the async
+    transports) for free; a natively-async store (e.g. a DB driver) overrides the
+    async methods and may leave the sync twins raising ``NotImplementedError``.
+    ``has`` / ``has_sync`` default to an existence probe via ``load`` /
+    ``load_sync``; concrete stores override with a cheaper check.
+    """
+
+    # --- Async interface (used by the async transports) --------------------
+    # Defaults delegate to the sync twin, so a synchronous store gets these for
+    # free.  ``has`` probes ``load`` rather than ``has_sync`` so a natively-async
+    # store (whose ``has_sync`` may raise) still gets a working existence check.
+
+    async def save(self, interaction_id: str, interaction: CapturedInteraction) -> None:
+        self.save_sync(interaction_id, interaction)
+
     async def load(self, interaction_id: str) -> CapturedInteraction:
-        ...
+        return self.load_sync(interaction_id)
 
     async def discard(self, interaction_id: str) -> None:
         """Remove a recording if present (no error when absent).
@@ -39,13 +55,10 @@ class InteractionStore(ABC):
         the migration runner discards a failed (non-200) target response so a
         re-run retries the live call instead of replaying the failure.
         """
+        self.discard_sync(interaction_id)
 
     async def has(self, interaction_id: str) -> bool:
-        """Whether a recording exists. Drives auto mode (replay-or-record).
-
-        Default implementation probes ``load``; concrete stores override with a
-        cheaper existence check.
-        """
+        """Whether a recording exists. Drives auto mode (replay-or-record)."""
         try:
             await self.load(interaction_id)
             return True
@@ -106,20 +119,11 @@ class InMemoryStore(InteractionStore):
     def has_sync(self, interaction_id: str) -> bool:
         return interaction_id in self._data
 
-    async def save(self, interaction_id: str, interaction: CapturedInteraction) -> None:
-        self.save_sync(interaction_id, interaction)
-
-    async def load(self, interaction_id: str) -> CapturedInteraction:
-        return self.load_sync(interaction_id)
-
     def __contains__(self, interaction_id: str) -> bool:
         return interaction_id in self._data
 
     async def has(self, interaction_id: str) -> bool:
-        return self.has_sync(interaction_id)
-
-    async def discard(self, interaction_id: str) -> None:
-        self.discard_sync(interaction_id)
+        return self.has_sync(interaction_id)  # O(1) dict probe, cheaper than load
 
 
 # ---------------------------------------------------------------------------
@@ -423,23 +427,24 @@ class FileStore(InteractionStore):
     def has_sync(self, interaction_id: str) -> bool:
         return self._path(interaction_id).exists()
 
-    async def save(self, interaction_id: str, interaction: CapturedInteraction) -> None:
-        self.save_sync(interaction_id, interaction)
-
-    async def load(self, interaction_id: str) -> CapturedInteraction:
-        return self.load_sync(interaction_id)
-
     def __contains__(self, interaction_id: str) -> bool:
         return self._path(interaction_id).exists()
 
     async def has(self, interaction_id: str) -> bool:
+        # Cheap existence check (a stat), not the ABC default's full load+parse.
         return self.has_sync(interaction_id)
 
-    async def discard(self, interaction_id: str) -> None:
-        self.discard_sync(interaction_id)
-
     def ids(self) -> List[str]:
-        """Sorted interaction ids currently on disk."""
+        """Sorted interaction ids currently on disk.
+
+        These are the on-disk file stems.  Every id the library mints
+        (fingerprint cassette ids, ``migration__`` / ``judge__`` / ``imported__``
+        ids) is already filename-safe, so it round-trips here unchanged.  A
+        *custom* ``id=`` containing path-unsafe characters is stored under a
+        sanitized ``<safe>-<digest8>`` stem (see :meth:`_path`); ``ids`` then
+        returns that stem, not the original string — re-load via the returned
+        value, which keys back to the same file.
+        """
         return sorted(p.stem for p in self.root.glob("*.json"))
 
     def __len__(self) -> int:

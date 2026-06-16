@@ -44,6 +44,8 @@ import httpx
 from .comparators import JUDGE_PREFIX, Comparator, ComparisonResult
 from .keying import _sanitize, fingerprint_of
 from .providers import (
+    Conversation,
+    DecodedResponse,
     DecodeError,
     MissingAPIKeyError,
     ToolCall,
@@ -459,6 +461,249 @@ class MigrationReport:
         return all(gate.passed for gate in self.gates())
 
 
+# ---------------------------------------------------------------------------
+# Per-row scoring stages
+# ---------------------------------------------------------------------------
+# ``run_migration`` scores each row through these stages.  They are module-level
+# (not closures) so each is unit-testable and the orchestrator stays small; every
+# stage mutates *row* in place and signals "stop this row" by setting
+# ``row.status``/``row.reason`` and returning ``None``.
+
+
+def _populate_baseline(
+    row: RowResult, interaction, fp
+) -> Optional[Tuple[DecodedResponse, Conversation]]:
+    """Decode the baseline and fill the row's ``baseline_*`` fields.
+
+    Returns ``(baseline, conversation)`` for scoring, or ``None`` after marking
+    the row skipped when the baseline can't be decoded or its request can't be
+    translated to a neutral conversation.
+    """
+    try:
+        baseline = decode_interaction(interaction)
+    except DecodeError as exc:
+        row.status, row.reason = "skipped", f"baseline undecodable: {exc}"
+        return None
+    # Prose for display; tool calls kept structured for a distinct render.
+    # (Comparators score the decoded objects directly, so dropping the inlined
+    # tool-call lines here doesn't change scoring or judge caching.)
+    row.baseline_text = baseline.text
+    row.baseline_tool_calls = tuple(baseline.tool_calls)
+    row.baseline_model = baseline.model or fp.model
+    row.baseline_usage = usage_of(baseline)
+    row.baseline_in_tokens = row.baseline_usage.prompt_total
+    row.baseline_out_tokens = row.baseline_usage.output
+    recorded_at = interaction.metadata.get("recorded_at")
+    row.baseline_recorded_at = recorded_at if isinstance(recorded_at, str) else None
+    latency = interaction.metadata.get("latency_s")
+    row.baseline_latency_s = float(latency) if isinstance(latency, (int, float)) else None
+    first_chunk = interaction.metadata.get("latency_first_chunk_s")
+    row.baseline_latency_first_chunk_s = (
+        float(first_chunk) if isinstance(first_chunk, (int, float)) else None
+    )
+
+    try:
+        conversation = conversation_of(interaction)
+    except UnsupportedRequestError as exc:
+        row.status, row.reason = "skipped", f"unsupported request: {exc}"
+        return None
+    row.prompt_text = format_conversation(conversation)
+    row.prompt_preview = _prompt_preview(conversation)
+    return baseline, conversation
+
+
+def _note_translation_gaps(
+    row: RowResult, conversation: Conversation, fp, target_adapter
+) -> None:
+    """Note (never silently drop) request features this target can't carry.
+
+    ``build_request`` gates the actual emission on the same capability, so an
+    OpenAI→OpenAI run carries the knobs and produces no note.
+    """
+    source_adapter = adapter_for_provider(fp.provider) if fp.provider else None
+    cross_provider = source_adapter is None or source_adapter.name != target_adapter.name
+    if cross_provider and conversation.temperature is not None:
+        conversation.temperature = None
+        row.notes.append("temperature dropped in cross-provider translation")
+    if (
+        conversation.parallel_tool_calls is not None
+        and not target_adapter.carries_parallel_tool_calls()
+    ):
+        row.notes.append(
+            f"parallel_tool_calls={conversation.parallel_tool_calls} not carried to "
+            f"{target_adapter.name}; the target may parallelize tool calls differently"
+        )
+    if (
+        conversation.tools
+        and any(tool.get("strict") for tool in conversation.tools)
+        and not target_adapter.carries_function_strict()
+    ):
+        row.notes.append(
+            f"function strict-schema enforcement dropped translating to {target_adapter.name}"
+        )
+
+
+def _load_cached_target(row: RowResult, recorded) -> Optional[DecodedResponse]:
+    """Fill ``target_*`` provenance from a cached migration cassette and decode it.
+
+    Returns the decoded target, or ``None`` after marking the row errored when
+    the recorded response can't be decoded.
+    """
+    row.cached = True
+    target_recorded_at = recorded.metadata.get("recorded_at")
+    row.target_recorded_at = target_recorded_at if isinstance(target_recorded_at, str) else None
+    target_latency = recorded.metadata.get("latency_s")
+    row.target_latency_s = (
+        float(target_latency) if isinstance(target_latency, (int, float)) else None
+    )
+    target_first_chunk = recorded.metadata.get("latency_first_chunk_s")
+    row.target_latency_first_chunk_s = (
+        float(target_first_chunk) if isinstance(target_first_chunk, (int, float)) else None
+    )
+    try:
+        return decode_interaction(recorded)
+    except DecodeError as exc:
+        row.status, row.reason = "error", (
+            f"recorded migration response undecodable: {exc}; "
+            f"delete cassette {row.migration_id!r} to re-record"
+        )
+        return None
+
+
+async def _stream_target(
+    client: httpx.AsyncClient,
+    store: FileStore,
+    row: RowResult,
+    conversation: Conversation,
+    target_adapter,
+    target_model: str,
+    *,
+    max_tokens_default: int,
+    retries: int,
+) -> Optional[DecodedResponse]:
+    """Build, stream and decode the live target call, with retry/backoff.
+
+    Streaming gives a real time-to-first-chunk (comparable to a streamed
+    baseline's); the AutoTransport tees the chunks into the corpus and the
+    response is re-decoded by content type, so a target that ignores ``stream``
+    and answers with a JSON body still decodes.  Sets the row's target
+    latency/TTFB on success.  Returns the decoded target, or ``None`` after
+    marking the row skipped/errored.
+    """
+    try:
+        url, headers, body = target_adapter.build_request(
+            conversation, target_model, max_tokens_default=max_tokens_default, stream=True,
+        )
+    except MissingAPIKeyError as exc:
+        row.status, row.reason = "error", str(exc)
+        return None
+    except UnsupportedRequestError as exc:
+        # The target dialect can't faithfully represent this request (e.g. a
+        # strict json_schema, or tool-call arguments that never parsed to an
+        # object).  An honest skipped row — not a crash — mirrors the
+        # extract-time skip handled in _populate_baseline.
+        row.status, row.reason = "skipped", f"target cannot represent request: {exc}"
+        return None
+
+    # Per-row identity (cassette id + lineage) rides a contextvar the shared
+    # transport's keyer reads; pin the baseline's semantic_key onto the cassette.
+    extra: Dict[str, object] = {
+        "migrated_from": row.baseline_id,
+        "semantic_key": row.semantic_key,
+        "baseline_model": row.baseline_model,
+    }
+    if row.category:
+        extra["category"] = row.category
+    _ROW_IDENTITY.set((row.migration_id, extra))
+
+    payload = b""
+    is_sse = False
+    for attempt in range(max(0, retries) + 1):
+        attempt_start = time.monotonic()
+        first_chunk_at: Optional[float] = None
+        try:
+            async with client.stream("POST", url, headers=headers, json=body) as response:
+                if response.status_code == 200:
+                    buffer = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        if first_chunk_at is None and chunk:
+                            first_chunk_at = time.monotonic()
+                        buffer.extend(chunk)
+                    payload = bytes(buffer)
+                    is_sse = "text/event-stream" in response.headers.get(
+                        "content-type", ""
+                    ).lower()
+                else:
+                    payload = await response.aread()
+        except httpx.HTTPError as exc:
+            row.status, row.reason = "error", f"target call failed: {exc}"
+            return None
+        if response.status_code == 200:
+            done = time.monotonic()
+            row.target_latency_s = round(done - attempt_start, 4)
+            row.target_latency_first_chunk_s = round((first_chunk_at or done) - attempt_start, 4)
+            break
+        # Don't let a failure poison the cache: the transport recorded this
+        # response, so discard it before any retry or re-run.
+        await store.discard(row.migration_id)
+        if response.status_code in _RETRYABLE_STATUSES and attempt < retries:
+            row.notes.append(
+                f"retried after HTTP {response.status_code} (attempt {attempt + 1}/{retries})"
+            )
+            await asyncio.sleep(_retry_delay(response, attempt))
+            continue
+        row.status, row.reason = "error", (
+            f"target API returned {response.status_code}: "
+            f"{payload[:200].decode('utf-8', 'replace')}"
+        )
+        return None
+
+    try:
+        return target_adapter.decode_response(payload, is_sse=is_sse)
+    except DecodeError as exc:
+        row.status, row.reason = "error", f"target response undecodable: {exc}"
+        return None
+
+
+def _populate_target(row: RowResult, target: DecodedResponse, target_model: str) -> None:
+    """Fill the row's ``target_*`` fields and flag a token-cap truncation."""
+    row.target_text = target.text
+    row.target_tool_calls = tuple(target.tool_calls)
+    row.target_model = target.model or target_model
+    row.target_usage = usage_of(target)
+    row.target_in_tokens = row.target_usage.prompt_total
+    row.target_out_tokens = row.target_usage.output
+    if target.finish_reason in ("max_tokens", "length"):
+        # A truncated target makes every comparison (and the output-token ratio)
+        # quietly unfair — surface it instead of letting the numbers lie.
+        row.notes.append(
+            f"target response was truncated by its token cap "
+            f"(finish_reason={target.finish_reason!r}); scores and token "
+            "ratios may be skewed — consider raising --max-tokens"
+        )
+
+
+async def _score_comparisons(
+    row: RowResult, comparators: List[Comparator], baseline: DecodedResponse, target: DecodedResponse
+) -> None:
+    """Score the row with every comparator in one pass; degrade, never crash."""
+    for comparator in comparators:
+        try:
+            row.comparisons.append(
+                await comparator.compare(row.prompt_text, baseline, target)
+            )
+        except Exception as exc:
+            row.comparisons.append(
+                ComparisonResult(
+                    comparator=comparator.name,
+                    score=0.0,
+                    passed=None,
+                    detail=f"comparator failed: {exc}",
+                    error=True,
+                )
+            )
+
+
 async def run_migration(
     store: FileStore,
     target_model: str,
@@ -543,211 +788,31 @@ async def run_migration(
         jobs.append((row, interaction, fp))
 
     async def score_row(row: RowResult, interaction, fp) -> None:
-        # --- Baseline ---------------------------------------------------
-        try:
-            baseline = decode_interaction(interaction)
-        except DecodeError as exc:
-            row.status, row.reason = "skipped", f"baseline undecodable: {exc}"
-            return
-        # Prose for display; tool calls kept structured for a distinct render.
-        # (Comparators score the decoded objects directly, so dropping the
-        # inlined tool-call lines here doesn't change scoring or judge caching.)
-        row.baseline_text = baseline.text
-        row.baseline_tool_calls = tuple(baseline.tool_calls)
-        row.baseline_model = baseline.model or fp.model
-        row.baseline_usage = usage_of(baseline)
-        row.baseline_in_tokens = row.baseline_usage.prompt_total
-        row.baseline_out_tokens = row.baseline_usage.output
-        recorded_at = interaction.metadata.get("recorded_at")
-        row.baseline_recorded_at = recorded_at if isinstance(recorded_at, str) else None
-        latency = interaction.metadata.get("latency_s")
-        row.baseline_latency_s = float(latency) if isinstance(latency, (int, float)) else None
-        first_chunk = interaction.metadata.get("latency_first_chunk_s")
-        row.baseline_latency_first_chunk_s = (
-            float(first_chunk) if isinstance(first_chunk, (int, float)) else None
-        )
+        populated = _populate_baseline(row, interaction, fp)
+        if populated is None:
+            return  # baseline undecodable or untranslatable — row already marked
+        baseline, conversation = populated
+        _note_translation_gaps(row, conversation, fp, target_adapter)
 
-        try:
-            conversation = conversation_of(interaction)
-        except UnsupportedRequestError as exc:
-            row.status, row.reason = "skipped", f"unsupported request: {exc}"
-            return
-        row.prompt_text = format_conversation(conversation)
-        row.prompt_preview = _prompt_preview(conversation)
-
-        source_adapter = adapter_for_provider(fp.provider) if fp.provider else None
-        cross_provider = source_adapter is None or source_adapter.name != target_adapter.name
-        if cross_provider and conversation.temperature is not None:
-            conversation.temperature = None
-            row.notes.append("temperature dropped in cross-provider translation")
-        # Tool-call fidelity knobs the baseline set that this target won't carry
-        # are *dropped* (not skipped) — but never silently: note them so a reader
-        # knows the translated call may behave differently here.  build_request
-        # gates the actual emission on the same capability, so OpenAI→OpenAI
-        # carries them and produces no note.
-        if (
-            conversation.parallel_tool_calls is not None
-            and not target_adapter.carries_parallel_tool_calls()
-        ):
-            row.notes.append(
-                f"parallel_tool_calls={conversation.parallel_tool_calls} not carried to "
-                f"{target_adapter.name}; the target may parallelize tool calls differently"
-            )
-        if (
-            conversation.tools
-            and any(tool.get("strict") for tool in conversation.tools)
-            and not target_adapter.carries_function_strict()
-        ):
-            row.notes.append(
-                f"function strict-schema enforcement dropped translating to {target_adapter.name}"
-            )
-
-        # --- Target (cache, or live via the shared AutoTransport) --------
-        target = None
+        # Target: replay a cached migration answer, skip (offline, none cached),
+        # or stream a live one through the shared AutoTransport.
         if await store.has(row.migration_id):
-            row.cached = True
-            recorded = await store.load(row.migration_id)
-            target_recorded_at = recorded.metadata.get("recorded_at")
-            row.target_recorded_at = (
-                target_recorded_at if isinstance(target_recorded_at, str) else None
-            )
-            target_latency = recorded.metadata.get("latency_s")
-            row.target_latency_s = (
-                float(target_latency) if isinstance(target_latency, (int, float)) else None
-            )
-            target_first_chunk = recorded.metadata.get("latency_first_chunk_s")
-            row.target_latency_first_chunk_s = (
-                float(target_first_chunk)
-                if isinstance(target_first_chunk, (int, float))
-                else None
-            )
-            try:
-                target = decode_interaction(recorded)
-            except DecodeError as exc:
-                row.status, row.reason = "error", (
-                    f"recorded migration response undecodable: {exc}; "
-                    f"delete cassette {row.migration_id!r} to re-record"
-                )
-                return
+            target = _load_cached_target(row, await store.load(row.migration_id))
         elif offline:
             row.status, row.reason = "skipped", (
                 "no recorded migration response; run `agentrec migrate` (online) first"
             )
             return
         else:
-            try:
-                url, headers, body = target_adapter.build_request(
-                    conversation, target_model, max_tokens_default=max_tokens_default,
-                    stream=True,
-                )
-            except MissingAPIKeyError as exc:
-                row.status, row.reason = "error", str(exc)
-                return
-            except UnsupportedRequestError as exc:
-                # The target dialect can't faithfully represent this request
-                # (e.g. a strict json_schema, or tool-call arguments that never
-                # parsed to an object).  An honest skipped row — not a crash —
-                # mirrors the extract-time skip handled above.
-                row.status, row.reason = "skipped", f"target cannot represent request: {exc}"
-                return
-            extra: Dict[str, object] = {
-                "migrated_from": row.baseline_id,
-                "semantic_key": row.semantic_key,  # pin the baseline's key
-                "baseline_model": row.baseline_model,
-            }
-            if row.category:
-                extra["category"] = row.category
-            _ROW_IDENTITY.set((row.migration_id, extra))
-            payload = b""
-            is_sse = False
-            for attempt in range(max(0, retries) + 1):
-                attempt_start = time.monotonic()
-                first_chunk_at: Optional[float] = None
-                try:
-                    # Stream the target so its time-to-first-chunk is a real,
-                    # comparable number (a streamed baseline reports true TTFB).
-                    # The AutoTransport tees the chunks into the corpus exactly
-                    # as it does for a recorded stream; we re-decode by content
-                    # type, so a target that ignores `stream` and answers with a
-                    # JSON body still decodes correctly.
-                    async with client.stream(
-                        "POST", url, headers=headers, json=body
-                    ) as response:
-                        if response.status_code == 200:
-                            buffer = bytearray()
-                            async for chunk in response.aiter_bytes():
-                                if first_chunk_at is None and chunk:
-                                    first_chunk_at = time.monotonic()
-                                buffer.extend(chunk)
-                            payload = bytes(buffer)
-                            is_sse = "text/event-stream" in response.headers.get(
-                                "content-type", ""
-                            ).lower()
-                        else:
-                            payload = await response.aread()
-                except httpx.HTTPError as exc:
-                    row.status, row.reason = "error", f"target call failed: {exc}"
-                    return
-                if response.status_code == 200:
-                    done = time.monotonic()
-                    row.target_latency_s = round(done - attempt_start, 4)
-                    row.target_latency_first_chunk_s = round(
-                        (first_chunk_at or done) - attempt_start, 4
-                    )
-                    break
-                # Don't let a failure poison the cache: the transport recorded
-                # this response, so discard it before any retry or re-run.
-                await store.discard(row.migration_id)
-                if response.status_code in _RETRYABLE_STATUSES and attempt < retries:
-                    row.notes.append(
-                        f"retried after HTTP {response.status_code} "
-                        f"(attempt {attempt + 1}/{retries})"
-                    )
-                    await asyncio.sleep(_retry_delay(response, attempt))
-                    continue
-                row.status, row.reason = "error", (
-                    f"target API returned {response.status_code}: "
-                    f"{payload[:200].decode('utf-8', 'replace')}"
-                )
-                return
-            try:
-                target = target_adapter.decode_response(payload, is_sse=is_sse)
-            except DecodeError as exc:
-                row.status, row.reason = "error", f"target response undecodable: {exc}"
-                return
-
-        row.target_text = target.text
-        row.target_tool_calls = tuple(target.tool_calls)
-        row.target_model = target.model or target_model
-        row.target_usage = usage_of(target)
-        row.target_in_tokens = row.target_usage.prompt_total
-        row.target_out_tokens = row.target_usage.output
-        if target.finish_reason in ("max_tokens", "length"):
-            # A truncated target makes every comparison (and the output-token
-            # ratio) quietly unfair — surface it instead of letting the
-            # numbers lie.
-            row.notes.append(
-                f"target response was truncated by its token cap "
-                f"(finish_reason={target.finish_reason!r}); scores and token "
-                "ratios may be skewed — consider raising --max-tokens"
+            target = await _stream_target(
+                client, store, row, conversation, target_adapter, target_model,
+                max_tokens_default=max_tokens_default, retries=retries,
             )
+        if target is None:
+            return  # a stage marked the row skipped/errored
 
-        # --- Score with every comparator in one pass ---------------------
-        for comparator in comparators:
-            try:
-                row.comparisons.append(
-                    await comparator.compare(row.prompt_text, baseline, target)
-                )
-            except Exception as exc:  # degrade, never crash the run
-                row.comparisons.append(
-                    ComparisonResult(
-                        comparator=comparator.name,
-                        score=0.0,
-                        passed=None,
-                        detail=f"comparator failed: {exc}",
-                        error=True,
-                    )
-                )
+        _populate_target(row, target, target_model)
+        await _score_comparisons(row, comparators, baseline, target)
 
     async def bounded(row: RowResult, interaction, fp) -> None:
         async with semaphore:

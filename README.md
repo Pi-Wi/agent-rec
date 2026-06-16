@@ -110,6 +110,22 @@ verdicts without touching the network, so it's safe to run in CI. See
 [`examples/`](examples/) for runnable scripts (a text-corpus migration, a
 tool-calling agent step, and a CI workflow snippet).
 
+### Try it now — no keys, no cost
+
+This repo ships the corpus behind the report above — all 100 prompts **and** the
+recorded Claude answers (`corpus/`) — so from a checkout you can render a real
+report fully offline, before recording anything of your own:
+
+```bash
+pip install agentrec            # or, from the checkout: pip install -e .
+agentrec report --corpus corpus --target claude-haiku-4-5 --compare exact,fuzzy
+```
+
+`report` replays the committed cassettes — no API keys, no network. Add
+`--pricing "anthropic-list+openai-list"` for the cost columns, `--format html`
+for the shareable report, or run `agentrec profiles` to list the built-in
+pricing profiles.
+
 ## Two ways to use it
 
 **Episodic — the migration event.** A model is deprecated, a cheaper one ships,
@@ -350,7 +366,7 @@ agentrec/
   pricing.py      # versioned pricing snapshots → derived cost estimates
   pricing_data/   # built-in list-price snapshots (anthropic-list, openai-list, mistral-list)
   report.py       # Markdown / HTML / console rendering
-  cli.py          # agentrec migrate | report | annotate | import
+  cli.py          # agentrec migrate | report | annotate | import | profiles
 ```
 
 - **Tee, don't buffer:** the caller and the store see every chunk in order,

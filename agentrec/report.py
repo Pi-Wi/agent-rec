@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import html as _html
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -218,6 +219,198 @@ def _aggregate_cell(agg: ComparatorAggregate) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Shared table model
+# ---------------------------------------------------------------------------
+# The migration report's five tables (summary, totals, gate, by-category,
+# results) used to be built twice — once as Markdown, once as HTML — so adding a
+# column meant editing both renderers in lockstep.  A table is now built once as
+# a grid of :class:`Cell`s; ``_md_table`` / ``_html_table`` are the only
+# format-specific plumbing.  A cell can carry distinct Markdown and HTML forms
+# (e.g. a category renders as plain text in Markdown, a ``<span class='tag'>``
+# chip in HTML) and an optional HTML ``<td>`` CSS class (pass/fail shading), so
+# the per-format cell decorations survive a single shared column layout.
+
+
+@dataclass(frozen=True)
+class Cell:
+    """One table cell: its Markdown text, its HTML body, and an optional td class."""
+
+    md: str
+    html: str
+    cls: str = ""
+
+    def td(self) -> str:
+        return f"<td class='{self.cls}'>{self.html}</td>" if self.cls else f"<td>{self.html}</td>"
+
+    def th(self) -> str:
+        return f"<th>{self.html}</th>"
+
+
+def _cell(value: str, *, cls: str = "") -> Cell:
+    """A plain cell whose Markdown and HTML forms are *value*, escaped per format."""
+    return Cell(md=_md_escape_cell(value), html=_html.escape(value), cls=cls)
+
+
+@dataclass
+class Table:
+    headers: List[Cell]
+    rows: List[List[Cell]]
+    aligns: List[str]  # one Markdown alignment token ("---" / "---:") per column
+
+
+def _md_table(table: Table) -> List[str]:
+    """Markdown lines for *table* (header, alignment row, body rows)."""
+    lines = ["| " + " | ".join(c.md for c in table.headers) + " |"]
+    lines.append("|" + "|".join(table.aligns) + "|")
+    for row in table.rows:
+        lines.append("| " + " | ".join(c.md for c in row) + " |")
+    return lines
+
+
+def _html_table(table: Table) -> str:
+    """A ``<table>…</table>`` string for *table*."""
+    parts = ["<table><tr>", *(c.th() for c in table.headers), "</tr>"]
+    for row in table.rows:
+        parts.append("<tr>")
+        parts.extend(c.td() for c in row)
+        parts.append("</tr>")
+    parts.append("</table>")
+    return "".join(parts)
+
+
+def _summary_table(report: MigrationReport) -> Table:
+    """Per-comparator verdict table (passed / pass rate / mean score)."""
+    rows: List[List[Cell]] = []
+    for agg in report.aggregates():
+        passed = "–" if agg.pass_rate is None else f"{agg.passed}/{agg.passed + agg.failed}"
+        rows.append([
+            _cell(agg.comparator), _cell(passed),
+            _cell(_fmt_rate(agg.pass_rate)), _cell(_fmt_score(agg.mean_score)),
+        ])
+    return Table(
+        headers=[_cell("Comparator"), _cell("Passed"), _cell("Pass rate"), _cell("Mean score")],
+        rows=rows,
+        aligns=["---", "---:", "---:", "---:"],
+    )
+
+
+def _totals_table(report: MigrationReport, pricings: List[ReportPricing]) -> Tuple[Optional[Table], bool]:
+    """Baseline→target totals (tokens / latency / TTFB / cost); ``None`` when empty.
+
+    Returns ``(table, has_latency)`` — the caller appends the recording-time
+    latency caveat only when a latency row is present.
+    """
+    rows_data, has_latency = _totals_rows(report, pricings)
+    if not rows_data:
+        return None, has_latency
+    table = Table(
+        headers=[_cell("Metric"), _cell("Baseline"), _cell("Target"), _cell("Ratio")],
+        rows=[[_cell(metric), _cell(base), _cell(target), _cell(ratio)]
+              for metric, base, target, ratio in rows_data],
+        aligns=["---", "---:", "---:", "---:"],
+    )
+    return table, has_latency
+
+
+def _gate_table(report: MigrationReport) -> Table:
+    """``--min-pass`` gate outcomes; the verdict cell carries pass/fail shading."""
+    rows: List[List[Cell]] = []
+    for gate in report.gates():
+        word = "pass" if gate.passed else "fail"
+        mark = "✅ pass" if gate.passed else "❌ fail"
+        verdict = Cell(
+            md=f"{mark} — {_md_escape_cell(gate.detail)}",
+            html=f"{word} — {_html.escape(gate.detail)}",
+            cls=word,
+        )
+        rows.append([
+            _cell(gate.comparator), _cell(_fmt_rate(gate.threshold)),
+            _cell(_fmt_rate(gate.pass_rate)), _cell(str(gate.errors)), verdict,
+        ])
+    return Table(
+        headers=[_cell("Comparator"), _cell("Threshold"), _cell("Pass rate"),
+                 _cell("Errors"), _cell("Verdict")],
+        rows=rows,
+        aligns=["---", "---:", "---:", "---:", "---"],
+    )
+
+
+def _category_cell(category: str) -> Cell:
+    """A category label: plain text in Markdown, a pill chip in HTML."""
+    return Cell(md=category, html=f"<span class='tag'>{_html.escape(category)}</span>")
+
+
+def _category_table(
+    report: MigrationReport,
+    breakdown: List,
+    pricings: List[ReportPricing],
+    category_rows: Dict[str, List[RowResult]],
+) -> Table:
+    """Per-category pass-rate · mean-score grid, with token/latency/cost ratios."""
+    headers = [_cell("Category"), _cell("Prompts")]
+    headers += [_cell(name) for name in report.comparator_names]
+    headers += [_cell("Out tokens"), _cell("Latency")]
+    headers += [_cell(f"Cost ({entry.profile})") for entry in pricings]
+    rows: List[List[Cell]] = []
+    for cat in breakdown:
+        cells = [_category_cell(cat.category), _cell(str(cat.prompts))]
+        cells += [_cell(_aggregate_cell(agg)) for agg in cat.aggregates]
+        cells.append(_cell(_fmt_ratio(cat.tokens.ratio) if cat.tokens else "–"))
+        cells.append(_cell(_fmt_ratio(cat.latency.ratio) if cat.latency else "–"))
+        for entry in pricings:
+            cost_totals = entry.totals(category_rows.get(cat.category, []))
+            cells.append(_cell(_fmt_ratio(cost_totals.ratio) if cost_totals else "–"))
+        rows.append(cells)
+    return Table(headers=headers, rows=rows, aligns=["---"] + ["---:"] * (len(headers) - 1))
+
+
+def _prompt_cell(row: RowResult) -> Cell:
+    """The Results-table prompt preview, flagged when the step involves tools."""
+    tools = _has_tool_calls(row)
+    md = _md_escape_cell(row.prompt_preview)
+    html = _html.escape(row.prompt_preview)
+    return Cell(
+        md=f"🔧 {md}" if tools else md,
+        html=f"{html} <span class='tag'>tools</span>" if tools else html,
+    )
+
+
+def _verdict_cell(row: RowResult, name: str) -> Cell:
+    """A per-row comparator result cell, shaded pass/fail/error in HTML."""
+    text = _comparison_cell(row, name)
+    return Cell(md=text, html=_html.escape(text), cls=_html_cell_class(row, name))
+
+
+def _results_table(
+    report: MigrationReport, breakdown: List, pricings: List[ReportPricing]
+) -> Table:
+    """One row per compared prompt: previews, per-comparator marks, tokens, cost."""
+    headers = [_cell("#"), _cell("Prompt")]
+    if breakdown:
+        headers.append(_cell("Category"))
+    # Markdown says "Baseline model"; HTML's narrower column says "Baseline".
+    headers.append(Cell(md="Baseline model", html="Baseline"))
+    headers += [_cell(name) for name in report.comparator_names]
+    headers += [_cell("Out tok"), _cell("Latency")]
+    headers += [_cell(f"Cost ({entry.profile})") for entry in pricings]
+    headers.append(_cell("Cached"))
+
+    rows: List[List[Cell]] = []
+    for index, row in enumerate(report.ok_rows, 1):
+        cells = [_cell(str(index)), _prompt_cell(row)]
+        if breakdown:
+            cells.append(_category_cell(row.category) if row.category else _cell("–"))
+        cells.append(_cell(row.baseline_model or "?"))
+        cells += [_verdict_cell(row, name) for name in report.comparator_names]
+        cells.append(_cell(_fmt_out_tokens(row)))
+        cells.append(_cell(_fmt_latency(row)))
+        cells += [_cell(_fmt_cost_cell(entry, row)) for entry in pricings]
+        cells.append(Cell(md="✅" if row.cached else "live", html="yes" if row.cached else "live"))
+        rows.append(cells)
+    return Table(headers=headers, rows=rows, aligns=["---"] * len(headers))
+
+
+# ---------------------------------------------------------------------------
 # Markdown
 # ---------------------------------------------------------------------------
 
@@ -294,44 +487,25 @@ def render_markdown(
 
     lines.append("## Summary")
     lines.append("")
-    lines.append("| Comparator | Passed | Pass rate | Mean score |")
-    lines.append("|---|---:|---:|---:|")
-    for agg in report.aggregates():
-        passed = "–" if agg.pass_rate is None else f"{agg.passed}/{agg.passed + agg.failed}"
-        lines.append(
-            f"| {agg.comparator} | {passed} "
-            f"| {_fmt_rate(agg.pass_rate)} | {_fmt_score(agg.mean_score)} |"
-        )
+    lines.extend(_md_table(_summary_table(report)))
     lines.append("")
 
-    totals_rows, has_latency = _totals_rows(report, pricings)
-    if totals_rows:
-        lines.append("| Metric | Baseline | Target | Ratio |")
-        lines.append("|---|---:|---:|---:|")
-        for metric, base, target, ratio in totals_rows:
-            lines.append(f"| {metric} | {base} | {target} | {ratio} |")
+    totals, has_latency = _totals_table(report, pricings)
+    if totals:
+        lines.extend(_md_table(totals))
         lines.append("")
         if has_latency:
             lines.append(f"_{_LATENCY_CAVEAT}_")
             lines.append("")
 
-    gates = report.gates()
-    if gates:
+    if report.gates():
         lines.append("## Strict gate")
         lines.append("")
         lines.append(
             "_Comparators named in `--min-pass` gate the run; the others are informational._"
         )
         lines.append("")
-        lines.append("| Comparator | Threshold | Pass rate | Errors | Verdict |")
-        lines.append("|---|---:|---:|---:|---|")
-        for gate in gates:
-            mark = "✅ pass" if gate.passed else "❌ fail"
-            lines.append(
-                f"| {gate.comparator} | {_fmt_rate(gate.threshold)} "
-                f"| {_fmt_rate(gate.pass_rate)} | {gate.errors} "
-                f"| {mark} — {_md_escape_cell(gate.detail)} |"
-            )
+        lines.extend(_md_table(_gate_table(report)))
         lines.append("")
 
     if breakdown:
@@ -342,48 +516,13 @@ def render_markdown(
             "target/baseline ratios._"
         )
         lines.append("")
-        header = ["Category", "Prompts"] + report.comparator_names + ["Out tokens", "Latency"]
-        header += [f"Cost ({entry.profile})" for entry in pricings]
-        lines.append("| " + " | ".join(header) + " |")
-        lines.append("|---|---:|" + "---:|" * (len(report.comparator_names) + 2 + len(pricings)))
-        for cat in breakdown:
-            cells = [cat.category, str(cat.prompts)]
-            cells.extend(_aggregate_cell(agg) for agg in cat.aggregates)
-            cells.append(_fmt_ratio(cat.tokens.ratio) if cat.tokens else "–")
-            cells.append(_fmt_ratio(cat.latency.ratio) if cat.latency else "–")
-            for entry in pricings:
-                cost_totals = entry.totals(category_rows.get(cat.category, []))
-                cells.append(_fmt_ratio(cost_totals.ratio) if cost_totals else "–")
-            lines.append("| " + " | ".join(cells) + " |")
+        lines.extend(_md_table(_category_table(report, breakdown, pricings, category_rows)))
         lines.append("")
 
     if report.ok_rows:
         lines.append("## Results")
         lines.append("")
-        header = ["#", "Prompt"]
-        if breakdown:
-            header.append("Category")
-        header += ["Baseline model"] + report.comparator_names + ["Out tok", "Latency"]
-        header += [f"Cost ({entry.profile})" for entry in pricings]
-        header.append("Cached")
-        lines.append("| " + " | ".join(header) + " |")
-        lines.append("|" + "---|" * len(header))
-        for index, row in enumerate(report.ok_rows, 1):
-            preview = _md_escape_cell(row.prompt_preview)
-            if _has_tool_calls(row):
-                preview = f"🔧 {preview}"  # this step involves tool calls
-            cells = [str(index), preview]
-            if breakdown:
-                cells.append(row.category or "–")
-            cells += [
-                row.baseline_model or "?",
-                *[_comparison_cell(row, name) for name in report.comparator_names],
-                _fmt_out_tokens(row),
-                _fmt_latency(row),
-                *[_fmt_cost_cell(entry, row) for entry in pricings],
-                "✅" if row.cached else "live",
-            ]
-            lines.append("| " + " | ".join(cells) + " |")
+        lines.extend(_md_table(_results_table(report, breakdown, pricings)))
         lines.append("")
 
         ordered = _ordered_detail_rows(report.ok_rows)
@@ -566,47 +705,22 @@ def render_html(
 
     # One consolidated Summary: the comparator verdict table plus a
     # baseline→target totals table (tokens / latency / cost).
-    parts.append("<h2>Summary</h2><table><tr><th>Comparator</th>"
-                 "<th>Passed</th><th>Pass rate</th><th>Mean score</th></tr>")
-    for agg in report.aggregates():
-        passed = "–" if agg.pass_rate is None else f"{agg.passed}/{agg.passed + agg.failed}"
-        parts.append(
-            f"<tr><td>{esc(agg.comparator)}</td><td>{passed}</td>"
-            f"<td>{_fmt_rate(agg.pass_rate)}</td><td>{_fmt_score(agg.mean_score)}</td></tr>"
-        )
-    parts.append("</table>")
+    parts.append("<h2>Summary</h2>")
+    parts.append(_html_table(_summary_table(report)))
 
-    totals_rows, has_latency = _totals_rows(report, pricings)
-    if totals_rows:
-        parts.append("<table><tr><th>Metric</th><th>Baseline</th>"
-                     "<th>Target</th><th>Ratio</th></tr>")
-        for metric, base, target, ratio in totals_rows:
-            parts.append(
-                f"<tr><td>{esc(metric)}</td><td>{esc(base)}</td>"
-                f"<td>{esc(target)}</td><td>{esc(ratio)}</td></tr>"
-            )
-        parts.append("</table>")
+    totals, has_latency = _totals_table(report, pricings)
+    if totals:
+        parts.append(_html_table(totals))
         if has_latency:
             parts.append(f"<p class='note'>{esc(_LATENCY_CAVEAT)}</p>")
 
-    gates = report.gates()
-    if gates:
+    if report.gates():
         parts.append("<h2>Strict gate</h2>")
         parts.append(
             "<p class='meta'>Comparators named in <code>--min-pass</code> gate the run; "
             "the others are informational.</p>"
         )
-        parts.append("<table><tr><th>Comparator</th><th>Threshold</th>"
-                     "<th>Pass rate</th><th>Errors</th><th>Verdict</th></tr>")
-        for gate in gates:
-            cell_class = "pass" if gate.passed else "fail"
-            mark = "pass" if gate.passed else "fail"
-            parts.append(
-                f"<tr><td>{esc(gate.comparator)}</td><td>{_fmt_rate(gate.threshold)}</td>"
-                f"<td>{_fmt_rate(gate.pass_rate)}</td><td>{gate.errors}</td>"
-                f"<td class='{cell_class}'>{mark} — {esc(gate.detail)}</td></tr>"
-            )
-        parts.append("</table>")
+        parts.append(_html_table(_gate_table(report)))
 
     if breakdown:
         parts.append("<h2>By category</h2>")
@@ -614,62 +728,11 @@ def render_html(
             "<p class='meta'>Cells are pass rate · mean score. "
             "Out tokens and Latency are target/baseline ratios.</p>"
         )
-        parts.append("<table><tr><th>Category</th><th>Prompts</th>")
-        for name in report.comparator_names:
-            parts.append(f"<th>{esc(name)}</th>")
-        parts.append("<th>Out tokens</th><th>Latency</th>")
-        for entry in pricings:
-            parts.append(f"<th>Cost ({esc(entry.profile)})</th>")
-        parts.append("</tr>")
-        for cat in breakdown:
-            parts.append(
-                f"<tr><td><span class='tag'>{esc(cat.category)}</span></td>"
-                f"<td>{cat.prompts}</td>"
-            )
-            for agg in cat.aggregates:
-                parts.append(f"<td>{esc(_aggregate_cell(agg))}</td>")
-            ratio = _fmt_ratio(cat.tokens.ratio) if cat.tokens else "–"
-            parts.append(f"<td>{esc(ratio)}</td>")
-            latency_ratio = _fmt_ratio(cat.latency.ratio) if cat.latency else "–"
-            parts.append(f"<td>{esc(latency_ratio)}</td>")
-            for entry in pricings:
-                cost_totals = entry.totals(category_rows.get(cat.category, []))
-                cost_ratio = _fmt_ratio(cost_totals.ratio) if cost_totals else "–"
-                parts.append(f"<td>{esc(cost_ratio)}</td>")
-            parts.append("</tr>")
-        parts.append("</table>")
+        parts.append(_html_table(_category_table(report, breakdown, pricings, category_rows)))
 
     if report.ok_rows:
-        parts.append("<h2>Results</h2><table><tr><th>#</th><th>Prompt</th>")
-        if breakdown:
-            parts.append("<th>Category</th>")
-        parts.append("<th>Baseline</th>")
-        for name in report.comparator_names:
-            parts.append(f"<th>{esc(name)}</th>")
-        parts.append("<th>Out tok</th><th>Latency</th>")
-        for entry in pricings:
-            parts.append(f"<th>Cost ({esc(entry.profile)})</th>")
-        parts.append("<th>Cached</th></tr>")
-        for index, row in enumerate(report.ok_rows, 1):
-            preview = esc(row.prompt_preview)
-            if _has_tool_calls(row):
-                preview += " <span class='tag'>tools</span>"
-            parts.append(f"<tr><td>{index}</td><td>{preview}</td>")
-            if breakdown:
-                tag = f"<span class='tag'>{esc(row.category)}</span>" if row.category else "–"
-                parts.append(f"<td>{tag}</td>")
-            parts.append(f"<td>{esc(row.baseline_model or '?')}</td>")
-            for name in report.comparator_names:
-                parts.append(
-                    f"<td class='{_html_cell_class(row, name)}'>"
-                    f"{esc(_comparison_cell(row, name))}</td>"
-                )
-            parts.append(f"<td>{esc(_fmt_out_tokens(row))}</td>")
-            parts.append(f"<td>{esc(_fmt_latency(row))}</td>")
-            for entry in pricings:
-                parts.append(f"<td>{esc(_fmt_cost_cell(entry, row))}</td>")
-            parts.append(f"<td>{'yes' if row.cached else 'live'}</td></tr>")
-        parts.append("</table>")
+        parts.append("<h2>Results</h2>")
+        parts.append(_html_table(_results_table(report, breakdown, pricings)))
 
         ordered = _ordered_detail_rows(report.ok_rows)
         shown = ordered if max_detail_rows <= 0 else ordered[:max_detail_rows]
