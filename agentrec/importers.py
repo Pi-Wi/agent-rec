@@ -688,6 +688,26 @@ def _detect_source(records: List[Any]) -> Optional[str]:
 # ---------------------------------------------------------------------------
 
 
+def _has_usable_prompt(record: ImportedRecord) -> bool:
+    """Whether the prompt carries any text or tool content to ask the target.
+
+    A turn whose content was entirely non-text (an image) coerces to an empty
+    string (see :func:`_content_text`); synthesizing it would emit an
+    empty-content request that target APIs reject (HTTP 400), turning a silent
+    import into an errored migration row.  Such a record is an honest skip —
+    consistent with the build-time image skip at migration — not a degenerate
+    empty prompt.  An assistant turn that only made tool calls (empty text but
+    populated ``tool_calls``) still counts as usable.
+    """
+    for message in record.messages:
+        if message.get("tool_calls"):
+            return True
+        content = message.get("content")
+        if isinstance(content, str) and content.strip():
+            return True
+    return False
+
+
 def _synthesize(record: ImportedRecord) -> Tuple[str, CapturedInteraction]:
     """A synthesized OpenAI-dialect cassette (id, interaction) for *record*."""
     messages: List[dict] = []
@@ -793,6 +813,8 @@ async def import_corpus(
             if category and not record.category:
                 record.category = category
             ref = record.ref
+            if not _has_usable_prompt(record):
+                raise _Skip("no text content in prompt (image-only turn?)")
             cid, interaction = _synthesize(record)
         except _Skip as exc:
             summary.skipped.append((ref, str(exc)))

@@ -38,6 +38,49 @@ coverage), and **how it presents itself** (positioning).
   path for the unparseable-tool-args skip). Decided per P3: **carry
   same-dialect, note the drop otherwise** — never silent.
 
+## P2 — importer & store hardening (funnel trust)
+
+The funnel ("how corpora get in") is the #1 limiter, and an abuse pass (2026-06)
+over the importer/store path surfaced trust gaps that are cheap to close. These
+are small; bundle them as one release before the P3 capability work.
+
+- [x] **Image-only turn → honest skip, not an empty prompt (2026-06).** A
+  Langfuse/OTel turn whose only content was an image coerced to `""`, so the
+  importer synthesized an empty-content request that 400s the target and
+  *errors the row* — failing a `--strict` gate, a silent behavior change against
+  invariant #5. The importer now skips it with a reason (`_has_usable_prompt`
+  guard in `import_corpus`); a turn mixing text and an image keeps the text.
+  This is **not** image support (P3) — just a guardrail so the funnel stays
+  honest until multimodal lands.
+- [x] **Honest store contract (2026-06).** `run_migration`/`annotate_corpus`
+  enumerate the corpus via `store.ids()`, which was implemented **only on
+  `FileStore`** — so `import_corpus()` into the public `InMemoryStore` then
+  migrating raised `AttributeError`. `ids()` (sorted, sync) and `__len__` now
+  live on the `InteractionStore` base (raising a clear error if a store leaves
+  them unimplemented) and on `InMemoryStore`; a base `__bool__` keeps an empty
+  store truthy so `if store:` presence checks (e.g. the judge cache) don't
+  silently flip. CLAUDE.md's module-map line is corrected (`ids`/`__len__` are
+  sync, not async twins). Unlocks fast in-memory migration tests
+  (`tests/test_store.py` + an InMemoryStore end-to-end in `tests/test_import.py`).
+- [ ] **Import → next-step hint.** A freshly imported corpus has baseline answers
+  but no *target* answers yet, so `agentrec report` (offline) skips every row —
+  the first thing a new user hits after `import`. Have `agentrec import` print
+  the next step ("run `agentrec migrate --target …` to fill target answers;
+  `report` is offline after that").
+- [ ] **PII hygiene on the `import` CLI.** The importer is pitched as the
+  PII-safer alternative to live recording, yet the CLI builds a *default*
+  `FileStore` — scrubs known credential shapes only (an `sk-` key), never PII
+  (email/SSN/phone) and never response bodies. Add `--scrub-response-body`,
+  `--secret-patterns FILE`, a `--redact-pii` preset, and `--dry-run` (print the
+  import summary without writing, to vet an export first). Ship PII patterns as
+  documented best-effort (locale-specific, never complete), matching the
+  existing `FileStore` honesty — not a compliance guarantee.
+- [ ] **Importer robustness.** Auto-detect samples a *single* record
+  (`_detect_source` → first dict wins), so a mixed or odd-first export
+  mis-routes the whole file — vote across the first N. And let the import
+  summary write to JSON (the CLI truncates skips at 10; large exports otherwise
+  hide data loss).
+
 ## P3 — translation-fidelity gaps (known honest skips to revisit)
 
 - [ ] OpenAI **Responses API** (`/v1/responses`) adapter — chat-completions only

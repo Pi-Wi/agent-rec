@@ -9,6 +9,8 @@ venv/
 .venv/
 corpus/
 corpus-support/
+corpus-imported/
+corpus-imported-src/
 reports/
 migration-report__*
 CLAUDE.local.md

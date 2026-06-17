@@ -19,6 +19,7 @@ import pytest
 
 from agentrec import (
     FileStore,
+    InMemoryStore,
     build_comparators,
     fingerprint_of,
     import_corpus,
@@ -279,6 +280,38 @@ async def test_bad_records_are_skipped_not_fatal(tmp_path: Path):
     assert any("only a system" in r for r in reasons.values())
 
 
+async def test_image_only_turn_skipped_text_survives(tmp_path: Path):
+    """An image-only turn coerces to empty text; rather than synthesize an
+    empty-content prompt that 400s the target (an errored migration row), the
+    importer skips it honestly.  A turn mixing text and an image keeps the
+    text (the image is dropped)."""
+    store = FileStore(tmp_path / "corpus")
+    image_only = {
+        "id": "img-only", "type": "GENERATION", "model": "gpt-4o",
+        "input": {"messages": [{"role": "user", "content": [
+            {"type": "image_url", "image_url": {"url": "https://x/y.png"}}]}]},
+        "output": "a cat",
+    }
+    text_plus_image = {
+        "id": "text-img", "type": "GENERATION", "model": "gpt-4o",
+        "input": {"messages": [{"role": "user", "content": [
+            {"type": "text", "text": "What is in this picture?"},
+            {"type": "image_url", "image_url": {"url": "https://x/y.png"}}]}]},
+        "output": "a cat",
+    }
+    summary = await import_corpus(
+        _write_jsonl(tmp_path / "img.jsonl", [image_only, text_plus_image]),
+        store, source="langfuse",
+    )
+    assert summary.imported_count == 1  # only the text+image row survives
+    assert summary.skipped_count == 1
+    ref, reason = summary.skipped[0]
+    assert ref == "img-only" and "image-only" in reason
+    # The surviving cassette kept its text (image dropped) and is non-empty.
+    conversation = conversation_of(await store.load(summary.imported[0]))
+    assert conversation.messages[-1]["content"] == "What is in this picture?"
+
+
 async def test_category_override_tags_untagged_rows(tmp_path: Path):
     store = FileStore(tmp_path / "corpus")
     summary = await import_corpus(
@@ -328,6 +361,23 @@ async def test_imported_corpus_migrates_end_to_end(tmp_path: Path, monkeypatch):
     assert row.baseline_model == "gpt-4o-mini"
     assert row.target_text == "Paris"
     assert row.category == "geo"
+    assert report.all_passed
+
+
+async def test_inmemory_store_imports_and_migrates(tmp_path: Path, monkeypatch):
+    """Import into the public InMemoryStore and migrate it end to end. This used
+    to raise AttributeError because run_migration enumerates via store.ids(),
+    which only FileStore implemented — the store contract now covers ids()/len()."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    store = InMemoryStore()
+    await import_corpus(_write_jsonl(tmp_path / "lf.jsonl", [LANGFUSE_OBS]), store, source="langfuse")
+    assert len(store) == 1  # __len__ now works on InMemoryStore too
+
+    report = await run_migration(
+        store, "claude-haiku-4-5", build_comparators("exact"),
+        inner_transport=_anthropic_target("Paris"),
+    )
+    assert len(report.rows) == 1 and report.rows[0].status == "ok"
     assert report.all_passed
 
 

@@ -34,7 +34,9 @@ class InteractionStore(ABC):
     transports) for free; a natively-async store (e.g. a DB driver) overrides the
     async methods and may leave the sync twins raising ``NotImplementedError``.
     ``has`` / ``has_sync`` default to an existence probe via ``load`` /
-    ``load_sync``; concrete stores override with a cheaper check.
+    ``load_sync``; concrete stores override with a cheaper check.  Enumeration
+    (``ids`` / ``__len__``) is synchronous — the corpus tooling iterates it
+    directly — so a store must implement ``ids`` to be migrated or annotated.
     """
 
     # --- Async interface (used by the async transports) --------------------
@@ -94,6 +96,35 @@ class InteractionStore(ABC):
         except KeyError:
             return False
 
+    # --- Enumeration -------------------------------------------------------
+    # Synchronous on both built-in stores; the corpus tooling (run_migration,
+    # annotate_corpus) iterates ids() without awaiting.  The default raises a
+    # clear error rather than an AttributeError, so a store that wants to be
+    # migrated knows exactly what it must implement.
+
+    def ids(self) -> List[str]:
+        """Sorted ids of every interaction in the store.
+
+        The migration runner and ``annotate_corpus`` enumerate the corpus
+        through this, so a store that wants to be migrated must implement it.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement ids(); a store must be "
+            "enumerable to be migrated or annotated"
+        )
+
+    def __len__(self) -> int:
+        """Number of interactions in the store (defaults to ``len(self.ids())``)."""
+        return len(self.ids())
+
+    def __bool__(self) -> bool:
+        # A store object is always truthy.  Without this, defining __len__ makes
+        # an *empty* store falsy, silently flipping the common "if store:" /
+        # "... if store else None" presence checks (e.g. the judge verdict cache,
+        # which caches into an initially-empty store).  Presence is `is not None`;
+        # emptiness is `len(store) == 0`.
+        return True
+
 
 class InMemoryStore(InteractionStore):
     """Volatile, single-process store — the first implementation."""
@@ -124,6 +155,12 @@ class InMemoryStore(InteractionStore):
 
     async def has(self, interaction_id: str) -> bool:
         return self.has_sync(interaction_id)  # O(1) dict probe, cheaper than load
+
+    def ids(self) -> List[str]:
+        return sorted(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
 
 
 # ---------------------------------------------------------------------------
