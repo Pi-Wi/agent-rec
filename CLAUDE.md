@@ -21,7 +21,7 @@ bold lead-ins, *why* included).
 |---|---|---|
 | `capture.py` | captured interaction | `CapturedInteraction`, `CapturedRequest`, `CapturedChunk` (raw bytes + `timestamp_offset`) |
 | `keying.py` | request identity | `fingerprint(request)` → `Fingerprint(provider, model, semantic_key, cassette_id)`; `fingerprint_of`; `default_key` |
-| `store.py` | persistence | `InteractionStore` (`save/load/has/discard/ids` async + `*_sync` twins), `InMemoryStore`, `FileStore` (human-readable JSON, auth redaction, secret scrubbing, summary-first) |
+| `store.py` | persistence | `InteractionStore` (`save/load/has/discard` async + `*_sync` twins; `ids()`/`__len__` **sync**, on the base + both stores — a store must implement `ids()` to be migrated/annotated), `InMemoryStore`, `FileStore` (human-readable JSON, auth redaction, secret scrubbing, summary-first) |
 | `transport.py` | record/replay seams | `RecordingTransport`, `ReplayTransport` (offline — *cannot* hit network), `AutoTransport` (replay-else-record) + `Sync*` twins; `key=` fixed/callable; `extra_metadata=` |
 | `session.py` | ergonomic facade | `async_client()` / `sync_client()` (any SDK via `http_client=`), `cassette(store, mode=...)` decorator/CM, `DynamicTransport` |
 | `providers/base.py` | provider-neutral forms | `ProviderAdapter` ABC (`extract_conversation` / `build_request` / `decode_response` / `normalize_usage`), `Conversation`, `DecodedResponse`, `ToolCall`, `TokenUsage`, `UnsupportedRequestError`, `DecodeError`, `MissingAPIKeyError`, `format_conversation`, `render_response`, `sse_data_lines` |
