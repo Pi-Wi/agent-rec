@@ -72,7 +72,13 @@ from .session import (
     cassette,
     sync_client,
 )
-from .store import FileStore, InMemoryStore, InteractionStore
+from .store import (
+    DEFAULT_SECRET_PATTERNS,
+    FileStore,
+    InMemoryStore,
+    InteractionStore,
+    scrub_secrets,
+)
 from .transport import (
     AutoTransport,
     RecordingTransport,
@@ -102,6 +108,8 @@ __all__ = [
     "FileStore",
     "InMemoryStore",
     "InteractionStore",
+    "DEFAULT_SECRET_PATTERNS",
+    "scrub_secrets",
     # Low-level transports
     "AutoTransport",
     "RecordingTransport",

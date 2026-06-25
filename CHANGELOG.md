@@ -22,6 +22,18 @@
   (`carries_parallel_tool_calls` / `carries_function_strict`, default `False`,
   `True` on `OpenAIAdapter`, back to `False` on `MistralAdapter`) let the runner
   decide what to note without hard-coding provider names.
+- **Public API declared, deprecation policy written (TODO P0).**
+  `agentrec.__all__` now also exports `DEFAULT_SECRET_PATTERNS` and
+  `scrub_secrets` — previously reachable only via the `agentrec.store`
+  submodule, despite the README telling users to extend
+  `secret_patterns=[...]` with them. A new `DEPRECATIONS.md` defines the
+  public surface (Python `__all__`, the 5 CLI subcommands and their flags,
+  and the cassette on-disk JSON structure) and what SemVer means for it:
+  additive changes are minor, removing/renaming any of those — or changing
+  the `semantic_key` algorithm — is a 2.0 event. *Why:* every other 1.0
+  blocker is mechanical; this is the promise users actually rely on once
+  they pin a version. The README's "API may still change in minor releases
+  before 1.0" sentence is retired in favor of a link to the new policy.
 
 ### Changed
 - **Build-time skips are caught, not crashes.** The migration runner now turns

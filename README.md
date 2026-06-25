@@ -27,8 +27,9 @@ migrate against — no hand-authored test cases, no golden answers to maintain.
 > target that can't enforce a schema, as images still do. Record/replay is proven for streaming (SSE) and
 > non-streaming (JSON) on OpenAI and Anthropic, sync and async — or **import** an
 > existing Langfuse / LangSmith / OpenTelemetry export as a corpus without
-> running the recorder at all. The API may still change in minor releases before
-> 1.0. See [CHANGELOG](CHANGELOG.md).
+> running the recorder at all. The public API (Python `__all__`, CLI flags,
+> cassette JSON structure) follows SemVer — see [DEPRECATIONS](DEPRECATIONS.md)
+> for what that covers and [CHANGELOG](CHANGELOG.md) for history.
 
 ## The report is the product
 
