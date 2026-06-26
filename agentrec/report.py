@@ -485,6 +485,10 @@ def render_markdown(
     )
     lines.append("")
 
+    for warning in report.warnings:
+        lines.append(f"**⚠ Warning:** {warning}")
+        lines.append("")
+
     lines.append("## Summary")
     lines.append("")
     lines.extend(_md_table(_summary_table(report)))
@@ -703,6 +707,9 @@ def render_html(
         f"{len(report.error_rows)} errored</p>"
     )
 
+    for warning in report.warnings:
+        parts.append(f"<p class='note'><b>⚠ Warning:</b> {esc(warning)}</p>")
+
     # One consolidated Summary: the comparator verdict table plus a
     # baseline→target totals table (tokens / latency / cost).
     parts.append("<h2>Summary</h2>")
@@ -832,6 +839,8 @@ def render_console(report: MigrationReport, *, pricing: PricingArg = None) -> st
         f"({report.cached_count} cached, {report.live_count} live, "
         f"{len(report.skipped_rows)} skipped, {len(report.error_rows)} errors)"
     ]
+    for warning in report.warnings:  # ASCII-safe (console runs on Windows too)
+        lines.append(f"  ! warning: {warning}")
     for agg in report.aggregates():
         passed = (
             "n/a"

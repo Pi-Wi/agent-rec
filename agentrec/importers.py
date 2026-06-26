@@ -46,7 +46,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx
 
 from .capture import CapturedChunk, CapturedInteraction, CapturedRequest
-from .keying import _sanitize, fingerprint
+from .keying import _sanitize, fingerprint, SEMANTIC_KEY_VERSION
 from .store import InteractionStore
 
 # Synthesized cassettes always speak this dialect (see module docstring).
@@ -742,6 +742,7 @@ def _synthesize(record: ImportedRecord) -> Tuple[str, CapturedInteraction]:
         "provider": _SYNTH_PROVIDER,
         "model": record.model,
         "semantic_key": fp.semantic_key,
+        "semantic_key_version": SEMANTIC_KEY_VERSION,
         "imported": True,
         "imported_from": record.source,
     }

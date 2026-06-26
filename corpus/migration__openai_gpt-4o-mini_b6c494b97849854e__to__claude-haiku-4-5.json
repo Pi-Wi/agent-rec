@@ -1,0 +1,193 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Extract the action items as a JSON array: 'John will email the report, Lisa books the venue, and we all review the deck by Friday.'",
+    "response": "```json\n[\n  {\n    \"owner\": \"John\",\n    \"action\": \"email the report\"\n  },\n  {\n    \"owner\": \"Lisa\",\n    \"action\": \"book the venue\"\n  },\n  {\n    \"owner\": \"everyone\",\n    \"action\": \"review the deck\",\n    \"deadline\": \"Friday\"\n  }\n]\n```",
+    "semantic_key": "bfbeb8bd5101a7a9ffdd050d8be824f0",
+    "recorded_at": "2026-06-11T12:08:22.743085+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "bfbeb8bd5101a7a9ffdd050d8be824f0",
+    "migrated_from": "openai_gpt-4o-mini_b6c494b97849854e",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "extract",
+    "recorded_at": "2026-06-11T12:08:22.743085+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "303"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Extract the action items as a JSON array: 'John will email the report, Lisa books the venue, and we all review the deck by Friday.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:24 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:24Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:25Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "13"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:09:07Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:24Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSq8ww2BYcegrxZgCo6"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-27836df7cc5e6b15298fafc9a748d4a8-6513a4b5db267f56-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a08039fa0475f0-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA4SSW4vbMBCF/4rRswN2aFrq95ZS9mGhl5f1omils7Eae+Tq4jQE//eOTEy3W0JfJHG+o2PPaC5icAa9aITuVTLYdMoe0+bNZrfZVttdXVW1KIU1bBjCQVb1vU7Tu0l/oe/bb19Pz5/orjt8uGdPPI/ILoSgDmDBuz4LKgQboqLIknYUwafm4bL6I35lsmyN2O/3P4Kjlh5aKopLXoqiFe5E8K1o+PjZddSKciVKR8v+BWFQti9ih8JjdD62Irvm8lbUnQ3qRtSTc8claQIl/C8IE/zZEW6EeUwWpyXOQB9fuAyU6W2+mH0fvTXqfP1YS48tcTvE/FiKEN0oPRS3hpsEMjImT+IKAn4mkOZuUur7q2gQuRth1dLyKM1FWBpTlNEdQQx3b/lRlO4gNcfnX5Z/G6qVMza32Ho352PsMMCrXu6Gf/1/aN29pnMpXIovpfc1FwM/WQ0ZLTzXnifJKG/yUNIzfK5bHuAYkYtSTVy0euLBm+ffAAAA//8DAEzUxWHbAgAA"
+      },
+      "timestamp_offset": 0.00017109999316744506
+    }
+  ]
+}

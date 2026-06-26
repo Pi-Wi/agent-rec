@@ -1,0 +1,81 @@
+name: Release
+
+# Build and publish to PyPI when a version tag (e.g. v1.0.0) is pushed.
+#
+# Publishing uses PyPI **Trusted Publishing (OIDC)** — no API token is stored in
+# repository secrets. Before the first release, configure the trusted publisher
+# once on PyPI (Project → Publishing): owner/repo, workflow file `release.yml`,
+# and environment `pypi`. The `pypi` GitHub environment (Settings → Environments)
+# gates the publish step and can carry approval rules.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & check distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist + wheel
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+      - name: Check distribution metadata
+        run: python -m twine check dist/*
+      - name: Tag must match the packaged version
+        # Guards against tagging v1.0.1 while pyproject still says 1.0.0.
+        run: |
+          PKG=$(python -c "import tomllib, pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "packaged version: $PKG · tag: $TAG"
+          test "$PKG" = "$TAG"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  smoke-test:
+    name: Smoke-test the built wheel
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Install the wheel in a clean env and exercise the entry point
+        # Catches packaging gaps the local tests can't: a broken console script,
+        # an import error, or missing package data (the pricing_data/ snapshots
+        # `profiles` loads). The shipped-corpus demo (`agentrec report --corpus
+        # corpus`) is intentionally not run here — the demo corpus is not part of
+        # the repo checkout or the wheel (see the README "Try it now" section).
+        run: |
+          python -m pip install dist/*.whl
+          agentrec --help
+          agentrec profiles
+          python -c "from importlib.metadata import version; print('agentrec', version('agentrec'))"
+
+  publish:
+    name: Publish to PyPI
+    needs: [build, smoke-test]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # OIDC token for PyPI Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

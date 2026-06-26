@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Extract as JSON {product, issue}: 'The X200 vacuum's battery drains within ten minutes.'",
+    "response": "```json\n{\"product\":\"X200 vacuum\",\"issue\":\"battery drains within ten minutes\"}\n```",
+    "semantic_key": "ee11434d7c5a176d1bb97504660e6039",
+    "recorded_at": "2026-06-11T12:07:31.488392+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "ee11434d7c5a176d1bb97504660e6039",
+    "category": "extract",
+    "recorded_at": "2026-06-11T12:07:31.488392+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "256"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Extract as JSON {product, issue}: 'The X200 vacuum's battery drains within ten minutes.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:33 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07efd7adaa5a4-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "539"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9950"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199957"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "7m5.095s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "12ms"
+    ],
+    [
+      "x-request-id",
+      "req_592b17331fd544c88f7c90b7cdba6dce"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/4xSQW7bMBC8+xUEz1JBG7bl5FYgD2gPTRtUgUyTK4muRBLkMq1h+O8lJTtS2hToRYB2doYzu3teEEKVpPeEipaj6G2XP9inLwzqzzVjx6eHTyAevx4fP56YsKxgNEsMcziCwBvrgzCRB6iMHmHhgCMk1WWxWy6Lu+1mNQC9kdAlWmMxX5u8V1rlK7Za56zIl7sruzVKgI9t3+MvIefhm3xqCb9imWW3Sg/e8wZi7dYUi850qUK598oj10izCRRGI+jB+n6/P3qjS30uqXVGBoElvS/ptxVj5IWLEPqSZiVV3gcYkANHBHci0nGlPfmpsFWaRD0SgwQEX9JLqaPu/EUHdfA8pdah62YA19ogT1Mbsj5fkctrus400dfB/0GldZyab6s45Gg/JfFoLB3QS/w+D1MMbwaTAvYWKzQ/YHhuvRvl6LS7CVzeXUGMBrupvi2yd9QqCchV52dboIKLFuTEnFbGg1RmBixmmf828572mFvp5n/kJ0AIsPEoK+tAKvE28NTmIF32v9peZzwYph7cSzzVChW4tAcJNQ/deG/UnzxCX8VlNeCsU+PR1baSYrPesu2mqOnisvgNAAD//w=="
+      },
+      "timestamp_offset": 0.00678269998752512
+    },
+    {
+      "data": {
+        "__b64__": "AwA5oUsiggMAAA=="
+      },
+      "timestamp_offset": 0.006870899989735335
+    }
+  ]
+}

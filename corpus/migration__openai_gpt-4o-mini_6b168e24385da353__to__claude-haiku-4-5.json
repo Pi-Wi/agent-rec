@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize the incident impact in one sentence: 'The pricing bug showed VAT-exclusive totals to EU customers for six hours; 214 orders were affected and will be refunded the difference automatically.'",
+    "response": "A pricing bug displayed incorrect VAT-exclusive totals to EU customers for six hours, affecting 214 orders that will receive automatic refunds for the difference.",
+    "semantic_key": "564950d665cb20b366fa09fb238d1bf0",
+    "recorded_at": "2026-06-11T12:08:06.262427+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "564950d665cb20b366fa09fb238d1bf0",
+    "migrated_from": "openai_gpt-4o-mini_6b168e24385da353",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:08:06.262427+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "371"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Summarize the incident impact in one sentence: 'The pricing bug showed VAT-exclusive totals to EU customers for six hours; 214 orders were affected and will be refunded the difference automatically.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:08 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:07Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:08Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "26"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:08:34Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:07Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSotRHPpJW9SBgw6NJ9"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-d5fcbd4bd1ec07fdd7c28cbdb5b8178a-f2e77a5a0bd19c8c-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07fcfef67da98-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SSQW8bIRCF/wri7K12XTtK95ZDb/WpTdOkqtAExrvIGLbM4Niy/N8zpLaapOoJ9L43D2bgqLfJYdC9tgGKw2YEvynNolk283a+7Nq20zPtnRi2NJi2u118cffdHf24u8/wsD+sVl/d5lo8fJiwupAIBhQhp1AFIPLEEFkkmyKj7Pqfx4ufcV/Jy9LrGzVl"
+      },
+      "timestamp_offset": 0.0003532000118866563
+    },
+    {
+      "data": {
+        "__b64__": "b30c1GMZlPM0BTigUz7alDNaVt9vvjW4t6GQ36HixBBIFvX5VtlCnLaYSa1TVuT3akwl00zBei2lNXXeLVTKrnp4BFZPPgQluVjDoEg5sLeirEt0f3J4RLmIJGSMFj/o06+ZlnMmkxEoRbk0Rme45KjPgPB3qV7dxxLCWXTI4ANdtPIypP6ofZwKG04bjAKvPsmQwI5orMSzT9G8NbQXLtj9j11qaz5OI8pMIJjl9l//X9qN7+lpplPh19LHK2kG885bNOwxS+/1ZR1kVz9JPM/IDJgExcQGdtI0PMpHOJ2eAQAA//8DABllcKhrAgAA"
+      },
+      "timestamp_offset": 0.0005010000022593886
+    }
+  ]
+}

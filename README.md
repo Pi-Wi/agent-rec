@@ -16,7 +16,7 @@ the OpenAI SDK, the Anthropic SDK, LangChain, or any httpx-backed client), so
 the prompts you already run in development or production *are* the corpus you
 migrate against — no hand-authored test cases, no golden answers to maintain.
 
-> **Status:** beta (0.11.0). Migration translation covers OpenAI ↔ Anthropic
+> **Status:** stable (1.0.0). Migration translation covers OpenAI ↔ Anthropic
 > conversations including **tool use** (definitions, assistant tool calls, tool
 > results) and JSON mode; **Gemini** and **Mistral** are included as third and
 > fourth translation dialects (request/response, streaming and tool-call paths
@@ -114,11 +114,12 @@ tool-calling agent step, and a CI workflow snippet).
 ### Try it now — no keys, no cost
 
 This repo ships the corpus behind the report above — all 100 prompts **and** the
-recorded Claude answers (`corpus/`) — so from a checkout you can render a real
-report fully offline, before recording anything of your own:
+recorded Claude answers (`corpus/`) — so a **checkout of this repository** can
+render a real report fully offline, before recording anything of your own:
 
 ```bash
-pip install agentrec            # or, from the checkout: pip install -e .
+# the demo corpus/ ships in the repository (it is not bundled in the PyPI wheel)
+pip install -e .     # from a clone; or `pip install agentrec` to install just the tool
 agentrec report --corpus corpus --target claude-haiku-4-5 --compare exact,fuzzy
 ```
 

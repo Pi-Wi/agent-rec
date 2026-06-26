@@ -18,6 +18,7 @@ import httpx
 import pytest
 
 from agentrec import (
+    SEMANTIC_KEY_VERSION,
     FileStore,
     InMemoryStore,
     build_comparators,
@@ -253,6 +254,8 @@ async def test_imported_cassette_groups_with_recorded_anthropic(tmp_path: Path):
     assert fingerprint_of(imported).semantic_key == fingerprint_of(anthropic).semantic_key
     # And it matches the key the importer pinned into metadata.
     assert imported.metadata["semantic_key"] == fingerprint_of(anthropic).semantic_key
+    # Imported cassettes are version-stamped like recorded ones.
+    assert imported.metadata["semantic_key_version"] == SEMANTIC_KEY_VERSION
 
 
 async def test_reimport_is_idempotent(tmp_path: Path):

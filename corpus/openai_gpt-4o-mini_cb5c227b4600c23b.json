@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Extract as JSON {day, time, timezone}: 'Let's sync Thursday at 14:30 CET on the usual bridge.'",
+    "response": "```json\n{\n  \"day\": \"Thursday\",\n  \"time\": \"14:30\",\n  \"timezone\": \"CET\"\n}\n```",
+    "semantic_key": "05939e287a5cbd2fa97238d256d56730",
+    "recorded_at": "2026-06-11T12:07:30.085428+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "05939e287a5cbd2fa97238d256d56730",
+    "category": "extract",
+    "recorded_at": "2026-06-11T12:07:30.085428+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "262"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Extract as JSON {day, time, timezone}: 'Let's sync Thursday at 14:30 CET on the usual bridge.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:31 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07ef37f434d24-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "726"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9962"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199955"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "5m23.007s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "13ms"
+    ],
+    [
+      "x-request-id",
+      "req_0d33212819dc420a90d9ebb86e11576d"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDKkKTgQAAAD//w=="
+      },
+      "timestamp_offset": 0.006426500011002645
+    },
+    {
+      "data": {
+        "__b64__": "jFLLTsMwELz3KyqfG9T0QVpugLigXhAgBKRKXXubGhI72A5QUP+dtZM2KQ+JiyXPeNY7s1uezTZ3D9d3w9n9S355On47o1e3QHpOoZZPwOxOdcQU6sAKJSuaaaAWXNUwmoRhND0eh57IFYfMydLCBiMV5EKKYNAfjIJ+FISTWr1WgoHBZ4947XY//en6lBzeEe73dkgOxtAUENs9QlCrzCGEGiOMpdKSXkMyJS1I3/pisXgySsbyM5bdbkw43cSIx+RmXWrjb72KsSKHigpHJ8P+Af6hZM2dX9zEJJbbWGLl9p8aVqWhzrcss6xFUCmVpS4373ZeM9u9v0ylhVZL801KVpibWScYMxpwXoxVBfHsFs+5z7E8iIZgobywiVXP4L8bD6typJleQw7rjInFBrMGn+xEB9USDpaKzLTmQBhla+CNshkaLblQLaLT8vyzmd9qV76FTP9TviEYgwLXMik0cMEODTfPNLjd/uvZPmPfMDGgX3FZEytAuzlwWNEyqzaOmI2xkCc4rBR0oUW1dqsiGYyiSTSeRjwinW3nCwAA//8="
+      },
+      "timestamp_offset": 0.006501700001535937
+    },
+    {
+      "data": {
+        "__b64__": "AwCx2Z7HhAMAAA=="
+      },
+      "timestamp_offset": 0.0065667000017128885
+    }
+  ]
+}

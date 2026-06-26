@@ -17,6 +17,7 @@ import httpx
 import pytest
 
 from agentrec import (
+    SEMANTIC_KEY_VERSION,
     AutoTransport,
     FileStore,
     InMemoryStore,
@@ -214,6 +215,26 @@ async def test_annotate_backfills_legacy_cassette(corpus: FileStore):
     assert raw["metadata"]["provider"] == "openai"
     assert raw["metadata"]["model"] == "gpt-4o-mini"
     assert raw["metadata"]["semantic_key"]
+    # No key was pinned, so annotate computed it fresh — the version stamp it
+    # adds truthfully describes that key.
+    assert raw["metadata"]["semantic_key_version"] == SEMANTIC_KEY_VERSION
+
+
+async def test_annotate_does_not_version_a_stale_pinned_key(corpus: FileStore):
+    """A pinned key from an older algorithm is preserved but left un-versioned.
+
+    annotate must not claim the running ``SEMANTIC_KEY_VERSION`` for a key it
+    didn't compute — that would mislabel an old corpus as current.  It stamps
+    the version only when the pinned key still equals this release's recompute.
+    """
+    interaction = _baseline_interaction()
+    interaction.metadata["semantic_key"] = "stale-key-from-an-older-algorithm"
+    await corpus.save(BASELINE_ID, interaction)
+
+    await annotate_corpus(corpus)
+    meta = (await corpus.load(BASELINE_ID)).metadata
+    assert meta["semantic_key"] == "stale-key-from-an-older-algorithm"  # provenance kept
+    assert "semantic_key_version" not in meta  # not falsely claimed
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +278,34 @@ async def test_migration_end_to_end_cross_provider(corpus: FileStore, monkeypatc
 
     assert report.all_passed
     assert report.live_count == 1 and report.cached_count == 0
+    # An un-stamped (pre-versioning) corpus must not trigger the skew warning.
+    assert report.warnings == []
+
+
+async def test_version_skew_warns_but_does_not_regroup_or_gate(corpus: FileStore, monkeypatch):
+    """A corpus stamped with a foreign semantic-key version warns, visibly —
+    but the run still groups under the running algorithm and the gate is
+    unaffected (the warning is informational, like cost/latency)."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    interaction = _baseline_interaction()
+    interaction.metadata["category"] = "classify"
+    interaction.metadata["semantic_key_version"] = SEMANTIC_KEY_VERSION + 99  # a "future" algo
+    await corpus.save(BASELINE_ID, interaction)
+
+    report = await run_migration(
+        corpus, TARGET_MODEL, build_comparators("exact"), inner_transport=_anthropic_answer("Blue")
+    )
+
+    # Grouping and gating are untouched: still one row, still scored.
+    assert len(report.rows) == 1 and report.rows[0].status == "ok"
+    assert report.all_passed  # the skew warning never fails a gate
+    # The warning names both versions and surfaces in the rendered reports.
+    assert len(report.warnings) == 1
+    warning = report.warnings[0]
+    assert str(SEMANTIC_KEY_VERSION + 99) in warning and str(SEMANTIC_KEY_VERSION) in warning
+    assert "warning:" in render_console(report)  # ASCII-safe console line
+    assert "Warning:" in render_markdown(report)
+    assert "Warning:" in render_html(report)
 
 
 def _tooled_baseline(*, strict: bool, parallel: bool) -> CapturedInteraction:

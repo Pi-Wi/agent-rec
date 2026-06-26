@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Route this support ticket (billing/technical/account/shipping): 'I can't reset my password.'",
+    "response": "Technical",
+    "semantic_key": "b6f801582c982bba2b9a925406532c13",
+    "recorded_at": "2026-06-11T12:07:25.069670+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "b6f801582c982bba2b9a925406532c13",
+    "category": "classify",
+    "recorded_at": "2026-06-11T12:07:25.069670+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "260"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Route this support ticket (billing/technical/account/shipping): 'I can't reset my password.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:26 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07ed53c3ba5a4-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "559"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9994"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199956"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "51.342s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "13ms"
+    ],
+    [
+      "x-request-id",
+      "req_9ebdd98e28374915a48086aa518f5ad8"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDCl19gQAAAD//4xSQU7DMBC89xWVzwlKStqmDwBxBw4IVZFrbxKD47VsB4pQ/47ttE2AInGx5J2d9cx4b+6bVvDbR7Ypn5Z3y3d2vTeIJAkM3L0AcyfWFUPPAydQDTAzQB2Eqfm6zPP1ZlWsItAhBxlojXZpgWknlEgX2aJIs3Wal0d2i4KB9W3P/jqff8Yz6FQc9r6cJadKB9bSBnzt1OSLBmWoEGqtsI4qR5IRZKgcqCj9AVirBKNyihuoe0uDRtVLOQGoUuho8BiVbY/I4axFYqMN7uwPKqm9R9tWPhLr8/HvWoeaRPTgz2303H+zQfygTrvK4SvE54r1MI6MSY9gfsSc1ycnnDK5MKzi4KiQdhIZYZS1wEfmmC/tucAJMJtY/q3l0uzBtlDNf8aPAGOg/QZV2gAX7Lvfsc1AWMO/2s4RR8HEgnnze1U5ASZ8A4ea9nJYDmI/rIOu8n/VgNFGDBtS6woyDptsl2UlmR1mXwAAAP//"
+      },
+      "timestamp_offset": 0.004564400005619973
+    },
+    {
+      "data": {
+        "__b64__": "AwB9fpgRLwMAAA=="
+      },
+      "timestamp_offset": 0.004660100006731227
+    }
+  ]
+}

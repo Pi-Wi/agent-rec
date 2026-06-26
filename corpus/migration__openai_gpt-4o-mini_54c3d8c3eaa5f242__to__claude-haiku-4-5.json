@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Extract as JSON {city, country}: 'Our HQ is in Lyon, France, with a satellite office in Austin.'",
+    "response": "```json\n[\n  {\n    \"city\": \"Lyon\",\n    \"country\": \"France\"\n  },\n  {\n    \"city\": \"Austin\",\n    \"country\": \"USA\"\n  }\n]\n```",
+    "semantic_key": "62f88765b968221003a58c868e265352",
+    "recorded_at": "2026-06-11T12:08:01.532251+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "62f88765b968221003a58c868e265352",
+    "migrated_from": "openai_gpt-4o-mini_54c3d8c3eaa5f242",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "extract",
+    "recorded_at": "2026-06-11T12:08:01.532251+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "268"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Extract as JSON {city, country}: 'Our HQ is in Lyon, France, with a satellite office in Austin.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:03 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:03Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:03Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "31"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:08:25Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:03Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSocixzNYaUnUp8kJag"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-d55c6e669393b0e3643a1d01d7dbc8ec-922eef70b192cf81-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07fb8fb6829ae-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SSTWvDMAyG/0rwOYGkLGzkVhg9jJ32QWFNcb1Ybb0mcmbLpaXkv08uzcY2erHN+7ySJdkn0VkNrahE06qgIdsqswvZTVZmk3xSFnleiFQYzYbOb2RePG0e7l9mffd2B2G+NofD7VrP5uyhYw/RBd6rDbDgbBsF5b3xpJBYaiwS8KlanEY/wSGS81aJ1Wr1"
+      },
+      "timestamp_offset": 0.00020589999621734023
+    },
+    {
+      "data": {
+        "__b64__": "4S3WuKgxSU5xSZJaNIaOtaj49HhkKtJvYAOSu7CZU9hALSIc0isJpsGTuZri9Xl6ia9xWSOXI4ZlKjzZXjpQXBoXCaglBYfiAjx8BuCbRYWhbS+iBlKm9aMWzkOpTsJgH0iS3QEyLAseimq2IBtOT8ai/G3IR85YX2NjbMwP/RY6cKqVZfff/0OL7V86pMIG+lVdyc2A25sGJBlw3Ht8Sa2cjp8C1+Bi33IDlhFakmrPTat3fvhh+AIAAP//AwCpb84mWwIAAA=="
+      },
+      "timestamp_offset": 0.0002972999936901033
+    }
+  ]
+}

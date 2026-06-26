@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize this review in one sentence: 'I have used this laptop for three months. The screen is gorgeous and battery life is solid, but the fan noise under load is noticeable and the webcam is mediocre.'",
+    "response": "The laptop has an excellent display and battery life, but is hindered by loud fan noise under load and a subpar webcam.",
+    "semantic_key": "c4816a25c7548f27ad88ffdb3b0430d9",
+    "recorded_at": "2026-06-11T12:07:59.650497+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "c4816a25c7548f27ad88ffdb3b0430d9",
+    "migrated_from": "openai_gpt-4o-mini_448da0337efb9d3e",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:59.650497+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "375"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Summarize this review in one sentence: 'I have used this laptop for three months. The screen is gorgeous and battery life is solid, but the fan noise under load is noticeable and the webcam is mediocre.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:01 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:01Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:01Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "35"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:08:18Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:01Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSoR4EwwRjfpbWvzau3"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-1b43c961e6e5d0746b25c8f7fb28a63a-16f4045a916ed0ab-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07fa7efaf1e42-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SRT0sDMRDFv0rIuZVttag9qogHEQ8FDyJhdjPtBrOTNTPRltLv7mxp8R+eEt7vvSQvs7Vd8hjt3DYRisdxC+G1jM/Gs/G0ms4mVTWxIxu8GjpeuWpyc02P9cPl4poWtxdXzE+L8/u7G/XIpsfBhcywQhVyioMAzIEFSFRqEgnqbv68PfoF1wPZL3O7aNFE"
+      },
+      "timestamp_offset": 0.00029979998362250626
+    },
+    {
+      "data": {
+        "__b64__": "6CX1pgU2QAbXDcaoIeMD9xE2KnpTgwjmjYlhiSNTFzGBTRvIY0alClLxZql5SoHRlIGoCH4fB8Ol7iGbD6wb6E7s7mVkWW91GYET6UuQvJOSyR4A41tBavTJVGI8iB4FQuSjVvbN51sbqC/iJL0iKTw/0+bQtOgaPV5CIvfTUB25Yv8fO2aH87FvscMM0c26v/4vOml/093IpiLfpVNNMOb30KCTgFm7D+PykP0weVrql2pvt8KkiJI4eNfSUOt0d7tPAAAA//8DAJvIeIlAAgAA"
+      },
+      "timestamp_offset": 0.00041539999074302614
+    }
+  ]
+}

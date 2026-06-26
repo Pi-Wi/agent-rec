@@ -31,29 +31,54 @@ The minimum to honestly publish a `1.0.0` to PyPI.
   (what can change in a minor, what waits for 2.0, how long deprecations live).
   *Why:* every other P0 is mechanical; this is the promise users actually rely
   on, and it constrains everything after.
-- [ ] **Decide the cassette-format stability guarantee.** Corpora are meant to
+- [x] **Decide the cassette-format stability guarantee.** Corpora are meant to
   be *kept* (the "frozen behavioural baseline" in the README). State whether the
   on-disk JSON is part of the 1.0 contract and how `semantic_key` changes will
   be handled post-1.0 — the changelog already documents three pre-1.0 regroupings
   (0.3.0/0.4.0/0.6.0); after 1.0 those need a migration path, not a caveat.
-- [ ] **Ship `py.typed`.** The package is thoroughly typed (dataclasses, typed
+  *Decided:* the running release's algorithm is the grouping authority and is
+  frozen across 1.x; cassettes now stamp `semantic_key_version` and the runner
+  warns (non-gating) on version skew, so a 2.0 algorithm change is a detectable,
+  re-keyable migration. See `DEPRECATIONS.md` → "Semantic-key stability & the
+  2.0 migration path".
+- [x] **Ship `py.typed`.** The package is thoroughly typed (dataclasses, typed
   returns throughout) but ships no marker, so downstream type-checkers ignore it
   entirely. Add `agentrec/py.typed` and include it in the wheel
   (`[tool.hatch.build]` force-include / package-data). *Why:* a typed library
   that doesn't advertise it gives consumers none of the benefit — and this is
   far cheaper to promise at 1.0 than to retrofit later.
-- [ ] **Finalize version + changelog.** Bump `pyproject.toml` to `1.0.0`, roll
+  *Done:* `agentrec/py.typed` added; no build-config change needed — hatchling's
+  default `packages = ["agentrec"]` includes it (verified by building the wheel
+  and confirming `agentrec/py.typed` and the `pricing_data/` snapshots are
+  inside).
+- [x] **Finalize version + changelog.** Bump `pyproject.toml` to `1.0.0`, roll
   the `## Dev (0.11.0)` heading to `## 1.0.0 — YYYY-MM-DD`, and move the
   classifier from `Development Status :: 4 - Beta` to `5 - Production/Stable`.
   Update the README status line (currently "beta (0.11.0)").
+  *Done (release-prep):* version → `1.0.0`, classifier → `5 - Production/Stable`,
+  README status → "stable (1.0.0)", CHANGELOG heading rolled to
+  `## 1.0.0 — 2026-06-25`. **Confirm/adjust that date to the actual release day,**
+  and note nothing is published until the release pipeline below runs.
 - [ ] **Release pipeline to PyPI.** No publish workflow exists (CI only tests).
   Add a tag-triggered GitHub Actions job that builds sdist + wheel, runs
   `twine check`, and publishes via **Trusted Publishing (OIDC)** — no API token
   in secrets. Smoke-test the built wheel in a clean env (`pip install`, run
   `agentrec report` on the shipped corpus) before publish.
-- [ ] **Clean up `dist/`.** It holds stale `0.2.0`–`0.5.1` artifacts and is
+  *Workflow written:* `.github/workflows/release.yml` — on a `v*` tag it builds
+  sdist+wheel, runs `twine check`, asserts the tag matches the packaged version,
+  smoke-tests the installed wheel, then publishes via OIDC. **Remaining (manual,
+  yours):** (1) on PyPI, register the Trusted Publisher for this repo +
+  workflow `release.yml` + environment `pypi`; (2) create the GitHub `pypi`
+  environment (Settings → Environments); (3) push tag `v1.0.0`. The in-CI smoke
+  test exercises `agentrec --help` / `profiles` / import (entry point + packaged
+  `pricing_data/`), **not** the `--corpus` demo — the demo corpus isn't tracked
+  in the repo or in the wheel (see the dry-run note in P2).
+- [x] **Clean up `dist/`.** It holds stale `0.2.0`–`0.5.1` artifacts and is
   checked in. Add `dist/` to `.gitignore` and remove the committed wheels; build
   artifacts shouldn't live in the repo.
+  *Done:* `dist/` was already in `.gitignore` and **never tracked** (`git log`
+  shows no commit ever touched it — the "checked in" premise was stale); removed
+  the stale local `0.2.0`–`0.5.1` artifacts so the working tree is clean.
 
 ## P1 — strongly want before the first official release
 
@@ -105,6 +130,16 @@ is itself part of a clean release.
   flow) on a fresh machine/container to confirm the shipped corpus + entry point
   work as documented. Catches packaging gaps (missing package-data, the
   `pricing_data/` snapshots, the demo corpus) that local dev hides.
+  **Resolved (2026-06-26):** the demo `corpus/` was untracked (gitignored, never
+  committed) **and** absent from the wheel, so the README "Try it now" demo
+  didn't work from a fresh clone. Fixed by **force-adding `corpus/`** (the
+  `.gitignore` rule still protects users' own recordings — see the comment
+  there) so a checkout renders the demo offline, and the README now states the
+  corpus ships with the repo, not the PyPI wheel. The corpus is intentionally
+  *not* bundled in the wheel (0.97 MB of demo data every install doesn't need).
+  Remaining for the dry-run itself: confirm the flow on a genuinely clean
+  machine/container, and consider adding an in-CI `--corpus` smoke test now that
+  the corpus is tracked.
 
 ## P3 — post-1.0 / explicit non-goals
 

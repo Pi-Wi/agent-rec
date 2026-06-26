@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] One-sentence executive summary: 'Q2 churn rose from 4% to 6%, driven by small-business accounts citing price increases; enterprise retention stayed flat while expansion revenue grew 9%.'",
+    "response": "Q2 churn doubled among small-business customers due to price increases, though enterprise accounts remained stable and expansion revenue grew 9%.",
+    "semantic_key": "5426a153910b91550c6b12ffb74a7f2f",
+    "recorded_at": "2026-06-11T12:07:59.179145+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "5426a153910b91550c6b12ffb74a7f2f",
+    "migrated_from": "openai_gpt-4o-mini_45756453e5e98b19",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:59.179145+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "358"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"One-sentence executive summary: 'Q2 churn rose from 4% to 6%, driven by small-business accounts citing price increases; enterprise retention stayed flat while expansion revenue grew 9%.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:01 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:00Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:01Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "34"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:08:19Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:00Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSoRp8m9uYrFExXt1SD"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-36646dde0545660e6817c65a95d29db8-3f65f9145a2b521d-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07fa9088d3082-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SSQWscMQyF/4ox9LYTZjbdQvZYekqgUEgvKcUotjrjxCNPLHmzYdn/XjlkSZrQ05j3vZH0ZB/snAMmu7U+QQ3YTRDva/e523Trfr0Z+n6wKxuDGmYeXT98v14/nV/tb+rl5upuJL776n9+u1SPPC3YXMgMI6pQcmoCMEcWIFHJZxLU0/bX4eQX3Dfy/Nna"
+      },
+      "timestamp_offset": 0.00039129998185671866
+    },
+    {
+      "data": {
+        "__b64__": "H2vjp1rIhFxvEwYDc6bR8AwpdbeVI2l54ytLnrGwCRWNZLOU6NFE8gWBkVdGplzHyWgvLAoZDXifKwmbgjNomWB0KG1hgILB/QLEMZPSHZIWHQs+motPZ/b4e2W12+Ja6Uw6I1JwojPaF8D4UJG8hqGa0osYUCAmPmn1eSfbg420VHGS75EUfrnQnYCf0LXJRQdw/xr6E1cc/sdO/7b6uEyom4HkNvNH/ysdpvf0uLK5ylvpfNAwWHa6WycRi2ZvFxmghPYm6A+WltuNmBVRFgc7Dd22ao/HvwAAAP//AwD+DGlAWgIAAA=="
+      },
+      "timestamp_offset": 0.0006342999986372888
+    }
+  ]
+}

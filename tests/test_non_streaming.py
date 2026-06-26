@@ -18,7 +18,13 @@ import httpx
 import pytest
 from openai import AsyncOpenAI
 
-from agentrec import FileStore, InMemoryStore, async_client, cassette
+from agentrec import (
+    SEMANTIC_KEY_VERSION,
+    FileStore,
+    InMemoryStore,
+    async_client,
+    cassette,
+)
 
 
 def _json_body(content: str = "Hello world", model: str = "gpt-4o-mini") -> bytes:
@@ -141,4 +147,7 @@ async def test_non_streaming_captures_provenance_metadata(tmp_path: Path) -> Non
     assert meta["provider"] == "openai"
     assert meta["model"] == "gpt-4o-mini"
     assert meta["semantic_key"] and isinstance(meta["semantic_key"], str)
+    # The algorithm version is stamped alongside the key it produced, so a kept
+    # corpus is self-identifying (a future major release can detect/re-key it).
+    assert meta["semantic_key_version"] == SEMANTIC_KEY_VERSION
     assert "recorded_at" in meta

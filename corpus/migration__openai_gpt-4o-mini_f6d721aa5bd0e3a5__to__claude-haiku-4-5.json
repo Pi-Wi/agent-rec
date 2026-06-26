@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize the recurring feedback theme in one sentence: 'Across 80 survey responses, users repeatedly praised onboarding speed but flagged confusing invoice layouts and slow support response on weekends.'",
+    "response": "Users value fast onboarding but struggle with confusing invoices and slow weekend support.",
+    "semantic_key": "645d5aeca0f277dbf2e0720cc4903690",
+    "recorded_at": "2026-06-11T12:11:22.210961+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "645d5aeca0f277dbf2e0720cc4903690",
+    "migrated_from": "openai_gpt-4o-mini_f6d721aa5bd0e3a5",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:11:22.210961+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "376"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Summarize the recurring feedback theme in one sentence: 'Across 80 survey responses, users repeatedly praised onboarding speed but flagged confusing invoice layouts and slow support response on weekends.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:11:24 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:11:23Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:11:24Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "49"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:11:24Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:11:23Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwT4Q8McK8zx1BMJMG5G"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-fef331b1988b1a13bb9720c13c0a1346-926d5b0a0d8055ef-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a0849e6a8ffea1-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SRT0sDMRDFv0rIuSu7xYruTehJoaCgF5GQbqa7odlkzUy21dLv7qR08R+ekrzfy0xe5iD7YMDJWjZOJwNFp+02FZfFopiX80VVlpWcSWvY0GOrymoZt5b0437VLW8NPDzf360+bvbsofcBsgsQdQssxOCyoBEtkvbEUhM8Ae/ql8PkJ9hnclpq+YQQUYza"
+      },
+      "timestamp_offset": 0.0002823999966494739
+    },
+    {
+      "data": {
+        "__b64__": "JRAbjSSCXwcdjfWtWCcSSDG1rQOxs9QJLrdJmJn1Y7ANoNDeCHRhJ3YAW8iHNAwh0oU8vs4kUhhUBI3BczPGilL08gwQ3hL4hl/lk3Nn0QBp63DS0ilcfZDWD4kUBW7C8Oqaw+mmA9VwebLBq5+GcuKMzX9supvrw9BBD1E7tej/+r9o1f2mx5kMib5L84rDQBz5hxRZiJw9T8Twx+bh+g3EnFu1EBj5QEqPHFqveYDH4ycAAAD//wMAXsYZPiMCAAA="
+      },
+      "timestamp_offset": 0.00040530000114813447
+    }
+  ]
+}

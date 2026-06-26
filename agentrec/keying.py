@@ -69,6 +69,16 @@ _SAMPLING_FIELDS = frozenset(
 
 _UNSAFE_ID_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 
+# Version of the ``semantic_key`` algorithm computed below — the rules that
+# decide which recordings group into one migration row.  Stamped onto every
+# recorded/imported cassette (``semantic_key_version`` in metadata) so a corpus
+# is self-identifying.  The migration runner recomputes the key with the
+# *running* release's algorithm (the pinned key is provenance), so within a
+# major version the grouping is stable; this number is bumped **only in a major
+# release**, where it lets tooling detect a corpus recorded under an older
+# algorithm and re-key it rather than regroup it silently.  See DEPRECATIONS.md.
+SEMANTIC_KEY_VERSION = 1
+
 
 @dataclass(frozen=True)
 class Fingerprint:
@@ -80,11 +90,17 @@ class Fingerprint:
     cassette_id: str  # default record/replay key (model- and request-specific)
 
     def as_metadata(self) -> dict:
-        """The slice of the fingerprint worth persisting with the interaction."""
+        """The slice of the fingerprint worth persisting with the interaction.
+
+        ``semantic_key_version`` records which algorithm produced the
+        co-located ``semantic_key`` (see :data:`SEMANTIC_KEY_VERSION`), so a
+        kept corpus stays self-identifying across releases.
+        """
         return {
             "provider": self.provider,
             "model": self.model,
             "semantic_key": self.semantic_key,
+            "semantic_key_version": SEMANTIC_KEY_VERSION,
         }
 
 

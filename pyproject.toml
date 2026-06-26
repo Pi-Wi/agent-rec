@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentrec"
-version = "0.11.0"
+version = "1.0.0"
 description = "Replay recorded LLM API traffic against a candidate model: cross-provider migration & regression reports (OpenAI/Anthropic/Gemini/Mistral) with scoring, cost and latency, built on httpx record/replay"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = "MIT"
 license-files = ["LICENSE", "NOTICE"]
 keywords = ["llm", "openai", "anthropic", "gemini", "mistral", "httpx", "record", "replay", "vcr", "testing"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",

@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Route this support ticket (billing/technical/account/shipping): 'My package shows delivered but never arrived.'",
+    "response": "Shipping",
+    "semantic_key": "83a06f8883f2722a27f94f4c768eb2cd",
+    "recorded_at": "2026-06-11T12:07:25.020436+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "83a06f8883f2722a27f94f4c768eb2cd",
+    "category": "classify",
+    "recorded_at": "2026-06-11T12:07:25.020436+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "279"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Route this support ticket (billing/technical/account/shipping): 'My package shows delivered but never arrived.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:26 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07ed58c330839-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "323"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9995"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199951"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "42.496s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "14ms"
+    ],
+    [
+      "x-request-id",
+      "req_174dcbd476104d85b17c9a76d5f1b2c4"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDCmNMgUAAAD//4xSy26DMBC85ysin0MFiIT0mNx6bHOpWkXIMQs4AdvymqpVlX/vGkggfUi9WPLOznpmvJunk1wW23j3HD2+HPBhs8EjbtnCM/ThCMJdWHdCEw+c1KqHhQXuwE+N0nUUpferZNUBjc6h9rTSuCDRQSOVDOIwToIwDaL1wK60FIDU9krX+fyzO71OlcM7lcPFpdIAIi+BapcmKlpd+wrjiBIdV44tRlBo5UB10neVNEaqcgpbKFrkXqJq63oCcKW0495iJ2w/IOerlFqXxuoDfqOygixilVEiSPHQs+i0YR16pnPfWW5vXDAa1BiXOX2C7rnkvh/HxqBHMBowR/rqsbwcUrodluXguKxxkhgTXFSQj8wxXt7mUk+A2cTyTy2/ze5tU8j/GT8CQoChBcqMhVyKW79jmwW/hX+1XSPuBDME+0ZrlTkJ1n9DDgVv6343GH6ggyajvyrBGiv7BSlMFq5TDrmIecxm59kXAAAA//8="
+      },
+      "timestamp_offset": 0.0016423999913968146
+    },
+    {
+      "data": {
+        "__b64__": "AwBL9II7LgMAAA=="
+      },
+      "timestamp_offset": 0.0017377999902237207
+    }
+  ]
+}

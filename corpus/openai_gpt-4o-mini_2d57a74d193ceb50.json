@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Replace all personal data with [REDACTED]: 'Contact Anna Larsen at +45 22 11 33 44 or anna@example.dk for access.'",
+    "response": "'Contact [REDACTED] at [REDACTED] or [REDACTED] for access.'",
+    "semantic_key": "60ac7757af2e2d634eab0d05caf126e5",
+    "recorded_at": "2026-06-11T12:07:36.054721+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "60ac7757af2e2d634eab0d05caf126e5",
+    "category": "rewrite",
+    "recorded_at": "2026-06-11T12:07:36.054721+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "282"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Replace all personal data with [REDACTED]: 'Contact Anna Larsen at +45 22 11 33 44 or anna@example.dk for access.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:37 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f18fad17e5b-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "695"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9925"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199950"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "10m45.267s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "15ms"
+    ],
+    [
+      "x-request-id",
+      "req_da372d148efb4e9380dcd948e8661233"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDUtigIAAAD//4xSy27CMBC88xXIFy4EkZRXjwg4tpUoSJUqFBlnE9wmdmRvqkLFv3edAAktlXqxsjs7k9lH8fC8Wj9uk5f5/rCbrpc4PTwFS9Z1DL19A4FnVk9o4gFKrSpYGOAITtUfT3x/fD8ajksg0xGkjpbk6A20l0klvaAfDLz+2PMnJ/ZOSwGWyl4pbLe/ytf5VBF8UrrfPWcysJYnQLlzESWNTl2GcWulRa6QdWtQaIWgSuudGX1zge3X5WI+na0W802bX0XaNKOYQi7Ime11mpIG4sJy15Yq0rQBcKU0cjeWspnNCTle7Kc6yY3e2h9UFtNY7C6kKVoaKVm1qHNWokd6N+WYiqvOGQllOYao36H83civ5Fi9nBoMhicQyWBa5yej7g21MALkMrWNMTPBxQ6imlnvhBeR1A2g1ej5t5lb2lXfUiX/ka8BWk1OVxfmBiIprhuuywy40/2r7DLj0jCzYD7oFkOUYNweIoh5kVYHxezeImQhLSsBkxtZXVWch3f+YDjkvi8C1jq2vgEAAP//"
+      },
+      "timestamp_offset": 0.005562800011830404
+    },
+    {
+      "data": {
+        "__b64__": "AwAU97jBYwMAAA=="
+      },
+      "timestamp_offset": 0.005679099995177239
+    }
+  ]
+}

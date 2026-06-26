@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Sentiment (positive/negative/neutral): 'Shipping was fast but the product broke within a week.'",
+    "response": "Negative.",
+    "semantic_key": "36c936f0bcfeb259e326feaa6eb6943a",
+    "recorded_at": "2026-06-11T12:07:24.352580+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "36c936f0bcfeb259e326feaa6eb6943a",
+    "category": "classify",
+    "recorded_at": "2026-06-11T12:07:24.352580+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Content-Length",
+        "263"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Sentiment (positive/negative/neutral): 'Shipping was fast but the product broke within a week.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:26 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07ecc39e1a5a4-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "349"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9999"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199955"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "8.64s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "13ms"
+    ],
+    [
+      "x-request-id",
+      "req_10711e8b93814cf7a7bb3cb0f1e375b8"
+    ],
+    [
+      "set-cookie",
+      "[REDACTED]"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDCktcQcAAAD//w=="
+      },
+      "timestamp_offset": 0.0017477000073995441
+    },
+    {
+      "data": {
+        "__b64__": "jFLLbsMgELznKyLOdhQ7bhwfc0ikXnqo1FMVWQTWDi0GBDhqVOXfCzgJTh9SL0js7Cwzw26b/CUr1aZbmva0eSbr7WLdPaLEM+T+DYi9smZEOh5YJsUAEw3Ygp+alassK6tlsQxAJylwT2uVTQuZdkywNJ/nRTov02x1YR8kI2Bc26u7Tqef4fQ6BYUPV54n10oHxuAWXO3a5Ipacl9B2BhmLBYWJREkUlgQQfoTtNiyI8zGuIamN9hrFD3nIwALIS32HoOy3QU537Rw2Sot9+YbFTXOoznULhLj8nHvGisVCujZnbvgub+zgdygTtnayncIzxXVMA7FpCOYXzDr9PFYfsiSX4bVFCxm3IwiQwSTA9DIjPninjI5AiYjyz+1/DZ7sM1E+5/xESAElNugWmmgjNz7jW0a/Br+1XaLOAhGBvTR7VVtGWj/DRQa3PNhOZA5GQtd7f6qBa00GzakUXVBcYMXVbUq0OQ8+QIAAP//"
+      },
+      "timestamp_offset": 0.0018854000081773847
+    },
+    {
+      "data": {
+        "__b64__": "AwA2XoGxLwMAAA=="
+      },
+      "timestamp_offset": 0.0019480999908410013
+    }
+  ]
+}

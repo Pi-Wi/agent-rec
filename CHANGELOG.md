@@ -1,6 +1,6 @@
 # Changelog
 
-## Dev (0.11.0)
+## 1.0.0 — 2026-06-25
 
 ### Added
 - **Structured-output & tool-call fidelity — three knobs the runner used to drop
@@ -34,6 +34,41 @@
   blocker is mechanical; this is the promise users actually rely on once
   they pin a version. The README's "API may still change in minor releases
   before 1.0" sentence is retired in favor of a link to the new policy.
+- **Cassette-format stability guarantee decided; the `semantic_key` algorithm
+  is now versioned (TODO P0).** Closes the half of the deprecation policy that
+  `DEPRECATIONS.md` had three times explicitly deferred — *how a `semantic_key`
+  change is handled post-1.0*. The decision: the **running release's algorithm
+  is the grouping authority** (the runner already recomputes each key from the
+  request bytes; the pinned `semantic_key` is recording-time provenance), and
+  that algorithm is **frozen across all of 1.x**, so every 1.x release groups a
+  kept corpus identically. To make a future change *detectable rather than
+  silent*, cassettes (recorded **and** imported) now stamp
+  `semantic_key_version` — `agentrec.SEMANTIC_KEY_VERSION`, currently `1` — the
+  algorithm that produced their key; and the migration runner emits a
+  non-gating **report warning** (`MigrationReport.warnings`) when a corpus's
+  stamped version differs from the running release's, regrouping under the
+  running algorithm but never silently. A 2.0 algorithm change bumps the
+  version and ships an explicit re-key step (`agentrec annotate`); the new
+  "Semantic-key stability & the 2.0 migration path" section of `DEPRECATIONS.md`
+  specifies all of it. *Why:* a corpus is a frozen behavioural baseline kept for
+  CI — a post-1.0 regroup must be a deliberate, visible migration, not a quiet
+  surprise on upgrade, and the version stamp is the one piece that can't be
+  added retroactively (hence at 1.0). Additive and behavior-preserving:
+  recompute-based grouping is unchanged, so existing corpora and the shipped
+  sample report are byte-identical; `annotate` stamps the version only when it
+  is truthful (the pinned key still matches the current recompute), leaving a
+  legacy key from an older algorithm un-versioned rather than mislabeled.
+- **`py.typed` marker shipped — the package now advertises its types (TODO
+  P0).** agentrec is thoroughly typed (dataclasses, typed returns throughout)
+  but carried no [PEP 561](https://peps.python.org/pep-0561/) marker, so a
+  downstream `mypy`/`pyright` silently treated it as untyped and ignored every
+  annotation. `agentrec/py.typed` now ships **in the wheel** — verified by
+  building and inspecting it: hatchling's default package inclusion
+  (`packages = ["agentrec"]`) carries the marker alongside the `pricing_data/`
+  snapshots, so no `force-include`/build-config change was needed. *Why:* a
+  typed library that doesn't advertise it gives consumers none of the benefit,
+  and the marker is far cheaper to promise at 1.0 than to retrofit after users
+  pin a version.
 
 ### Changed
 - **Build-time skips are caught, not crashes.** The migration runner now turns

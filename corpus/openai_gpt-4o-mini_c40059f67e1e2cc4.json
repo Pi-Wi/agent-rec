@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Extract the username: 'User @data_wrangler_88 reported the sync issue first.'",
+    "response": "data_wrangler_88",
+    "semantic_key": "d9d05fa0b45b7104f950bc6f0f388e5a",
+    "recorded_at": "2026-06-11T12:07:31.967966+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "d9d05fa0b45b7104f950bc6f0f388e5a",
+    "category": "extract",
+    "recorded_at": "2026-06-11T12:07:31.967966+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "245"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Extract the username: 'User @data_wrangler_88 reported the sync issue first.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:33 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f01cbf6a5a4-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "322"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9945"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199959"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "7m47.571s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "12ms"
+    ],
+    [
+      "x-request-id",
+      "req_0ab9159e3e964f73af9907480cf45956"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDUsSgQAAAD//w=="
+      },
+      "timestamp_offset": 0.006074699980672449
+    },
+    {
+      "data": {
+        "__b64__": "jFLLTsMwELz3KyqfG9S0SROOrcQBDkgILghVlmtvUoNjB9vhIdR/x3baOi0gcbHknZ31zHgZX96vbsu7h/ymeH3cyKvrVbmkaOIZavMM1B5YF1Q5HliuZA9TDcSCn5oWZZoWl4t8HoBGMRCeVrc2yVTScMmT2XSWJdMiScs9e6s4BePantx1PP4Kp9cpGXy48nRyqDRgDKnB1Q5NrqiV8BVEjOHGEmnRJIJUSQsySGfEEvyuiawFaFyWwzYNVWeIlyo7IQYAkVJZ4q0Gges9sjtKEqputdqYMyqqnFWzxS4Z42JyzxurWhTQnTvXwXp34ga5QU1rsVUvEJ7Lin4cioFHcLHHrNMnYrlP/nwYZmAJF2aQHKKEboFFZoyZdIyrATAaWP6p5bfZvW0u6/+MjwCl0LpFwq0Gxump39imwW/jX23HiINgZEC/ufXCloMOWwAV6US/I8h8GgsNdn9Vg2417xelavE8zfKcpCmdodFu9A0AAP//"
+      },
+      "timestamp_offset": 0.006129999994300306
+    },
+    {
+      "data": {
+        "__b64__": "AwB/Z+4LNgMAAA=="
+      },
+      "timestamp_offset": 0.006985899992287159
+    }
+  ]
+}

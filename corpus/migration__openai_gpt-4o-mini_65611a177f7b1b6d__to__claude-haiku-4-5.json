@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Condense this email to one sentence: 'Following up on our call - attached is the revised proposal with updated timelines, a 5% volume discount as discussed, and the security questionnaire your IT team requested.'",
+    "response": "Following up on our call, I've attached the revised proposal with updated timelines, a 5% volume discount, and the security questionnaire your IT team requested.",
+    "semantic_key": "e9b4b2ed718ff6f6b3e8dd19f92504c3",
+    "recorded_at": "2026-06-11T12:08:05.679459+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "e9b4b2ed718ff6f6b3e8dd19f92504c3",
+    "migrated_from": "openai_gpt-4o-mini_65611a177f7b1b6d",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:08:05.679459+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "384"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Condense this email to one sentence: 'Following up on our call - attached is the revised proposal with updated timelines, a 5% volume discount as discussed, and the security questionnaire your IT team requested.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:07 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:07Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:07Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "28"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:08:32Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:07Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSosbvPLxwdA8rnA8zz"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-f397db4de5e0a3bdf0ac42c7e032fb85-4aca483c71d867e4-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07fcebea01e42-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SST2sbMRDFv4oQlF7WZdeNG/AthQZyaC4plFKKmEgT7xDtaCuNNjHG370jp6b/6Eni/Z5m5kk62CkFjHZrfYQacDUCPdbVxWqzWvfrzdD3g+0sBTVMZef64fbzw4ePXzLdPV+9X/P9Bd2+u766U4/sZ2wuLAV2qEJOsQlQChUBFpV8YkHdbb8ezn7B50ZO"
+      },
+      "timestamp_offset": 0.00020629999926313758
+    },
+    {
+      "data": {
+        "__b64__": "y9ZepxjTE/HO1NkkNqlm4yHGzty8XtCACPgRg5ERTcaFiu7nnOZUIJonklHPBZDmoAkjMZbOgNm8MkuKdUITqPhUWVTllzIFfc0ke/O9YhFKzEAZzb61vvlkBGHSVieI4Y09futskTS7jFAS68zIwUnNbH+C0szsNRxXnfxFDChAsZy1erqj7cESz1WcpEdkhZeD3lFL6LyWb8O4Pw39mSsO/2Pns60+ziNOmCG6zfSv/xcdxr/psbOpyu/S20sNg3khj04Is2ZvDxsgh/ZH+AFzy+12mBRxEgeLhoZ7/QfH4w8AAAD//wMAivI50WoCAAA="
+      },
+      "timestamp_offset": 0.0002964999875985086
+    }
+  ]
+}

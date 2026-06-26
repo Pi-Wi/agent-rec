@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Intent (question/complaint/praise/refund_request): 'Why is my order still not here after two weeks?'",
+    "response": "Complaint.",
+    "semantic_key": "62727f0c3dab79b31e35b6506a8779a6",
+    "recorded_at": "2026-06-11T12:07:25.773951+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "62727f0c3dab79b31e35b6506a8779a6",
+    "category": "classify",
+    "recorded_at": "2026-06-11T12:07:25.773951+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "268"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Intent (question/complaint/praise/refund_request): 'Why is my order still not here after two weeks?'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:27 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07edaf9988b1c-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "338"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9986"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199954"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "1m59.535s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "13ms"
+    ],
+    [
+      "x-request-id",
+      "req_3c5614ddd71c46f88e883c31cb1ac649"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDCkL8gMAAAD//4xSy27CMBC88xXI5wQlKBA4tr1UvbTXtkKRsTfB1LEte1NRVfx7bQdI6EPqxZJ3dtYz4232+5en8vH+obvl4vmwKKm4KTOSBIbe7oHhmTVj2vMAhVY9zCxQhDA1L1d5Xq6XRRmBVnOQgdYYTAudtkKJdJ7NizQr03x1Yu+0YOB826u/Tqef8Qw6FYeDL2fJudKCc7QBXzs3+aLVMlQIdU44pApJMoBMKwQVpd8F1VQonI0bLNSdo0Gk6qQcAVQpjTSYjNI2J+R4ESN1Y6zeum9UUnuTblf5TJwPyD/sUBsS0aM/N9F0d+WD+EGtwQr1G8TnFvN+HBmiHsAzhl6fHHGK5JdhFQekQrpRZoRRtgM+MIeAaceFHgGTkeWfWn6b3dsWqvnP+AFgDIxfocpY4IJd+x3aLIQ9/KvtEnEUTBzYd79YFQqw4Rs41LST/XYQ9+EQ2sr/VQPWWNGvSG2qgvHluszXWU4mx8kXAAAA//8="
+      },
+      "timestamp_offset": 0.00558120000641793
+    },
+    {
+      "data": {
+        "__b64__": "AwB9998aMAMAAA=="
+      },
+      "timestamp_offset": 0.005667000019457191
+    }
+  ]
+}

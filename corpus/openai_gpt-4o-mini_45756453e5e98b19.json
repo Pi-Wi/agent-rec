@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] One-sentence executive summary: 'Q2 churn rose from 4% to 6%, driven by small-business accounts citing price increases; enterprise retention stayed flat while expansion revenue grew 9%.'",
+    "response": "Q2 churn increased from 4% to 6% due to price hikes impacting small-business accounts, while enterprise retention remained stable and expansion revenue increased by 9%.",
+    "semantic_key": "5426a153910b91550c6b12ffb74a7f2f",
+    "recorded_at": "2026-06-11T12:07:34.491639+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "5426a153910b91550c6b12ffb74a7f2f",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:34.491639+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "354"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"One-sentence executive summary: 'Q2 churn rose from 4% to 6%, driven by small-business accounts citing price increases; enterprise retention stayed flat while expansion revenue grew 9%.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:36 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f081afb8b1c-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "835"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9940"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199932"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "8m38.394s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "20ms"
+    ],
+    [
+      "x-request-id",
+      "req_108d273520124139ad3ccb043e6dd63a"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDXOjAAAAAD//w=="
+      },
+      "timestamp_offset": 0.00024610001128166914
+    },
+    {
+      "data": {
+        "__b64__": "jFPBbtswDL3nKwQBudmF7aZJ+ge9pMOwHQYMhSFLtK1WljxRzhoM+fdRdlK7WwfsIsh8fOQTHx3E5nT8dvBfimY4fKoOj9XD1x/PPIkMVz2DDFfWjXTEg6CdnWDpQQSIVfPdPs9399u7uxHonAITaU0f0o1LO211WmTFJs12ab6/sFunJSClfadPxn6NZ9RpFbxSOEuukQ4QRQMUuyZR0DsTI1wgagzCBp7MoHQ2gB2lfy6YbAdvmbZRMIJitXcd26xZcGy7ZmqAeOs9yWGtfgFkuuuFDNo2DDthTFoNqC2JYEJKN9iACfvZagOMeoAnJgLzEDvScOjWCUpXjGRVlCSsYvDaC4sTegRLLWc51Yndr2+W8j3UA4o4QjsYswCEtS6I2GUc3NMFOb+Nyrim967CP6i8JguwLWNHso/GgsH1fETPdD6NlgzvpsypUNeHMrgXGNtt91M5Pi/CDN5uLmAggWaO51mRfFCuVBCENrjwlEshW1AzdV4AMSjtFsBq8ei/1XxUe3o4Ofo/5WdASuhpxcveg9Ly/YvnNA/xP/lX2tuQR8EcwR9p08qgwUcjFNRiMNP2cjxhgK4kt5pxr6YVrvuyrmqxF7vqNuOr8+o3AAAA//8="
+      },
+      "timestamp_offset": 0.0004403000057209283
+    },
+    {
+      "data": {
+        "__b64__": "AwDTEB230AMAAA=="
+      },
+      "timestamp_offset": 0.0005187999922782183
+    }
+  ]
+}

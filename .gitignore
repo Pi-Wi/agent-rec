@@ -7,6 +7,10 @@ dist/
 .env
 venv/
 .venv/
+# Recorded corpora are user data and ignored by default. The curated demo
+# corpus/ is the deliberate exception — it ships with the repo (force-added
+# past this rule, `git add -f corpus/`) so the README "Try it now" demo works
+# from a fresh checkout. New cassettes a user records into corpus/ stay ignored.
 corpus/
 corpus-support/
 corpus-imported/

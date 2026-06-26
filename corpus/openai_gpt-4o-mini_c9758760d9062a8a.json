@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Translate to Norwegian: 'Your return has been received and your refund is on its way.'",
+    "response": "\"Din retur har blitt mottatt, og refusjonen din er på vei.\"",
+    "semantic_key": "d23d983d2a03d9d6e9bb959ec475754d",
+    "recorded_at": "2026-06-11T12:07:38.806410+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "d23d983d2a03d9d6e9bb959ec475754d",
+    "category": "translate",
+    "recorded_at": "2026-06-11T12:07:38.806410+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "254"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Translate to Norwegian: 'Your return has been received and your refund is on its way.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:40 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f2adca84d24-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "592"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9904"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199957"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "13m43.851s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "12ms"
+    ],
+    [
+      "x-request-id",
+      "req_882a575825384777b7404fede5d376de"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDLVIcgUAAAD//w=="
+      },
+      "timestamp_offset": 0.006803099997341633
+    },
+    {
+      "data": {
+        "__b64__": "jFLBjtMwEL33Kyyfm1XTjdrmDAIkTghxYleRa09SL47HsicVCPVz+BJ+jImz3WSXReJiKfPmvcx7M5s3Xz7Utx9bfP/pTObcHT/X2/KdXI8MPD6ApivrRiPzgCz6CdYRFMGoWu4PZbmvd7tNBno04EZaF6iosOitt8V2s62Kzb4oD4/sE1oNidu+8qcQP/M7zukNfOdy1sqVHlJSHXDt2sTFiG6sSJWSTaQ8yfUMavQEPo9+J99aLyLQEMVJRXF0lkj0SKSI1gI7xtohPaAHLwy3QhTh9y9xBntzJ5eiuU+Nxvzg3AJQ3iOrcTDZzv0jcnky4LALEY/pBVW2HEw6NZxj4lB52EQYZEYv/N7noIZn3iUL9YEawm+Qf1ftJjk5r2cGyytIPKCb67vt+hW1xgAp69IiaKmVPoGZmfNW1GAsLoDVwvPfw7ymPfm2vvsf+RnQGgLfXRMiGKufG57bIozH+6+2p4zzwDJBPPM1NmQhjnsw0KrBTScl049E0De8rA5iiHa6qzY0lVGtuq3rQyVXl9UfAAAA//8="
+      },
+      "timestamp_offset": 0.0068598000216297805
+    },
+    {
+      "data": {
+        "__b64__": "AwDeChGLZQMAAA=="
+      },
+      "timestamp_offset": 0.0069457000063266605
+    }
+  ]
+}

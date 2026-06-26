@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Churn risk (low/medium/high): 'We're evaluating alternatives because prices went up again.'",
+    "response": "**Churn risk: HIGH**\n\n**Key indicators:**\n- Explicit evaluation of competitors (\"evaluating alternatives\")\n- Price sensitivity as primary driver\n- Recurring frustration (\"went up again\" implies multiple increases)\n- Active consideration stage, not just complaint\n\n**Recommended actions:**\n- Immediate outreach with retention offer\n- Review pricing/contract terms for optimization\n- Propose value-add alternatives to offset cost increase\n- Escalate to retention specialist or account manager",
+    "semantic_key": "f45c4ce55bd919f41def9b9526f6af07",
+    "recorded_at": "2026-06-11T12:08:07.431457+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "f45c4ce55bd919f41def9b9526f6af07",
+    "migrated_from": "openai_gpt-4o-mini_69a66c3ebce30c3a",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "classify",
+    "recorded_at": "2026-06-11T12:08:07.431457+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "263"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Churn risk (low/medium/high): 'We're evaluating alternatives because prices went up again.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:09 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:07Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:09Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "27"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:08:33Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:07Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSosxFtbNjpN5jyZb8X"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-9d76acbac111b09dcdd35845ee9ad552-77fe477a5d16aa5a-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07fcf3c333082-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3RTTW8TQQz9K9acIEpEUiUg9oYQaksvfBw4ELQaZpyNyXwx40kbqvx3PElXpSBOu7LfPr/37L1XPlp0qlPG6WpxttW0q7PlbDW7mF+sFvP5Qk0VWQH4MvTzxcdh+cV/vtxc7V7RbvF+meNNWt0Ihg8JGwpL0QNKIUfXCroUKqwDS8nEwChv3df7Ec941zqn"
+      },
+      "timestamp_offset": 0.00014990000636316836
+    },
+    {
+      "data": {
+        "__b64__": "R6cmk7fbmgNkKrsOrq4vryaTdViHyeQGD0DBktEcc+laeQbv7pIjQwy4165qphggbsBEn5CpAeHZWo3NMIB2jDnI+x7LWj1vHB8yGYSCoZCUiQ+gC6RMXucD2CzI3GCf0NScG8cm18L5PEzYb8UQ1AR60BTWCsiLJizgq2NKDkW1yagLltO4N6YNF4kyz+IDjeQz4BRCZPgh5CcDTuj47F1mR+8xWLSgTftiDOBaypY0I8TKMsVs4ZZ4Cxlbzuc4NqOBPeFtc2bExYu2iixkIIH4ApuYISYmT79Oks7JxBQLQosPZ9raJ/EBx0ZesMkVzaPN016K0a6pEsyjlJLQkHZyDSDTtDGxSnReBzGf1fHbVBWOqW8sMcgxiOGe5RrUQ6Pgz4rByNWE6txD0SJrcmWs1dPxdfeKQqrcc9zJYlW3fC3HJ+lg30Q2Nf1TwHzsS9v+rzd+2/gxbdHL/ly/8v/iH7uL7d/d41TJsv4sLeYvxQ3mvVxizyRhdKr9MlZn2/6+ICtsxvsBo7TkTHq9F9f6u/xhx+NvAAAA//8DAHyX74nEAwAA"
+      },
+      "timestamp_offset": 0.00027940000290982425
+    }
+  ]
+}

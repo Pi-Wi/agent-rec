@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize for a shift handover in one sentence: 'Night shift saw two failed batch jobs which were rerun successfully, disk usage on db-3 hit 85%, and the vendor confirmed the maintenance window for Saturday.'",
+    "response": "Night shift reported two failed batch jobs successfully rerun, disk usage on db-3 reached 85%, and the vendor confirmed Saturday's maintenance window.",
+    "semantic_key": "ddc5384420fba1535732e18c855418c7",
+    "recorded_at": "2026-06-11T12:07:34.457494+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "ddc5384420fba1535732e18c855418c7",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:34.457494+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "376"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Summarize for a shift handover in one sentence: 'Night shift saw two failed batch jobs which were rerun successfully, disk usage on db-3 hit 85%, and the vendor confirmed the maintenance window for Saturday.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:36 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f0e6bd1ebdd-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "801"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9935"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199887"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "9m20.595s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "33ms"
+    ],
+    [
+      "x-request-id",
+      "req_61fd638401cc4489bfd922f6fe16087b"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDU29QEAAAD//4xTwY6bMBC95yssS1UvsIJNsmSPq973kkvVaoWMPYCzxqYes2lU5d87hmQh21bqBcG8eTPP75lq/dU8b4d8vcGn/Md+D8WXb4cHnkSGqw4gw5V1Jx3xIGhnJ1h6EAHi1LzY5Xnx+LDdjkDnFJhIa/qQblzaaavT++x+k2ZFmu8u7NZpCUht3+mTsV/jM+q0Cn5SOUuulQ4QRQNUuzZR0TsTK1wgagzCBp7MoHQ2gB2lP+umDQxbXQfmoXeeJLNwdKwW2tBrRX607OAqZDhIUoT1YMyJev1gE6Y0vrIhrmfOMlWla0KEbIm5235KmLA0rQX2BlY5z2hxrX1H6F6EwStx+oysEzrKEVYCO9Lx3PFuKdZDTQuiYZY2LwBhrQsiGj7a9HJBzu/GGNf0npR/oPKaDMe2JKFIYZEJGFzPR/RMz5cxgOHGU06Duj6Uwb3CuK7YTOP4HPsMri/h8EACzVzPsyvrZlypIJDbuEiQy9HEmTrHLQal3QJYLQ79p5q/zZ4Orm3zP+NngNLv6XaUvQel5e2J5zYP8a/4V9u7yaNgjuDf6JqXQYOPQSioxWCmu8rxhAG6ktJqwPdeTxe27stsl0EOospyvjqvfgMAAP//"
+      },
+      "timestamp_offset": 0.003998500003945082
+    },
+    {
+      "data": {
+        "__b64__": "AwDNHtPbvgMAAA=="
+      },
+      "timestamp_offset": 0.004124200000660494
+    }
+  ]
+}

@@ -1,0 +1,219 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize the recurring feedback theme in one sentence: 'Across 80 survey responses, users repeatedly praised onboarding speed but flagged confusing invoice layouts and slow support response on weekends.'",
+    "response": "Users commend the fast onboarding process but consistently express dissatisfaction with the confusing invoice layouts and slow support response during weekends.",
+    "semantic_key": "645d5aeca0f277dbf2e0720cc4903690",
+    "recorded_at": "2026-06-11T12:07:35.386429+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "645d5aeca0f277dbf2e0720cc4903690",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:35.386429+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "372"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Summarize the recurring feedback theme in one sentence: 'Across 80 survey responses, users repeatedly praised onboarding speed but flagged confusing invoice layouts and slow support response on weekends.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:37 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f148ce58b1c-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "739"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9932"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199928"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "9m45.561s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "21ms"
+    ],
+    [
+      "x-request-id",
+      "req_4d27bc1a1cee49ca83c9327cbe4b63cd"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/41TTWsbMRC9+1cIne3g9Xd6LD30i0INLoQSFlma9arVSkIzG9sN/u8dreOs06bQy4LnzXt6M2/8OBBCWiPfCKlrRbqJbvQu3m1mbz/efVi/p2/TL7/WB1qvl9Wnz1836SCHmRG2P0DThXWjA/OAbPBnWCdQBFm1WK6KYnm7mC86oAkGXKbtIo1mYdRYb0eT8WQ2Gi9HxeqJXQerAbntO/8U4rH7Zp/ewIHL4+Gl0gCi2gHXLk1cTMHlilSIFkl5ksMe1MET+M76BiGhYO8NeCOoBlEpJBH8NqhkrN+JmAIbQbFtift8lmOuOwo4xJQBY/l9slgpnacXe0t1p8TdVYtZw/qHPI5w6hhaQqH4LXRhL7CNMSQSLBRZG4RpUybsAX6yIby5tp2A5VRenW+duwKU94FUfrxb2P0TcnpekQs7HmOLf1BlxavHuuSkkGPjdSCFKDv0xN/7Lor2xXYlCzWRSgpsMAsupmc52R9AD04mTyCxQdfXV/PhK2qlAVLW4VWUUitdg+mZfe6qNTZcAYOrmf8285r2eW7e9//I94DWEPmyS47fWP1y4L4tQf57/KvtecedYclX+MAHUpKFlHMwUKnWnY9W4pFPrik5rB2kyPfRXW4Vy2kxm89VUeiJHJwGvwFBsCf7xwMAAA=="
+      },
+      "timestamp_offset": 0.008445899991784245
+    }
+  ]
+}

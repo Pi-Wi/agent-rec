@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize the risk in one sentence: 'While the merger promises cost savings through shared infrastructure, analysts warn that cultural integration and overlapping product lines pose execution risks.'",
+    "response": "The merger's execution risks stem from cultural integration challenges and product line overlap that could undermine projected cost savings.",
+    "semantic_key": "a7defdb8661ab85a3c9b14801f1df85f",
+    "recorded_at": "2026-06-11T12:08:02.272725+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "a7defdb8661ab85a3c9b14801f1df85f",
+    "migrated_from": "openai_gpt-4o-mini_58b57d43a9724fed",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:08:02.272725+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "371"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Summarize the risk in one sentence: 'While the merger promises cost savings through shared infrastructure, analysts warn that cultural integration and overlapping product lines pose execution risks.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:04 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:03Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:04Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "30"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:08:26Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:03Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSofKyy9DkrMZ9XsSGT"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-6e9200eeb716e503e0ed0099ade54d0d-88168c630171a60c-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07fbcca573082-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SSzY4TMRCEX8XyhUuCJmGzh9xBSJxYISRAyGrs2hkTjz2421FQlHenHW34FSdb9ZXbrm6f7VwCkt1bn6gFrCeKh7a+W+/W22G72wzDxq5sDGqYeXTD5v1b+fDm5elhen33kZd7fnF6eHWo6pHvC7oLzDRChVpSF4g5slAWlXzJAt3tP51vfsGpk+uyt+8m"
+      },
+      "timestamp_offset": 0.00014540000120177865
+    },
+    {
+      "data": {
+        "__b64__": "mBl1RH3GBif4JrFkUyMf2LBgNo+1zMa3JK1SMlHrjZWuJj9RSsgj2FAOZqklNC8mxQxTjqiJFiMTifGlpWBaDqhzh+r8Ci8ISlgM0zHmkZ/by+eVZSmLqyAuWZ+HHJxenO0TYHxryF5z5JbSkxggFBPftHZtx/5sY16aOCkHZIX3g7aD/ATntXwP4P40/OSKw//Y7Wyvj2WC9o6S283/+n/RzfQ3vaxsafK7tN1pGNRj9HASUTV7n2GgGvp3yI+oPbcbURTlIo6OGpq+6Mgvlx8AAAD//wMA4L8dO1UCAAA="
+      },
+      "timestamp_offset": 0.00020069998572580516
+    }
+  ]
+}

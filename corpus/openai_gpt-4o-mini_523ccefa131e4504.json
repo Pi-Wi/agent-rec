@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Extract as JSON {from, to} airport codes: 'Searching flights CPH to JFK for two adults.'",
+    "response": "```json\n{\n  \"from\": \"CPH\",\n  \"to\": \"JFK\"\n}\n```",
+    "semantic_key": "b70ad0d8c7352a4247e72bc42d31b104",
+    "recorded_at": "2026-06-11T12:07:31.728617+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "b70ad0d8c7352a4247e72bc42d31b104",
+    "category": "extract",
+    "recorded_at": "2026-06-11T12:07:31.728617+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "256"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Extract as JSON {from, to} airport codes: 'Searching flights CPH to JFK for two adults.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:33 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07efe5df84d24-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "639"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9950"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199957"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "7m4.924s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "12ms"
+    ],
+    [
+      "x-request-id",
+      "req_31385d38cad5408fabe629355d622c96"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDUsCQEAAAD//4xSXWvjMBB8z68Ieo6P2Plw+nxQjiuU0JejVMVR5bWjVtYKST4SSv77reykdnp30BeBZ3bWs7PrbS3q+zf762hwfVht4FHLhy2bRQW+vIIMF9U3iaSDoND0tHQgAsSuab5J0/xmvVp0RIMl6CirbUiWmDTKqCSbZ8tknifp5qzeo5LgqeyJPqfT9+6NPk0JB4LnswvSgPeiBsIuRQQ61BFhwnvlgzCBzQZSoglgOuu73e7Vo+HmnZvplLPKYcOJ4Oz79gdnsx4N2GM/b+844+bEDenGHR1UrRdxKtNqPSKEMRhETKWb5fnMnD7ca6ytwxf/ScoqSsXvCwqR7EWnPqBlHXui97lLqb0anFGjxoYi4Bt0v1udQ2LDbgYyy85kIIN6wPMLftWtKCEIpf0oZSaF3EM5KIeViLZUOCImo5n/NvOv3v3cytRfaT8QUoKloyusg1LJ64GHMgfxcv9X9pFxZ5h5cL/pFIugwMU9lFCJVvf3xPzRB2gKWlYNzjrVH1VlC0hvZL5eZOmSTU6TPwAAAP//"
+      },
+      "timestamp_offset": 0.00644349999492988
+    },
+    {
+      "data": {
+        "__b64__": "AwDpdPmrYgMAAA=="
+      },
+      "timestamp_offset": 0.006691799993859604
+    }
+  ]
+}

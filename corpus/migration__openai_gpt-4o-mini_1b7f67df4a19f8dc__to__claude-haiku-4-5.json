@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Topic (billing/bug/feature_request/how_to): 'How do I add a teammate to my workspace?'",
+    "response": "# How to Add a Teammate to Your Workspace\n\n1. **Go to Workspace Settings**\n   - Click on your workspace name in the top left\n   - Select \"Settings\" or \"Members\"\n\n2. **Invite Team Members**\n   - Click \"Add Member\" or \"Invite\"\n   - Enter their email address\n   - Select their role/permission level\n\n3. **Send Invitation**\n   - Click \"Send Invite\" or \"Confirm\"\n   - They'll receive an email invitation\n   - They can accept and join your workspace\n\n4. **Set Permissions** (optional)\n   - Assign appropriate access level (Admin, Editor, Viewer, etc.)\n   - Configure which projects/resources they can access\n\n**Note:** The exact steps vary by platform. If you need help with a specific tool, provide the workspace name and I can give more detailed instructions.",
+    "semantic_key": "b9477ae51d73b0b93573e510e8cfca85",
+    "recorded_at": "2026-06-11T12:07:49.354803+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "b9477ae51d73b0b93573e510e8cfca85",
+    "migrated_from": "openai_gpt-4o-mini_1b7f67df4a19f8dc",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "classify",
+    "recorded_at": "2026-06-11T12:07:49.354803+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "258"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Topic (billing/bug/feature_request/how_to): 'How do I add a teammate to my workspace?'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:51 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:07:49Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:07:52Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "44"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:07:55Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:07:49Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSnaJavm2yaXZAEsrk5"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-dde7537affd8885261184c1271bc4ade-dc671773d3373023-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07f60ad381e42-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3RU70/bMBD9V07Zh7GqLW1Hta3fKoQAiU1IsF9ap8jY18bUsY3tpFSo//vu0qZA0T4luff87t2L7aesdApNNsmkEZXCXiH0suqd9Ma90WA0Hg4Gw6ybaUWEMi7ywfDq/NFdPww/PaiLqR9H/PX96nYqiJPWHpmFMYoFUiE4wwURo45J2EQl6WxCepv8eWr5"
+      },
+      "timestamp_offset": 0.0002786999975796789
+    },
+    {
+      "data": {
+        "__b64__": "CR8ZaR6T7B1cuBUkB1OlQMAtirIUCbny21UBfrqwjF5InNmZHfah0zl3DO7rcIMpabuInc7MAkAPTo2WS3AW1iyw2hOtKBG0hVSwvAeD87RbcoMGZYJZ1orNMnCBvr9ieYeBPrn9iNtf2lqTPzYKO/Sg8yzjWbZYq7NdxTIN8YxSCWxEB8BSaANCqUBBvvazJXCsxx5DqSlYGstgjYb9fGQ/N2gVNPIiEfrGyzOOrZlTZ+c6lHs3twWu3xsDASXqGkHYnSm9l33BBEm4kBJ9IqaCe6cPo2ZzJ1tzCa73zikoOHKe9YT5sJOcErQgQe+D80Hzv2fxGLdzwtFUldp24Uzp5EIXfmhcIT0xyX6r0Qy0qALCqtCyAJK6p/ziMUVKxkiNo3x2zjnPKKpvLuGETNFYgI+CEo8JfYRahDXcrcEbkeYulH24nPOIYBEVFGg8rHQqaL9Gj1LPtaQN5UyXG9daYbPFDjYeR3XZOFhwxqUjtwoTxUyS2sYUKsnJxH62+dvNIu3QPKCIztIpoX+YpyrYbAdEfKjQSjpOtjJmV9yqxbZWNady8pRp66uUJ7dES+B4RKdSyAJzSfLcMX9NGLQ4wep/WLuW9dEXWGIQJh+Xb/nP6LA4RDfdzFXpZWn45TNNg6HWEvOkMdDwfJcoERRfS3aOgQfPF+gIsi7loqapxR1dPZvNPwAAAP//AwAP8QWs3QQAAA=="
+      },
+      "timestamp_offset": 0.0004113999893888831
+    }
+  ]
+}

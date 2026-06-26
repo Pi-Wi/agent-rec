@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Extract the IBAN: 'Please wire the deposit to IBAN DE89 3704 0044 0532 0130 00 by Friday.'",
+    "response": "DE89 3704 0044 0532 0130 00",
+    "semantic_key": "d0f1f1655fdea9ade97ea758d92f9a64",
+    "recorded_at": "2026-06-11T12:07:29.798106+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "d0f1f1655fdea9ade97ea758d92f9a64",
+    "category": "extract",
+    "recorded_at": "2026-06-11T12:07:29.798106+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "258"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Extract the IBAN: 'Please wire the deposit to IBAN DE89 3704 0044 0532 0130 00 by Friday.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:31 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07ef29c53ebdd-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "579"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9962"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199956"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "5m23.121s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "13ms"
+    ],
+    [
+      "x-request-id",
+      "req_24c9a533b19e4e98ad4804f7de17d9a3"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDKmqsAAAAAD//4xSy27DIBC85yssznHlV+zk2setp6o9VFVkEbx2SDEgwFXaKv/exXFipw+pFyRmdpbZYZNu3+zs44OuxdM1cMOfbz7uKZl7hdrsgLmT6oop1IHjSh5pZoA68F3jYhnHxSpfxD3RqgqElzXahZkKWy55mERJFkZFGC8H9VZxBhbLXvAaBJ/96X3KCvYIR/MT0oK1tAHETkUIGiU8Qqi13DoqHZmPJFPSgeyt394tV0FaRFkQRRkeizQJojiN8DpVGKg7S71r2QkxIaiUylE/de91PTCHszuhGm3Uxn6TkhqnttsSQ7KYGDqxTmnSswc8130K3cVgBBu12pVOvUL/XD6EQMbsRzLOB9KhQTHixQm/6FZW4CgXdpIiYZRtoRqVY+S0q7iaELPJzD/N/Nb7ODeXzX/ajwRjoHGpSm2g4uxy4LHMgN/Mv8rOGfeGiQXzhqtWOg7G/0MFNe3EcV+IfbcO2hI/qwGjDT8uTa3LOE2qAuqszsnsMPsCAAD//w=="
+      },
+      "timestamp_offset": 0.002334399992832914
+    },
+    {
+      "data": {
+        "__b64__": "AwA3pbEsQgMAAA=="
+      },
+      "timestamp_offset": 0.002398999989964068
+    }
+  ]
+}

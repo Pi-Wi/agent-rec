@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize this policy in one sentence: 'Employees may work remotely up to three days per week, must be reachable during core hours 10-15, and need manager approval for full-remote arrangements.'",
+    "response": "Employees can work remotely up to three days weekly with manager approval for full-remote arrangements, provided they remain available during core hours 10-15.",
+    "semantic_key": "8a99ca22e594cdf7668ee6812c915b06",
+    "recorded_at": "2026-06-11T12:07:47.720622+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "8a99ca22e594cdf7668ee6812c915b06",
+    "migrated_from": "openai_gpt-4o-mini_19e926d571acae85",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:47.720622+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "366"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Summarize this policy in one sentence: 'Employees may work remotely up to three days per week, must be reachable during core hours 10-15, and need manager approval for full-remote arrangements.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:49 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:07:49Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:07:50Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "46"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:07:52Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:07:49Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSnYVCNDGcSGH13kkn8"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-fa2f8e4bfe2d56718da856053b69fe70-1d2900c9b1385b08-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07f5e0d5775f0-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SSzW7bMBCEX4Xg2QokN2oC33tpLy16yKEIiLW4lghRS2W5tCMYfveukri/yEnCfMNZzkpnOyWP0e5sF6F4rAYIY6luq7ba1tu2qevGbmzwaphy7+rmy/3Xz99vPzanbw/3tH/aP5OEh1E9ssy4ujBn6FEFTnEVIOeQBUhU6hIJ6tvux/nqF3xeyctjZz9N"
+      },
+      "timestamp_offset": 0.00031319999834522605
+    },
+    {
+      "data": {
+        "__b64__": "c0wLYjYdkDklHg3jlATjYspsJBkZGNF4WLI5IY6qn4IMZgLSqWxgnjkdIZpDYnMoMVav5w0wA/U46fi8MaspePQah8s6AgIZOEKIsI8aXzhQb7rEaIZUOJumrpr2xl4eNzZLmh0j5ER6YyTvpDDZN5DxqSB1Wo10+pvoUTQ6X7XysqHd2QaaizhJI5LCu61uCLoBXafxEhK5vw31lSv277Hr2TUf50EbM0TXTv/7f9Nm+JdeNjYV+VP60GoZ5GPo0ElA1u7rZ/XAfv1D6IC89nY9JkWUxP3ap71cfgIAAP//AwASid61aAIAAA=="
+      },
+      "timestamp_offset": 0.0004673000075854361
+    }
+  ]
+}

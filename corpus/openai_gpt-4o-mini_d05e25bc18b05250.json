@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Translate to Danish: 'Thank you for contacting support. We will reply within 24 hours.'",
+    "response": "Tak for at kontakte support. Vi vil svare inden for 24 timer.",
+    "semantic_key": "5bd193e6d44fd267bbadc4442751133c",
+    "recorded_at": "2026-06-11T12:07:37.772024+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "5bd193e6d44fd267bbadc4442751133c",
+    "category": "translate",
+    "recorded_at": "2026-06-11T12:07:37.772024+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "255"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Translate to Danish: 'Thank you for contacting support. We will reply within 24 hours.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:39 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f246c68a5a4-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "602"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9911"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199957"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "12m44.441s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "12ms"
+    ],
+    [
+      "x-request-id",
+      "req_e99020154f9346ccabfe7873a360b7a7"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDU3zgUAAAD//4xSwYrbMBC95yuEznGIXTdOjoWCL6VQKG2hLEaRx44aWRLSOO1S8u8dycnau91CLwa/N+9p5s18/fbxffmuqOtPPz8citr5UdX1I19HhT3+AIl31UZa0gEqayZaehAI0TWv9nleHXZvD4kYbAs6ynqHWWmzQRmVFduizLZVlu9v6pNVEgKVfadfxn6nb+zTtPCL4O36jgwQguiBsHsRgd7qiHARggooDPL1TEprEExq/bM4s856JpCdCRVnBBZG56zHDfui2EVpFi7CA4sPm1RblAzVAH6z9PTQjUHEucyo9YIQxlgUMZc0zcONuT71r23vvD2GF1LeUS7h1FCMgTKlXgNaxxN7pe9Dyml8Njono8Fhg/YM6bmymuz4vJ2ZzHc3EqlBPeO7N+tX3JoWUCgdFjlzKeQJ2lk5L0WMrbILYrWY+e9mXvOe5lam/x/7mZASHJ1d4zy0Sj4feC7zEG/3X2VPGaeGeQB/oWNsUIGPe2ihE6OeLoqHx4AwNLSsHrzzajqrzjWd3B+7XZXvJV9dV38AAAD//w=="
+      },
+      "timestamp_offset": 0.0037955000007059425
+    },
+    {
+      "data": {
+        "__b64__": "AwCZhtQuZAMAAA=="
+      },
+      "timestamp_offset": 0.003924999997252598
+    }
+  ]
+}

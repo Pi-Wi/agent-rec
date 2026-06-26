@@ -1,0 +1,193 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] TL;DR of these meeting notes in one sentence: 'We agreed to ship the beta on June 20, Maria owns the migration guide, the pricing review moved to next week, and we revisit the SLA discussion after the customer call.'",
+    "response": "The team set a June 20 beta launch date with Maria responsible for the migration guide, postponed the pricing review to next week, and will address SLA concerns following a customer call.",
+    "semantic_key": "af1677220a4a68df801ff65d3c06e02e",
+    "recorded_at": "2026-06-11T12:08:23.823212+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "af1677220a4a68df801ff65d3c06e02e",
+    "migrated_from": "openai_gpt-4o-mini_b8d7a232e7ca0e92",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:08:23.823212+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "388"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"TL;DR of these meeting notes in one sentence: 'We agreed to ship the beta on June 20, Maria owns the migration guide, the pricing review moved to next week, and we revisit the SLA discussion after the customer call.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:25 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:25Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:25Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "11"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:09:10Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:25Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSqEkvaLDm8rsqgm8qa"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-04bad98df444b7a257bcb87be696e7e3-08753b24ca481dcf-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a080427ca175f0-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SSS2/bMBCE/8qCZ7mQlRgBdOvFDYImlxZ9oCiIDbmRCFNLlVzaaQ3/966MGH2hJxHzDYc7pI5mSp6i6Y2LWD2tRgy7urpebVZd223Wbbs2jQleDVMZbLvefh7ebOl2/PRjv+0+fuC724eHq2f1yPeZFheVggOpkFNcBCwlFEEWlVxiIV31X44Xv9DzQs6f3rwfCYRwgkICCHeVCboWHkkQdD52I3gUgkOQEe4xB4RMZU5cwmMkeEoZRCOmMGSUkBiGGjw1MKci6iJ/xnMOLvCgW/eBDiAJWI+HA9GuAWSv8TECeq/ZBd69fQ06uKPMRU+IMR2WzQiuFkkTZXAY4ytz+toYFWabCUtibUPsrdTM5gUU+lZJg0zPNcYX0Wu3EMtFq+fb648m8FzFStoRK7y50dtDN5J1Gr9Us38a2gtX7P/HLnuXfJpH0uEx2s30r/8XXY9/01NjUpXfpetOy1DeB0dWAmXtvjy5x+yXv4efKC+97UBJESexuNfSqG9mTqefAAAA//8DAGM8S9aEAgAA"
+      },
+      "timestamp_offset": 0.000228599994443357
+    }
+  ]
+}

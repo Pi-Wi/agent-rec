@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Condense this email to one sentence: 'Following up on our call - attached is the revised proposal with updated timelines, a 5% volume discount as discussed, and the security questionnaire your IT team requested.'",
+    "response": "Attached is the revised proposal with updated timelines, a 5% volume discount, and the requested security questionnaire.",
+    "semantic_key": "e9b4b2ed718ff6f6b3e8dd19f92504c3",
+    "recorded_at": "2026-06-11T12:07:34.929586+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "e9b4b2ed718ff6f6b3e8dd19f92504c3",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:34.929586+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "380"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Condense this email to one sentence: 'Following up on our call - attached is the revised proposal with updated timelines, a 5% volume discount as discussed, and the security questionnaire your IT team requested.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:36 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f126e04a5a4-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "641"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9934"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199926"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "9m28.585s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "22ms"
+    ],
+    [
+      "x-request-id",
+      "req_3c4d0b700b234edc8ba27f27ccf68ec8"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDVx9QQAAAD//w=="
+      },
+      "timestamp_offset": 0.005652399995597079
+    },
+    {
+      "data": {
+        "__b64__": "jFLBjtowEL3zFZal3sgqUCBw7FaVqn5AD1utIuMMMLuO7XrGtKuKf+8kwCZsW6kXS37Pb/xm3jB+xk8fYz6mr08PsH5P5YP/cq+nnSJsn8DyVXVng+iAMfgzbRMYhq7qrFrPZtVmtVz1RBsacJ1sH7lYhKJFj8W8nC+Ksipm64v6ENACybNvclXqV392Pn0DPwUup1ekBSKzB8GujwRMwXWINkRIbDzr6UDa4Bl8b/0Ds7EHaBSS4gOoBEckucYUYiDj1A/kg8qx6XpRjC049EBTZdTynToGl1tQDZIN2bOgvrmU+Z6BOgmBzQn5RfWATMcbTHA3tpNgl+UrseOzcyPCeB/YdKJ+EI8X5vTaugt7MbqlN1K9k5HSoZYESOKQNolD1D17kvOxH3G+mZqWQm3kmsMz9N9VlwnrIdiBnM8vJItBN+CbK35TrW6ADToaRaRtP/ZBOeRpcoNhRExGPf9p5m+1z32j3/9P+YGwFqJEVscEDdrbhodnCbq1/9ez1xn3hjVBOsoe14yQuhwa2Jnszsuo6UU2pK0lrD2kmPC8kbtYbxbb0u5Wy6rUk9PkNwAAAP//"
+      },
+      "timestamp_offset": 0.005791400006273761
+    },
+    {
+      "data": {
+        "__b64__": "AwA5o5GknwMAAA=="
+      },
+      "timestamp_offset": 0.005882600002223626
+    }
+  ]
+}

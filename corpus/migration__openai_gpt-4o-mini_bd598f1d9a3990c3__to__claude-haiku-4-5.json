@@ -1,0 +1,193 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize in one sentence for a status page: 'Between 09:12 and 10:47 UTC some API requests returned elevated 5xx errors due to a failed database failover; traffic was rerouted and error rates returned to normal.'",
+    "response": "Between 09:12 and 10:47 UTC, a database failover failure caused elevated API errors that were resolved after traffic rerouting.",
+    "semantic_key": "46e1712c8d2735319f062da5e11a39be",
+    "recorded_at": "2026-06-11T12:08:24.833571+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "46e1712c8d2735319f062da5e11a39be",
+    "migrated_from": "openai_gpt-4o-mini_bd598f1d9a3990c3",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:08:24.833571+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "385"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Summarize in one sentence for a status page: 'Between 09:12 and 10:47 UTC some API requests returned elevated 5xx errors due to a failed database failover; traffic was rerouted and error rates returned to normal.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:26 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:26Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:26Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "11"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:09:12Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:26Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSqGzs1pZtJVLAPims7"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-85298cd2ed70a8e9ccd606f0af136d5f-be0ff12a44e96879-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a08045ba7d1e42-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SSzW7bMBCEX4Xg2S4kJ0Ib3doghzaXHBI0aFEQG3EkEaZJhVzKDQy/e1dG3F/0xMV8Q2Jnlwe9ixZet7rzVCzWI7ltWV+um/Wm2jR1VdV6pZ0Vwy4Ppqo/v+DT455vvrjh5mpz6x6b522YxMMvExYXcqYBIqToF4FydpkpsEhdDAyp2q+Hs5/xfSGno9UfwHsgqOqqrTeKglV11V6+VQ/31ytFyhLTE2WonpyPM9KpKAmqo5JhFTxmYine331USCmmrHgkVnuIKSFHPwulnuUuJ+p714mcYmEXhjf6+G2lM8fJJFCOQTpCsIZLCvoVZDwXhE5aD8X7V9GCpY981sppAu1BuzAVNhy3CALfVTIB6kaYTp5nF4P50/CTC7b/Y+e7y/uYRuyQyJtm96//F63Hv+lxpSXz79JFI2GQZtfBsEOS7MvaLCW7/IDQywQltxkQBYXIhmYJTU+y5ePxBwAAAP//AwB9uZ7lSAIAAA=="
+      },
+      "timestamp_offset": 0.00018390000332146883
+    }
+  ]
+}

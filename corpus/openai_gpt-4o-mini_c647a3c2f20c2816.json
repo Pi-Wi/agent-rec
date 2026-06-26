@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Extract the phone number: 'Call our support line at (415) 555-0132 between 9 and 5.'",
+    "response": "(415) 555-0132",
+    "semantic_key": "65e29f8939e3ab1f1d0604cd96419a61",
+    "recorded_at": "2026-06-11T12:07:29.038165+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "65e29f8939e3ab1f1d0604cd96419a61",
+    "category": "extract",
+    "recorded_at": "2026-06-11T12:07:29.038165+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "252"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Extract the phone number: 'Call our support line at (415) 555-0132 between 9 and 5.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:30 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07eee1f528b1c-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "537"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9964"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199958"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "5m6.552s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "12ms"
+    ],
+    [
+      "x-request-id",
+      "req_13a7291ce984498e930ba7bcfc84de12"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/4xSy07DMBC85ysin0BqUJImNOVMD1wRSDxURa6zSQ2ObWwHUVX9d2ynbVIoEhdL3tkZz6x3G4QhohW6CRFZY0NayaJb+fywuW/iLF1sXij9aGlx95TOxYKwxwRNHEOs3oCYA+uKCMsDQwXvYaIAG3CqyaxIktn8Oo890IoKmKM10kSZiFrKaZTGaRbFsygp9uy1oAS0bXu11zDc+tP55BV82bLX8pUWtMYN2NqhyRaVYK6CsNZUG8wNmgwgEdwA99YvsiS/DPM8j+Jkmo6bFNSdxs4o7xgbAZhzYbAL6u0t98juaIiJRiqx0j+oqLZB9bq0c9F2SPZxbYREHt3Zc+mDdydZkBVqpSmNeAf/XJ71cmgY9wAWe8xYf2woX6eTM2JlBQZTpkdzQwSTNVQDcxgy7ioqRkAwivzbyzntPjblzX/kB4AQkHaNSqmgouQ079CmwO3iX23HEXvDSIP6tMtVGgrKfUMFNe5YvyFIb7SBtrR/1YCSivZrUstyWq+ybBXnOEHBLvgGAAD//w=="
+      },
+      "timestamp_offset": 0.008517000009305775
+    },
+    {
+      "data": {
+        "__b64__": "AwD8RYg9NAMAAA=="
+      },
+      "timestamp_offset": 0.008598200016422197
+    }
+  ]
+}

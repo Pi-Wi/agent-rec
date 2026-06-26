@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Headline (max 8 words) for this update: 'The mobile app now supports offline mode, letting field technicians complete inspections without connectivity and sync automatically once back online.'",
+    "response": "\"Mobile App Now Supports Offline Inspection Mode\"",
+    "semantic_key": "82028009009172ca4f0dfe29296a679d",
+    "recorded_at": "2026-06-11T12:07:34.149450+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "82028009009172ca4f0dfe29296a679d",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:34.149450+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "360"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Headline (max 8 words) for this update: 'The mobile app now supports offline mode, letting field technicians complete inspections without connectivity and sync automatically once back online.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:36 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f0ebe5fa5a4-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "438"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9933"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199912"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "9m37.825s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "26ms"
+    ],
+    [
+      "x-request-id",
+      "req_38cbe7ef9c48475584c69e68f22a6f8b"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDV2MgcAAAD//4xSTW/bMAy951cYOsdDnKVNfNylaAekBdbtMKyFoUi0o1QWBVHeB4b891F2UrtdB+wiwHx8z++RvD58RmPK+yt9UNtPX7dPdFV8+SjmiYG7A6h4Zr1TyDyIBt0AqwAyQlIt1puiWJeXFxc90KIGm2iNj/kK89Y4ky8Xy1W+WOfF5sTeo1FA3PaNP7Psd/8mn07DTy4v5udKC0SyAa6dm7gY0KaKkESGonRRzEdQoYvgeusPYos7YyH74H12iz+y+857DJGyu7q2xkF248hzTs6Vbdn5g5gqBag7kimN66ydANI5jDKx+gyPJ+T47Npi4wPu6BVV1DwN2lc8POJJskOK6EWPHvl97KfTvQgsWKj1sYr4BP3vLpeDnBh3MoLlCYvsz47ldTF/Q6zSEKWxNBmuUFLtQY/McROy0wYnwGwS+W8vb2kPsY1r/kd+BJQCz7dW+QDaqJd5x7YA6WD/1fY84t6wIAjf+QKraCCkNWioZWeHMxL0iyK0Fe+qgeCDGW6p9tVKy1q+L8vNSsyOsz8AAAD//w=="
+      },
+      "timestamp_offset": 0.0050820999895222485
+    },
+    {
+      "data": {
+        "__b64__": "AwC1fu1/WQMAAA=="
+      },
+      "timestamp_offset": 0.005165800015674904
+    }
+  ]
+}

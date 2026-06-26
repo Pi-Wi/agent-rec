@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize the risk in one sentence: 'While the merger promises cost savings through shared infrastructure, analysts warn that cultural integration and overlapping product lines pose execution risks.'",
+    "response": "The merger's anticipated cost savings may be jeopardized by challenges in cultural integration and overlapping product lines.",
+    "semantic_key": "a7defdb8661ab85a3c9b14801f1df85f",
+    "recorded_at": "2026-06-11T12:07:35.229644+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "a7defdb8661ab85a3c9b14801f1df85f",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:35.229644+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "367"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Summarize the risk in one sentence: 'While the merger promises cost savings through shared infrastructure, analysts warn that cultural integration and overlapping product lines pose execution risks.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:37 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f145fb3ebdd-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "607"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9930"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199929"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "10m2.823s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "21ms"
+    ],
+    [
+      "x-request-id",
+      "req_94b894a217a34a0b951fda145202e092"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDUpzgAAAAD//4xSwY7TMBC99yssX7g0q6QqbTizJ8QRhARaRY49Sd11bMvjFArqvzN22k3KgsQlSubNe5l5bz5///jV16cyHD9UX8Rjt6na4N7zdWK49ggy3lgP0hEPonZ2gmUAESGpVvu6qvbvdm93GRicApNovY/F1hWDtrrYlJttUe6Lqr6yD05LQGr7Rp+M/crPNKdV8IPK5fpWGQBR9EC1WxMVgzOpwgWixihs5OsZlM5GsHn0TwdgA4Qewhtk1Kal9mlsJh1GhuKkbY9sEGfWAjuC8yIo/ZPw9sxobWPA9oBMWyZHE8cgDL1H6INITpCiYu4EwQjvSYn54NQoIzPaAj4sZwrQjSiSL3Y0ZgEIa13MatmNpytyednfuJ5kW/yDyjvyFQ8NxYCUCe2K0Xme0Qs9n7LP4511nIQGH5voniH/bldNcnxOdwY31wx4pAHNXK9vpDu1RkEU2uAiJy6FPICamXOoYlTaLYDVYufXw/xNe9qbTP8f+RmQEjzl3/gASsv7hee2AOn2/9X24nEemCOEEx1zEzWElIOCTtCxTIeOZ4wwNBQW3aAPejrLzjddrbZlK9p2z1eX1W8AAAD//w=="
+      },
+      "timestamp_offset": 0.00033310000435449183
+    },
+    {
+      "data": {
+        "__b64__": "AwBc1uJopAMAAA=="
+      },
+      "timestamp_offset": 0.00046790001215413213
+    }
+  ]
+}

@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize this support thread in one sentence: 'Customer reported login failures on mobile, support suggested clearing the cache which did not help, the issue was escalated to engineering who found an expired certificate, a fix was deployed, and the customer confirmed resolution.'",
+    "response": "A customer experienced login failures on mobile, which were resolved after engineering identified and fixed an expired certificate.",
+    "semantic_key": "473dd13353253b8229835297e3bec112",
+    "recorded_at": "2026-06-11T12:07:33.552519+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "473dd13353253b8229835297e3bec112",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:33.552519+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "449"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Summarize this support thread in one sentence: 'Customer reported login failures on mobile, support suggested clearing the cache which did not help, the issue was escalated to engineering who found an expired certificate, a fix was deployed, and the customer confirmed resolution.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:35 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f04ca3da5a4-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "1156"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9943"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199908"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "8m4.403s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "27ms"
+    ],
+    [
+      "x-request-id",
+      "req_552cdc4e47fb4a21974ad1696247eb03"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDXKNwcAAAD//4xTwW7bMAy95ysEnePCzrIlORbYUGC99diiMGSJtrnJkiDJbYoh/z5KiWun24BdBJmPjyLfo7/dVn13/yi/f7qr3qR/ONx97Q4NXyeGbX6AjBPrRlriQURrzrD0ICKkqtVuX1W7w5fP2wwMVoFOtM7FYmuLAQ0Wm3KzLcpdUe0v7N6ihEBpT/TJ2K98pj6NgiOFy/UUGSAE0QHFpiQKeqtThIsQMERhIl/PoLQmgsmt3zI5hmgH8AyODjyCkaCYth0a1grUo4fArGGDbVDDmr32KHv2Ch4YIVa/ULZoY+Ib4gCVMB1DRfWxxQQaxVo85lt6Az1dJfgES1LoZtmZh3YMIqljRq0XgDDGRpHUzZo8X5DTuwrUsfO2CR+ovCV1Q1+TGYGcoYlpWsczeqLzOas9XgnIqdDgYh3tT8jP7S9i89njGdxMYKQG9Ryvygm4KlcriCRrWNjFpZA9qJk6eytGhXYBrBZD/9nN32qfBydP/qf8DEgJjra3duQWyuuJ5zQP6Rf4V9q7yLlhHsC/0E7XEcEnIxS0YtTnxeThLUQYanKrA+9oh/J2tq6GUsGhbMpyz1en1W8AAAD//w=="
+      },
+      "timestamp_offset": 0.004362099978607148
+    },
+    {
+      "data": {
+        "__b64__": "AwCEEyudqwMAAA=="
+      },
+      "timestamp_offset": 0.004531999991741031
+    }
+  ]
+}

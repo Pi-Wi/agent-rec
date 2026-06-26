@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize in one sentence for a status page: 'Between 09:12 and 10:47 UTC some API requests returned elevated 5xx errors due to a failed database failover; traffic was rerouted and error rates returned to normal.'",
+    "response": "API requests experienced elevated 5xx errors between 09:12 and 10:47 UTC due to a failed database failover, but traffic was rerouted and error rates have since normalized.",
+    "semantic_key": "46e1712c8d2735319f062da5e11a39be",
+    "recorded_at": "2026-06-11T12:07:33.226440+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "46e1712c8d2735319f062da5e11a39be",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:33.226440+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "381"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Summarize in one sentence for a status page: 'Between 09:12 and 10:47 UTC some API requests returned elevated 5xx errors due to a failed database failover; traffic was rerouted and error rates returned to normal.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:35 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f0579137e5b-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "981"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9944"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199925"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "7m55.614s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "22ms"
+    ],
+    [
+      "x-request-id",
+      "req_29aa46a5830b438f86b9a54ecf9ca009"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDWKMAQAAAD//4xTTW/bMAy951cQOjuFnS8nvRU7DN2hKIK1l6EwFIl21NmSI9JptiH/fZLT1OnWAbsYEB8f+chHV/d3d/Pbz+7Leve4cPn64fFm97wWSWS4zTMqPrOulAs8ZOPsCVYeJWOsmuXLLMtXi/msBxqnsY60quXxzI0bY814kk5m4zQfZ8tX9tYZhRTSvoUnwK/+G3VajYcQTpNzpEEiWWGInZNC0Ls6RoQkMsTSskgGUDnLaHvpN/e34HHXITEBHlr0Bq1CDVjjPuqH+eEA6L3zBBvkF0QL6eo6m4C0GrL0epbDw9dPoDsEdiChlKYONC1ZbiRh/3Z79AlsOgb2siyNghdJoa93XWwRK/UtwIeWBFu5RyATdIB1vpG1+Yn66nICj2VHMm7RdnV9AUhrHcvoQr+7p1fk+Lat2lWtdxv6gyrK4AJti2AaBQfDZohdK3r0GL5PvSvdu0WLUKhpuWD3Hft2+epUTgy3MIDTM8hBYD3Es2yZfFCu0Mhhc3Rhq1BSbVEP1OEGZKeNuwBGF0P/reaj2qfBja3+p/wAKIVtsLBoPWqj3k88pHmMv8q/0t6W3AsWhH4fbr9ggz4aobGUXX06YEE/iLEpglsV+tab0xWXbbHAqZpKNV8uxOg4+g0AAP//"
+      },
+      "timestamp_offset": 0.00455589999910444
+    },
+    {
+      "data": {
+        "__b64__": "AwBKGbp20wMAAA=="
+      },
+      "timestamp_offset": 0.004667400004109368
+    }
+  ]
+}

@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Make this subject line professional: 'wanna chat about the budget thing'",
+    "response": "\"Budget Discussion Request\"\n\nor\n\n\"Meeting Request: Budget Review\"",
+    "semantic_key": "d8730742ce8559c3f9dfac3fa03c47a4",
+    "recorded_at": "2026-06-11T12:08:10.966046+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "d8730742ce8559c3f9dfac3fa03c47a4",
+    "migrated_from": "openai_gpt-4o-mini_7ffafe03a6e870e1",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "rewrite",
+    "recorded_at": "2026-06-11T12:08:10.966046+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "244"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Make this subject line professional: 'wanna chat about the budget thing'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:12 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:12Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:12Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "22"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:08:44Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:12Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSpJCGkZkYD9bGm2NYP"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-5c44e098dd756e0f1a809c270a6793cb-d2a7f4bec89b37dd-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07ff2bd5e75f0-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SRzWrDMBCEXyXoHINtEig+hp5aeklPoS5Clba2GnnlSqukIfjduwox/aMXScw3s2jYsxi8AScaoZ1KBope2X0qVsW6qMt6XZVlJZbCGjYMsZNl9fh219H9fneq/K7uj7uNr/WtZw+dRsguiFF1wELwLgsqRhtJIbGkPRLwq3k6z36Cj0wuVyNasUmmA1rc"
+      },
+      "timestamp_offset": 0.00016830000095069408
+    },
+    {
+      "data": {
+        "__b64__": "2qgTJz0utvCeIFIrWmzRh3y24gGALHYzbBbX3BYOFo6tENPzUkTyowygokeeDWgkpYDiCmKOouZPYHLuKhogZV2ctXTp0pyFxTGRJL8HZLiquIvSPUjN44l/KX8aypkzNv+xOZvnw9jDAEE5uR7++r9o1f+m01L4RN+l6obLQDhYDZIsBO6eF2BUMHmX+Aoh95YdeEboSaoDl1YvvK9p+gQAAP//AwCR0bAuEgIAAA=="
+      },
+      "timestamp_offset": 0.00024120000307448208
+    }
+  ]
+}

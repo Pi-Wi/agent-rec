@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize this policy in one sentence: 'Employees may work remotely up to three days per week, must be reachable during core hours 10-15, and need manager approval for full-remote arrangements.'",
+    "response": "Employees can work remotely three days a week with manager approval for full-remote, and must be available during core hours from 10 AM to 3 PM.",
+    "semantic_key": "8a99ca22e594cdf7668ee6812c915b06",
+    "recorded_at": "2026-06-11T12:07:35.194490+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "8a99ca22e594cdf7668ee6812c915b06",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:35.194490+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "362"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Summarize this policy in one sentence: 'Employees may work remotely up to three days per week, must be reachable during core hours 10-15, and need manager approval for full-remote arrangements.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:37 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f123fe07e5b-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "920"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9936"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199930"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "9m11.342s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "21ms"
+    ],
+    [
+      "x-request-id",
+      "req_81f6933264914f10b3ecabca2b9c8285"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDXJzQUAAAD//4xTXW/bMAx8z68g9BwXdtLE3WOBDei2Buj7UBiMTMdaZNGT5GTBkP8+2knqZB9AXwSYp6OOd/QurJ8+49PXH/v55nn1svLP1e7LRzXtGbz+TjpeWHeahUfRsDvB2hNG6rtm+UOW5R+Wi+UANFyS7WmbNib3nDTGmWSWzu6TNE+yhzO7ZqMpyLVv8gnwazh7na6kn1JOp5dKQyHghqR2uSRFz7avKAzBhIguqukIanaR3CD9k4jmA1EAjQ727LfgqeFI9gCx9kRQ4iEAwp5oC3sTa2jQyXMesG0979BCxR6qztrkxJwCuhKaLkRYE+AOjcW1lUadN24Dmj1BzZ0PUHluIEvhcQWRYQ4vq7trmZ6qLmBvlZPuVwA6xxF7qweDXs/I8c0SyxvRtg5/UFUlVoe6kGSCxCTjh8itGtCjnK+D9d2Nm0oaNW0sIm9peC4/O6/GwEdwPjuDUQTasZ6lF+CmXVFSFHvCVXZKo66pHKlj0NiVhq+AydXQf6v5V+/T4JLCe9qPgNbUyioXrafS6NuJx2ue+v/hf9feTB4Eq0B+JwteREO+D6KkCjt72lIVDiFSU0hasmetbM2wqlVbLBd5SXk6Sxdqcpz8BgAA//8="
+      },
+      "timestamp_offset": 0.009226199996192008
+    },
+    {
+      "data": {
+        "__b64__": "AwDQJRYEuAMAAA=="
+      },
+      "timestamp_offset": 0.009375299996463582
+    }
+  ]
+}

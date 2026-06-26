@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Sentiment (positive/negative/neutral): 'It's fine. Does the job, nothing special.'",
+    "response": "Neutral.",
+    "semantic_key": "9739c71448185e4a891321dd2e9c6e6f",
+    "recorded_at": "2026-06-11T12:07:24.726901+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "9739c71448185e4a891321dd2e9c6e6f",
+    "category": "classify",
+    "recorded_at": "2026-06-11T12:07:24.726901+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Content-Length",
+        "250"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Sentiment (positive/negative/neutral): 'It's fine. Does the job, nothing special.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:26 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07ecc6d577e5b-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "682"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9998"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199958"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "17.238s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "12ms"
+    ],
+    [
+      "x-request-id",
+      "req_001f50ffd7d04a06b4ffeebccdd1e165"
+    ],
+    [
+      "set-cookie",
+      "[REDACTED]"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDClNCwQAAAD//4xSy27DIBC85ysiznFku3acfkOlXhpVlarIIrB2aDAgwG3TKv9ewE5w+pB6QWJnZ5kZdg=="
+      },
+      "timestamp_offset": 0.0004372000112198293
+    },
+    {
+      "data": {
+        "__b64__": "0zwc9dvNR4Z3m6cyPTziuz00aOEZcvcCxJ5ZSyIdDyyTYoCJBmzBT82qdZZVt6tiFYBOUuCe1iqbFDLpmGBJnuZFklZJth7Ze8kIGNf27K7z+Wc4vU5B4d2V08W50oExuAVXOze5opbcVxA2hhmLhUWLCBIpLIgg/R56qzFfTmENTW+wlyh6zicAFkJa7C0GYdsROV2kcNkqLXfmGxU1zqLZ1y4R4+JxzxorFQroyZ3bYLm/coHcoE7Z2soDhOeK9TAOxaAjmI+Ydfp4LJdjStfDagoWM24miSGCyR5oZMZ4cU+ZnACzieWfWn6bPdhmov3P+AgQAsotUK00UEau/cY2DX4L/2q7RBwEIwP61a1VbRlo/w0UGtzzYTeQORoLXe3+qgWtNBsWpFH1qqwoVGmelmh2mn0BAAD//wMAYhsK4i4DAAA="
+      },
+      "timestamp_offset": 0.0005706000083591789
+    }
+  ]
+}

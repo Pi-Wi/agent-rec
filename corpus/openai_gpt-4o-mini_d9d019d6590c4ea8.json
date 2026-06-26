@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Language of this text (ISO 639-1 code only): 'Hvor er nærmeste togstation?'",
+    "response": "da",
+    "semantic_key": "86a76820829214f7a17c06bb0438e7ca",
+    "recorded_at": "2026-06-11T12:07:26.148033+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "86a76820829214f7a17c06bb0438e7ca",
+    "category": "classify",
+    "recorded_at": "2026-06-11T12:07:26.148033+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "244"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Language of this text (ISO 639-1 code only): 'Hvor er nærmeste togstation?'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:28 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07edde936a5a4-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "249"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9985"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199960"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "2m7.715s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "12ms"
+    ],
+    [
+      "x-request-id",
+      "req_ac908a693c4242d8844179351915094e"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDClLrQQAAAD//w=="
+      },
+      "timestamp_offset": 0.009701000002678484
+    },
+    {
+      "data": {
+        "__b64__": "jFLLasMwELznK4LOcYlNWqfX5tAeeiqEUkowirS21ciS0MolpeTfK8l27PQBvQi0s7OaGS081+LlcZvi5un2/rjVdAOHhzuyCAy9fwPmBtYV054HTmjVwcwCdRCmpvk6TfPbm1UegUZzkIFWGZesdNIIJZJsma2SZZ6k655da8EAfdurv87nn/EMOhWHoy8vF0OlAURaga8NTb5otQwVQhEFOqocWYwg08qBitI5nQIWyhZpEKdaKScAVUo7GsxFSbseOZ1FSF0Zq/f4jUpKbw7rwmeBPhj/IDptSERP/txFs+2FfuIHNcYVTh8gPnfdeyVjxCOY9pjz+uSEM9QvhhUcHBUSJ1kRRlkNfGSOwdKWCz0BZhPLP7X8NruzLVT1n/EjwBgYvzqFscAFu/Q7tlkI+/dX2zniKJgg2He/UIUTYOO/Q0lb2W0FwQ900BT+ryqwxopuNUpTLNc5Bc4ympHZafYFAAD//w=="
+      },
+      "timestamp_offset": 0.009752899990417063
+    },
+    {
+      "data": {
+        "__b64__": "AwCoVjM/KAMAAA=="
+      },
+      "timestamp_offset": 0.009828699985519052
+    }
+  ]
+}

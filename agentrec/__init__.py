@@ -21,7 +21,13 @@ from .importers import (
     ImportSummary,
     import_corpus,
 )
-from .keying import Fingerprint, default_key, fingerprint, fingerprint_of
+from .keying import (
+    SEMANTIC_KEY_VERSION,
+    Fingerprint,
+    default_key,
+    fingerprint,
+    fingerprint_of,
+)
 from .migration import (
     CategoryBreakdown,
     GateResult,
@@ -101,6 +107,7 @@ __all__ = [
     "CapturedRequest",
     # Keying
     "Fingerprint",
+    "SEMANTIC_KEY_VERSION",
     "default_key",
     "fingerprint",
     "fingerprint_of",

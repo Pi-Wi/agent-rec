@@ -1,0 +1,225 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Make this concise (max 10 words): 'Due to the fact that it was raining, we made the decision to postpone the event.'",
+    "response": "We decided to postpone the event due to rain.",
+    "semantic_key": "24e5794bfd06bb143da910d7aaf210ed",
+    "recorded_at": "2026-06-11T12:07:36.043898+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "24e5794bfd06bb143da910d7aaf210ed",
+    "category": "rewrite",
+    "recorded_at": "2026-06-11T12:07:36.043898+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "284"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Make this concise (max 10 words): 'Due to the fact that it was raining, we made the decision to postpone the event.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:37 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f1a283f8b1c-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "507"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9923"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199950"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "11m2.386s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "15ms"
+    ],
+    [
+      "x-request-id",
+      "req_d8d26fdff9d644808c06575d8c229f70"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDXN9AcAAAD//4xSy07DMBC89ysinxuUlLYpVw4IvgAQQpGxN6kh8Vr2BhVQ/5110pKUh8TFUnZ2JrOzC7pz92uUV8vru8ubAt/vFuftTswjA5+eQdGRdaaQeUAG7QArD5IgqubFJs+Li/Wq6IEWNTSRVjtKl5i2xpp0kS2WaVak+ebA3qJRELjtgT+T5KN/o0+rYcflbH6stBCCrIFrxyYuemxiRcgQTCBpScxHUKElsL31W0g0KKNBJ4SJw0AOLSS0hQReuSfRHUTES2PPphoeqi7IOIftmmYCSGuRZMyhd/94QPZffhusncen8I0qKs4hbEuOLXCG7C0QOtGje34f+1y6k1EFC7WOSsIX6H+3Wg9yYtzGCOaHzASxwWasr4+kE7VSA0nThEmuQkm1BT0yxyXIThucALPJzD/N/KY9zG1s/R/5EVAKHJ9Z6Txoo04HHts8xFv9q+0r496wCOBf+fhKMuDjHjRUsmuGCxLhLRC0JS+rBu+8Gc6ocuUmy/JNUQEsxGw/+wQAAP//"
+      },
+      "timestamp_offset": 0.004873099998803809
+    },
+    {
+      "data": {
+        "__b64__": "AwBpQb15VAMAAA=="
+      },
+      "timestamp_offset": 0.004983499995432794
+    }
+  ]
+}

@@ -1,0 +1,199 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize this support thread in one sentence: 'Customer reported login failures on mobile, support suggested clearing the cache which did not help, the issue was escalated to engineering who found an expired certificate, a fix was deployed, and the customer confirmed resolution.'",
+    "response": "A customer's mobile login failures caused by an expired certificate were resolved after support escalated to engineering, deployed a fix, and confirmed the issue was fixed.",
+    "semantic_key": "473dd13353253b8229835297e3bec112",
+    "recorded_at": "2026-06-11T12:08:09.981141+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "473dd13353253b8229835297e3bec112",
+    "migrated_from": "openai_gpt-4o-mini_783e9d41ed03ffc2",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:08:09.981141+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "453"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Summarize this support thread in one sentence: 'Customer reported login failures on mobile, support suggested clearing the cache which did not help, the issue was escalated to engineering who found an expired certificate, a fix was deployed, and the customer confirmed resolution.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:11 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:11Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:11Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "23"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:08:42Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:11Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSpBPVYbxBrPBtdzmbj"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-536b4343c7f06e89e1ade99bb5ddb240-843214f2ba9b41e0-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a07fe8aae23082-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SST2sbMRDFv4rQpZd1WbsxLb4F+if0lEMolFLEWJrdHUcrbTQj167xd+9siGmS0tNq3/vpoTfSyY45YLQb6yPUgIsB6L4urhbrxapdrZdtu7SNpaDAyL1rl9e/v8Nn/rZbfbq5ub378vEr3a53O2XkOOFMITP0qELJcRaAmVggiUo+J0FdbX6cLrzgYXYe"
+      },
+      "timestamp_offset": 0.00016399999731220305
+    },
+    {
+      "data": {
+        "__b64__": "Pxt7bXxlySOWN2zGvKWIJuaekumAYi3IxkNlDGZ7NJAMHiYq+uexCHXkQdD8woJGyRz36kAnWAzXacpFDLKHqFAwkg0mDUYslPrGBJxiPs4bTEeHRsM1NaeOyjjTAxpirpoOPAMY3trzz8bqYSdXEDgnPT6m4KSWZJ8MxoeKyWvPVGN8EgOKduGLVh/HtTlZSlMVJ/kek5rvP+i4wA/ovMYL5eReAu3FVzv8z7vsnfNxGlAHC9Gtx3/5v+5yeO2eG5urPJfeXWkZLHvy6ISwaPf5jgOUMD+X1OkdaG/XY1YrZXGw19Kw1SdxPv8BAAD//wMAjc5hwXUCAAA="
+      },
+      "timestamp_offset": 0.0002159999858122319
+    }
+  ]
+}

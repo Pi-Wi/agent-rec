@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize this review in one sentence: 'I have used this laptop for three months. The screen is gorgeous and battery life is solid, but the fan noise under load is noticeable and the webcam is mediocre.'",
+    "response": "The laptop has a beautiful screen and good battery life, but it has noticeable fan noise under load and a mediocre webcam.",
+    "semantic_key": "c4816a25c7548f27ad88ffdb3b0430d9",
+    "recorded_at": "2026-06-11T12:07:33.501232+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "c4816a25c7548f27ad88ffdb3b0430d9",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:07:33.501232+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "371"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Summarize this review in one sentence: 'I have used this laptop for three months. The screen is gorgeous and battery life is solid, but the fan noise under load is noticeable and the webcam is mediocre.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:35 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f08ceef4d24-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "750"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9938"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199928"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "8m55.564s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "21ms"
+    ],
+    [
+      "x-request-id",
+      "req_bff4e0d5d10f430399eefd77a49a9ab3"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDUKiAAAAAD//w=="
+      },
+      "timestamp_offset": 0.0024104999902192503
+    },
+    {
+      "data": {
+        "__b64__": "jFLBbtQwEL3vV1g+J9UmTdntGSFxgUqonFAVTexJ4uLYkT0BCtp/Z+LsNikUiUskz5v3MvPeVPTzs79+fP8W3zXF3cfmw92n6/ZeZjPDN4+o6MK6Up55SMa7BVYBgXBWLQ7HojjcvrmpEjB4jXamdSPllc8H40xe7ssq3x/y4nhm994ojNz2hZ9C/ErfeU6n8QeX99mlMmCM0CHXLk1cDN7OFQkxmkjgSGYrqLwjdGn0+x6FhZH8KHqIAkSDMJFpJysib4BOgNOi816LBogwPAlrWsxEM5EwlEjOE88KjUXRguOniSgmnjMI60EnBRADauNZUnzHRsFwtR0oYDtFmE1xk7UbAByLw2xqsuLhjJyel7e+G4Nv4h9U2bKpsa85g8iB8KKRV5QJPfH3IZk8vfBNstAwUk3+K6bfHYpFTq7RrmBZnUHiAe1av73JXlGrNRIYGzchSQWqR70y10RhYqs2wG6z89/DvKa97G1c9z/yK6AUjnyz9Rg4LPVy4bUt4Hz4/2p79jgNLCOGb3wdNRkMcw4aW5jsco4yPkXCoeawOgxjMMtNtmO9Px4AtSqhlLvT7jcAAAD//w=="
+      },
+      "timestamp_offset": 0.00253950001206249
+    },
+    {
+      "data": {
+        "__b64__": "AwD8Y9epoQMAAA=="
+      },
+      "timestamp_offset": 0.002675600000657141
+    }
+  ]
+}

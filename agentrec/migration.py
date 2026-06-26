@@ -42,7 +42,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 import httpx
 
 from .comparators import JUDGE_PREFIX, Comparator, ComparisonResult
-from .keying import _sanitize, fingerprint_of
+from .keying import _sanitize, fingerprint_of, SEMANTIC_KEY_VERSION
 from .providers import (
     Conversation,
     DecodedResponse,
@@ -268,6 +268,10 @@ class MigrationReport:
     # --min-pass thresholds (comparator name → minimum pass rate); empty means
     # --strict keeps its all-or-nothing semantics.
     min_pass: Dict[str, float] = field(default_factory=dict)
+    # Corpus-level advisories surfaced in the rendered report — informational,
+    # never gating (like cost/latency).  Today: a semantic-key algorithm-version
+    # skew between the corpus and the running release (see ``run_migration``).
+    warnings: List[str] = field(default_factory=list)
 
     @property
     def ok_rows(self) -> List[RowResult]:
@@ -745,12 +749,33 @@ async def run_migration(
     if filter_substr:
         baseline_ids = [bid for bid in baseline_ids if filter_substr in bid]
 
-    # Group baselines by semantic_key: one report row per logical prompt.
+    # Group baselines by semantic_key: one report row per logical prompt.  The
+    # key is recomputed here with *this* release's algorithm (the pinned
+    # metadata key is recording-time provenance), so a corpus groups by the
+    # running algorithm regardless of which release recorded it.
     groups: Dict[str, list] = {}
+    foreign_versions: set = set()
     for baseline_id in baseline_ids:
         interaction = await store.load(baseline_id)
         fp = fingerprint_of(interaction)
+        # A cassette stamped with a *different* algorithm version (only possible
+        # across a major release) is regrouped under the running algorithm — flag
+        # it so the change is visible, never a silent regroup.  Un-stamped
+        # (pre-versioning) corpora carry no version and must not warn.
+        recorded_version = interaction.metadata.get("semantic_key_version")
+        if isinstance(recorded_version, int) and recorded_version != SEMANTIC_KEY_VERSION:
+            foreign_versions.add(recorded_version)
         groups.setdefault(fp.semantic_key, []).append((baseline_id, interaction, fp))
+
+    warnings: List[str] = []
+    if foreign_versions:
+        versions = ", ".join(str(v) for v in sorted(foreign_versions))
+        warnings.append(
+            f"corpus contains cassettes recorded under semantic-key algorithm "
+            f"version {versions}; this release computes version {SEMANTIC_KEY_VERSION}. "
+            "Rows were grouped under the running algorithm and may differ from the "
+            "recording-time grouping; re-key the corpus (agentrec annotate) to silence this."
+        )
 
     # One AutoTransport/client for the whole run; each task pins its row's
     # identity in _ROW_IDENTITY before posting, and the keyer reads it back.
@@ -833,6 +858,7 @@ async def run_migration(
         comparator_names=[comparator.name for comparator in comparators],
         rows=rows,
         min_pass=dict(min_pass or {}),
+        warnings=warnings,
     )
 
 
@@ -843,14 +869,26 @@ async def annotate_corpus(store: FileStore) -> List[str]:
     ``summary`` block, and missing metadata is recomputed from the stored
     request.  ``setdefault`` keeps pinned values (e.g. a migration cassette's
     baseline ``semantic_key``) intact.  Returns the annotated ids.
+
+    The ``semantic_key_version`` stamp is only added when it would be truthful:
+    when no key is pinned yet (we compute it now), or when the pinned key still
+    equals the current recompute.  A cassette carrying a *stale* key from an
+    older algorithm keeps that key (provenance) but is left un-versioned —
+    annotate must not claim the running version for a key it didn't compute.
     """
     annotated: List[str] = []
     for interaction_id in store.ids():
         interaction = await store.load(interaction_id)
         try:
             fp = fingerprint_of(interaction)
+            md = interaction.metadata
+            # The version describes the co-located key; only assert it when the
+            # key is (or becomes) this release's recompute.
+            version_truthful = md.get("semantic_key", fp.semantic_key) == fp.semantic_key
             for key, value in fp.as_metadata().items():
-                interaction.metadata.setdefault(key, value)
+                if key == "semantic_key_version" and not version_truthful:
+                    continue
+                md.setdefault(key, value)
         except Exception:
             pass
         await store.save(interaction_id, interaction)

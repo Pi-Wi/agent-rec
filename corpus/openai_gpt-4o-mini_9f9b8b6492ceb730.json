@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Translate to Italian: 'The item is currently out of stock.'",
+    "response": "\"L'articolo è attualmente esaurito.\"",
+    "semantic_key": "e88585daecdd037e2beeb4d05772fc17",
+    "recorded_at": "2026-06-11T12:07:37.933427+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "e88585daecdd037e2beeb4d05772fc17",
+    "category": "translate",
+    "recorded_at": "2026-06-11T12:07:37.933427+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "227"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Translate to Italian: 'The item is currently out of stock.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:39 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07f26eef0ebdd-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "349"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9909"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199964"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "13m1.34s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "10ms"
+    ],
+    [
+      "x-request-id",
+      "req_8b5357b4f1f84ec6bc11ee0f1f732b72"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/6rmUlBQykxRslJQSs5ILEnOLcjRdSmIDDW3NAIAAAD//w=="
+      },
+      "timestamp_offset": 0.008242600015364587
+    },
+    {
+      "data": {
+        "__b64__": "jFLLbttADLz7K4S95GIFViDX1rkOggA95VCgaAJhs6LkTVZLYUkFSQv/T/+jP1auZEdyH0AvC2iGQw2HvNvpHb0V33Zf6s/02t5e373cfFypZVTg4xMYPqkuDYoO2KIfaRNAM8Su2WabZZviw7oYiBYrcFHWdJzmmLbW2/RqdZWnq02abY/qPVoDJGVf5TNJvg9v9OkreBV4tTwhLRDpBgQ7FQkY0EVEaSJLrD2r5UQa9Ax+sH6vPl3owNagw+Tnj0Qz99q1wkICpPtgGS/v1VwdoO5Jxwl879yM0N4j65jA4PvhyBzenTpsuoCP9JtU1ZIA7UsJjCQ9cUWMnRrYg7wPQyL92ZBKGrUdl4zPMPwuz8Z2atrDRGbHtBSLQTfh65PorFtZAWvraJaoMtrsoZqUU/y6ryzOiMVs5j/N/K33OLf1zf+0nwhjoJMDK7sAlTXnA09lAeKV/qvsPePBsCIIL3J2JVsIcQ8V1Lp34+0oeiOGtpRlNRC6YMcDqrtyXdS5zrdFZdTisPgFAAD//w=="
+      },
+      "timestamp_offset": 0.008374500001082197
+    },
+    {
+      "data": {
+        "__b64__": "AwAanrx1TgMAAA=="
+      },
+      "timestamp_offset": 0.008461899997200817
+    }
+  ]
+}

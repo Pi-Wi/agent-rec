@@ -25,18 +25,19 @@ Three surfaces are covered by SemVer:
 3. **The cassette on-disk JSON structure** — the top-level fields a `FileStore`
    cassette writes (`summary`, `metadata`, `request`, `response_status`,
    `response_headers`, `response_extensions`, `chunks`) and the conventional
-   `metadata` keys (`provider`, `model`, `semantic_key`, `recorded_at`,
-   `latency_s`, `latency_first_chunk_s`, `category`, `imported`,
-   `imported_from`, `migrated_from`). A cassette written by any 1.x release
-   stays loadable by any later 1.y.
+   `metadata` keys (`provider`, `model`, `semantic_key`,
+   `semantic_key_version`, `recorded_at`, `latency_s`,
+   `latency_first_chunk_s`, `category`, `imported`, `imported_from`,
+   `migrated_from`). A cassette written by any 1.x release stays loadable by
+   any later 1.y.
 
    This covers the *structure* only. The **algorithm** that computes
    `semantic_key` (what gets hashed, how it's normalized — the thing that
    decides which recordings group into the same migration row) is a separate,
-   narrower guarantee — see "Requires a major release" below. The detailed
-   mechanics of a post-1.0 `semantic_key` migration path are intentionally
-   not designed in this document; that's the still-open TODO item "Decide the
-   cassette-format stability guarantee."
+   narrower guarantee — see "Requires a major release" below and the dedicated
+   section ["Semantic-key stability & the 2.0 migration
+   path"](#semantic-key-stability--the-20-migration-path), which defines how a
+   post-1.0 algorithm change is handled.
 
 ## What's NOT covered
 
@@ -73,9 +74,10 @@ promotion once `py.typed` ships — tracked separately, not decided here.)
 - **Any change to the `semantic_key` algorithm** that would regroup an
   existing corpus differently. Pre-1.0, three such regroupings shipped as
   documented `CHANGELOG.md` caveats (0.3.0, 0.4.0, 0.6.0); post-1.0 this is a
-  major-version event with a migration path, not a caveat — see the open
-  "cassette-format stability guarantee" TODO item for how that path gets
-  designed.
+  major-version event with a migration path, not a caveat — bumping
+  `SEMANTIC_KEY_VERSION` and shipping a re-key step, as defined in
+  ["Semantic-key stability & the 2.0 migration
+  path"](#semantic-key-stability--the-20-migration-path).
 - Dropping support for a Python version still inside its upstream support
   window.
 
@@ -102,11 +104,54 @@ optional fields) is unconditional within 1.x. Reading a cassette written by a
 the same tolerance `store.py` already extends to cassettes recorded before
 `metadata` existed — but it isn't guaranteed.
 
+That commitment is about the on-disk *structure* (load + replay). The
+*grouping* a corpus produces in a migration report — which recordings are
+treated as the same logical prompt — is governed separately by the
+`semantic_key` algorithm, covered next.
+
+## Semantic-key stability & the 2.0 migration path
+
+A corpus is meant to be **kept** — a frozen behavioural baseline that gates
+every prompt edit and model bump in CI. So the question isn't only "does the
+file still load," but "does it still group into the same rows." That grouping
+is the `semantic_key`, and its stability rests on three facts:
+
+1. **The running release's algorithm is the grouping authority.** The migration
+   runner recomputes each baseline's `semantic_key` from the request bytes with
+   the algorithm in the release you're running — it does **not** group by the
+   key pinned in a cassette's metadata. The pinned `semantic_key` is
+   recording-time *provenance* (shown in summaries and the report); the live
+   recompute is what groups. This is *why* a corpus recorded by an old release
+   still groups correctly today: the runner re-derives every key under the
+   current rules, so a corpus never carries a stale grouping forward.
+
+2. **That algorithm is frozen across all of 1.x.** Because the runner recomputes
+   with a fixed algorithm, every 1.x release groups a given corpus
+   *identically*. Changing what `semantic_key` hashes or how it normalizes —
+   anything that would regroup an existing corpus — is a **2.0** event (see
+   "Requires a major release"), never a minor or patch.
+
+3. **Every 1.x recording is version-stamped.** Cassettes written by the recorder
+   and by `agentrec import` carry `semantic_key_version` in metadata (the value
+   of `agentrec.SEMANTIC_KEY_VERSION`, currently **1**) — the algorithm that
+   produced the co-located key. This stamp is the part that *cannot* be added
+   retroactively, which is why 1.0 ships it: it makes a corpus self-identifying
+   so a future major release can tell which algorithm grouped it.
+
+**The 2.0 migration path.** When a future major release changes the algorithm,
+it: (a) bumps `SEMANTIC_KEY_VERSION`; (b) ships an explicit **re-key** step that
+recomputes and re-pins keys under the new algorithm (via `agentrec annotate`),
+so adopting the new grouping is a deliberate action, not an accident of
+upgrading; and (c) relies on a guard that **already ships in 1.x**: when the
+migration runner reads a corpus whose stamped `semantic_key_version` differs
+from the running release's, it emits a non-gating **warning** in the report
+(naming both versions) and regroups under the running algorithm — it never
+*silently* regroups a kept corpus. The warning is dormant throughout 1.x (one
+frozen version) and becomes the visible signal at the 2.0 boundary. Like cost
+and latency, the warning is informational and never affects a `--strict` gate.
+
 ## See also
 
 - [CHANGELOG.md](CHANGELOG.md) for the history of changes, including the
   pre-1.0 `semantic_key` regroupings this policy's major-release rule is
   modeled on.
-- [TODO.md](TODO.md) for the open "cassette-format stability guarantee"
-  item — the deeper mechanics of a post-1.0 `semantic_key` migration path,
-  not designed in this document.

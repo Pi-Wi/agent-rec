@@ -1,0 +1,193 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Priority (low/medium/high/urgent): 'Login is broken for all users in production.'",
+    "response": "**Priority: URGENT**\n\nThis requires immediate action because:\n- **Scope**: All users affected (not isolated)\n- **Environment**: Production (live service)\n- **Impact**: Complete service unavailability for authentication\n- **Business risk**: Revenue loss, SLA violations, reputational damage\n\n**Recommended immediate actions:**\n1. Page on-call engineer/incident commander\n2. Declare SEV-1 incident\n3. Begin root cause investigation\n4. Prepare status page communication\n5. Activate war room if not already done",
+    "semantic_key": "d4410011d39b97559808627f87d53272",
+    "recorded_at": "2026-06-11T12:08:33.702415+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "d4410011d39b97559808627f87d53272",
+    "migrated_from": "openai_gpt-4o-mini_d80e914e1872be3d",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "classify",
+    "recorded_at": "2026-06-11T12:08:33.702415+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "253"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Priority (low/medium/high/urgent): 'Login is broken for all users in production.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:35 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:33Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:36Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "3"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:09:28Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:33Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSqqEbSTWYjadXz5Nvf"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-83c543df603a721a29aeb0f8970acbd9-0bc801304658e015-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a08074d88a29ae-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3RT23LTMBD9lR0/FU8c4jTpgN/SEigDw4SmLQ+E8ajSJhGRV0YXQ+nk31nlUqAMT7b2nD27e7R6yBqr0GRVJo2ICou10JtYjIpxMRwMx+VgUGa9TCsmNH5VD8qLy9ufH0fTy3L09cw1rz/dvXx3M3/BnHDfYmKh92KFHHDWpIDwXvsgKHBIWgrIf9XnhyM/4I+E7D5Vluczp63T4b6Cm6s30w/Xeb6gBV2vtQeH36J26EE3DSotAoKQQVuCO5QieqwWVECez6VtMc8rmBgDHHYexHKJMqCCE7IBtLeGs9WzPX9KnXaWGu4sZc2cVXGve2J0h8AKnZZ4YL9tWq6aiBe2aQ2GRwJEEp3QRtxpwxPA0joQMaxZV0uRBPcK59FrYpvAab9JQlfYIUUEY73vwfz9BDqdOuQMPjtsY9gdhAElGnY3WZLnVygtO0GK53pqia+ScWUfZkwHS4UUbAbSiiuje65JasV9QVIQrOAWNOzDK+QtcAjz6W1RwpG0oNM+nCOngrNs385rRjv0Qa8Og424FHeasvm2Q/TQpspJP9Lj+OM+TLi/LjX6Xbik14BeQroVYRwKdQ/KEmbbL73MB9vWHPOWeDV4zjpER9kB8LwNSJJ3iKIxh6DCwBfgj7G4W8XqIdPEHtbBbpAYHJ3xKgq5xlqyfOqs/pswOOKpo/9hx9ykj+0aG3TC1OPmX/5vtFw/Rbe9zMbwZ6gcnvI0+5Wqg0bHw6cHpIRT6S3SEl0avF6hZYitqw9rx+9tu/0FAAD//wMA01ZH39IDAAA="
+      },
+      "timestamp_offset": 0.00038090001908130944
+    }
+  ]
+}

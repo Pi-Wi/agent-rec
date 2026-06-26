@@ -1,0 +1,193 @@
+{
+  "summary": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Summarize for a shift handover in one sentence: 'Night shift saw two failed batch jobs which were rerun successfully, disk usage on db-3 hit 85%, and the vendor confirmed the maintenance window for Saturday.'",
+    "response": "Night shift reran two failed batch jobs successfully, disk usage on db-3 reached 85%, and vendor confirmed Saturday maintenance window.",
+    "semantic_key": "ddc5384420fba1535732e18c855418c7",
+    "recorded_at": "2026-06-11T12:08:32.012693+00:00"
+  },
+  "metadata": {
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5",
+    "semantic_key": "ddc5384420fba1535732e18c855418c7",
+    "migrated_from": "openai_gpt-4o-mini_d8287451b625e968",
+    "baseline_model": "gpt-4o-mini-2024-07-18",
+    "category": "summarize",
+    "recorded_at": "2026-06-11T12:08:32.012693+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": [
+      [
+        "Host",
+        "api.anthropic.com"
+      ],
+      [
+        "Accept",
+        "*/*"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "User-Agent",
+        "python-httpx/0.28.1"
+      ],
+      [
+        "x-api-key",
+        "[REDACTED]"
+      ],
+      [
+        "anthropic-version",
+        "2023-06-01"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "380"
+      ]
+    ],
+    "content": "{\"model\":\"claude-haiku-4-5\",\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"Summarize for a shift handover in one sentence: 'Night shift saw two failed batch jobs which were rerun successfully, disk usage on db-3 hit 85%, and the vendor confirmed the maintenance window for Saturday.'\"}],\"system\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:08:33 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-limit",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-remaining",
+      "50000"
+    ],
+    [
+      "anthropic-ratelimit-input-tokens-reset",
+      "2026-06-11T12:08:33Z"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-limit",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-remaining",
+      "10000"
+    ],
+    [
+      "anthropic-ratelimit-output-tokens-reset",
+      "2026-06-11T12:08:33Z"
+    ],
+    [
+      "anthropic-ratelimit-requests-limit",
+      "50"
+    ],
+    [
+      "anthropic-ratelimit-requests-remaining",
+      "2"
+    ],
+    [
+      "anthropic-ratelimit-requests-reset",
+      "2026-06-11T12:09:30Z"
+    ],
+    [
+      "anthropic-ratelimit-tokens-limit",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-remaining",
+      "60000"
+    ],
+    [
+      "anthropic-ratelimit-tokens-reset",
+      "2026-06-11T12:08:33Z"
+    ],
+    [
+      "request-id",
+      "req_011CbwSqqg964PnNCfR1jBJM"
+    ],
+    [
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "anthropic-organization-id",
+      "db9c8ea9-9ba3-49db-ab25-8037559e4dc2"
+    ],
+    [
+      "traceresponse",
+      "00-e5e2d00cc4f7562e3c670b3afa9a7cd3-5cc212aaad6a489d-01"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "vary",
+      "Accept-Encoding"
+    ],
+    [
+      "X-Robots-Tag",
+      "none"
+    ],
+    [
+      "Content-Security-Policy",
+      "default-src 'none'; frame-ancestors 'none'"
+    ],
+    [
+      "cf-cache-status",
+      "DYNAMIC"
+    ],
+    [
+      "CF-RAY",
+      "a0a080757a4575f0-CPH"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAAA3SSX0vDMBTFv0oI+NZK6xyOPuqDbyIqiIqE2+S2jWuTmdxsjrHv7o04/IdPDed3TnJu0p2cvMFRNlKPkAyWA9hlKk/LeXlSnczrqqplIa1hwxR7VdX3d5evi2V77vpFgJtHf3HzcB2yh7YrzC6MEXpkIfgxCxCjjQSOWNLeEfKqedod/IRvmXx8Gnll+4FEHGxHImAAJ2jjRQd2RCNaID2IF99GEZPWfFCXxnFbCGPjUqR8rPBOmLaccRj0wJnF/KgQ4IxYozM+CG7Q2TAxuQVKwcBWTGBzK3Aaxcaya3Ms98+FjORXiveJ3nEzjisOOPkJIr4m5IhsHJf4FA0SV40H7aOSbHbSulUiRX6JjuHZjG8i11OatyfrnfppqA6csfmPHbJ5f1wNOPF1jWo+/fV/0Xr4TfeF9Im+S7Oah8GwthoVWQw8e34+A8HkP8F1GPLcqkfPyHlSsOahoeXX3u/fAQAA//8DAGwu3ClQAgAA"
+      },
+      "timestamp_offset": 0.00035859999479725957
+    }
+  ]
+}

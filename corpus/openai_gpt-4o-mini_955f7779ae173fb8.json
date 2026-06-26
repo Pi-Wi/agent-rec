@@ -1,0 +1,231 @@
+{
+  "summary": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "prompt": "[system] You are a precise assistant. Answer directly and concisely. No preamble.\n\n[user] Extract as JSON {street, zip, city}: 'Send returns to Lagerstrasse 12, 20095 Hamburg, attention Returns Dept.'",
+    "response": "```json\n{\n  \"street\": \"Lagerstrasse 12\",\n  \"zip\": \"20095\",\n  \"city\": \"Hamburg\"\n}\n```",
+    "semantic_key": "badf73af7d3cdbac3170ad6ede7ac004",
+    "recorded_at": "2026-06-11T12:07:31.029711+00:00"
+  },
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "semantic_key": "badf73af7d3cdbac3170ad6ede7ac004",
+    "category": "extract",
+    "recorded_at": "2026-06-11T12:07:31.029711+00:00"
+  },
+  "request": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "headers": [
+      [
+        "Host",
+        "api.openai.com"
+      ],
+      [
+        "Accept-Encoding",
+        "gzip, deflate"
+      ],
+      [
+        "Connection",
+        "keep-alive"
+      ],
+      [
+        "Authorization",
+        "[REDACTED]"
+      ],
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "User-Agent",
+        "AsyncOpenAI/Python 2.41.0"
+      ],
+      [
+        "X-Stainless-Lang",
+        "python"
+      ],
+      [
+        "X-Stainless-Package-Version",
+        "2.41.0"
+      ],
+      [
+        "X-Stainless-OS",
+        "Windows"
+      ],
+      [
+        "X-Stainless-Arch",
+        "other:amd64"
+      ],
+      [
+        "X-Stainless-Runtime",
+        "CPython"
+      ],
+      [
+        "X-Stainless-Runtime-Version",
+        "3.13.7"
+      ],
+      [
+        "X-Stainless-Async",
+        "async:asyncio"
+      ],
+      [
+        "x-stainless-retry-count",
+        "0"
+      ],
+      [
+        "x-stainless-read-timeout",
+        "60.0"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Content-Length",
+        "278"
+      ]
+    ],
+    "content": "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a precise assistant. Answer directly and concisely. No preamble.\"},{\"role\":\"user\",\"content\":\"Extract as JSON {street, zip, city}: 'Send returns to Lagerstrasse 12, 20095 Hamburg, attention Returns Dept.'\"}],\"model\":\"gpt-4o-mini\"}"
+  },
+  "response_status": 200,
+  "response_headers": [
+    [
+      "Date",
+      "Thu, 11 Jun 2026 12:07:32 GMT"
+    ],
+    [
+      "Content-Type",
+      "application/json"
+    ],
+    [
+      "Transfer-Encoding",
+      "chunked"
+    ],
+    [
+      "Connection",
+      "keep-alive"
+    ],
+    [
+      "CF-Ray",
+      "a0a07ef6b9517e5b-CPH"
+    ],
+    [
+      "CF-Cache-Status",
+      "DYNAMIC"
+    ],
+    [
+      "Server",
+      "cloudflare"
+    ],
+    [
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    ],
+    [
+      "X-Content-Type-Options",
+      "nosniff"
+    ],
+    [
+      "access-control-expose-headers",
+      "X-Request-ID"
+    ],
+    [
+      "access-control-expose-headers",
+      "CF-Ray"
+    ],
+    [
+      "Access-Control-Expose-Headers",
+      "CF-Ray"
+    ],
+    [
+      "openai-organization",
+      "user-yhwjbxokn6u055fhovrwyx7f"
+    ],
+    [
+      "openai-processing-ms",
+      "966"
+    ],
+    [
+      "openai-project",
+      "proj_NPP6mF2SLuxohnvSeGZFtksv"
+    ],
+    [
+      "openai-version",
+      "2020-10-01"
+    ],
+    [
+      "x-openai-proxy-wasm",
+      "v0.1"
+    ],
+    [
+      "x-ratelimit-limit-requests",
+      "10000"
+    ],
+    [
+      "x-ratelimit-limit-tokens",
+      "200000"
+    ],
+    [
+      "x-ratelimit-remaining-requests",
+      "9957"
+    ],
+    [
+      "x-ratelimit-remaining-tokens",
+      "199951"
+    ],
+    [
+      "x-ratelimit-reset-requests",
+      "6m5.623s"
+    ],
+    [
+      "x-ratelimit-reset-tokens",
+      "14ms"
+    ],
+    [
+      "x-request-id",
+      "req_c3b0b3b6cede4b67ba772bf8dbfa661e"
+    ],
+    [
+      "Content-Encoding",
+      "gzip"
+    ],
+    [
+      "alt-svc",
+      "h3=\":443\"; ma=86400"
+    ]
+  ],
+  "response_extensions": {
+    "http_version": {
+      "__bytes__": "HTTP/1.1"
+    },
+    "reason_phrase": {
+      "__bytes__": "OK"
+    }
+  },
+  "chunks": [
+    {
+      "data": {
+        "__b64__": "H4sIAAAAAAAA/4xSwW7bMAy95ysMne3Bzpwm2bmHHYoBw3bppsJRZNpRakuCRAdtgvz7KDuJ3a4DdjHg9/ieyEeeZlHEVMm+REzuBMrWNsm9ffx5XOX5j8dy/6uS9/JweO70N3N8+Z4/sDgozHYPEq+qT9KQDlAZPdDSgUAIrtlylWXL9d0i64nWlNAEWW0xyU3SKq2SeTrPk3SZZKuLemeUBE9lv+k3ik79N/SpS3ghOI2vSAveixoIuxYR6EwTECa8Vx6FRhaPpDQaQfetbzabvTea6xPXUcSZRweAnCjOHsjVEUAeEGVzzuKh5qjsUDBP0/XiBkuFrwP+VbTbztWccX3mmp6YPu6g6rwIAeiuaSaE0NqgCAH2Yz9dmPNt0MbU1pmtfydlFQXodwXlTZOEoTway3r2TN+nPtDuTUaMjFqLBZpn6J9bLAc7Nq5xJD/nFxKpwWbE11n8gVtRAgrV+MlCmBRyB+WoHLcnulKZCTGbzPx3Mx95D3MrXf+P/UhICZbus7AOSiXfDjyWOQhH/q+yW8Z9w8yDO9DVFqjA"
+      },
+      "timestamp_offset": 0.000304899993352592
+    },
+    {
+      "data": {
+        "__b64__": "hT2UUImuGU6P+VeP0Ba0LLoq69Rwf5UtxFrK6i4DmbHZefYHAAD//w=="
+      },
+      "timestamp_offset": 0.0004333999822847545
+    },
+    {
+      "data": {
+        "__b64__": "AwBEXEq+jQMAAA=="
+      },
+      "timestamp_offset": 0.0004972000024281442
+    }
+  ]
+}
