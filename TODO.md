@@ -1,21 +1,16 @@
-# Roadmap — the road to 1.0
+# Roadmap — post-1.0
 
 The live roadmap (referenced by `CLAUDE.md` and the `prime-context` skill).
 **Shipped** work lives in `CHANGELOG.md`; this file is what's *left*. Priorities
 follow the `TODO Pn` convention the changelog already cites (P0 = release
 blocker, P3 = post-1.0).
 
-The library is functionally mature at 0.11.0: record/replay (sync + async,
-SSE + JSON), four translation dialects (OpenAI ↔ Anthropic ↔ Gemini ↔ Mistral),
-tool-call + structured-output fidelity, derived cost/latency, CI on
-Ubuntu **and** Windows across Python 3.10–3.13. What's missing for a *first
-official release* is mostly the 1.0 commitment itself — API stability, the
-release pipeline, typing/quality gates, and the community files — not engine
-features.
-
-> Roadmap note: the README "Roadmap" section lists "CI Windows runner" as open.
-> It isn't — `.github/workflows/ci.yml` already runs a `windows-latest` matrix
-> leg. Update that section when this file is adopted.
+**1.0.0 is published** (PyPI, 2026-06-26) — `pip install agentrec` works. The
+library is functionally mature: record/replay (sync + async, SSE + JSON), four
+translation dialects (OpenAI ↔ Anthropic ↔ Gemini ↔ Mistral), tool-call +
+structured-output fidelity, derived cost/latency, CI on Ubuntu **and** Windows
+across Python 3.10–3.13. All P0 release blockers are cleared; what remains is the
+P1 polish and the P2/P3 scope decisions below.
 
 ---
 
@@ -59,20 +54,19 @@ The minimum to honestly publish a `1.0.0` to PyPI.
   README status → "stable (1.0.0)", CHANGELOG heading rolled to
   `## 1.0.0 — 2026-06-25`. **Confirm/adjust that date to the actual release day,**
   and note nothing is published until the release pipeline below runs.
-- [ ] **Release pipeline to PyPI.** No publish workflow exists (CI only tests).
-  Add a tag-triggered GitHub Actions job that builds sdist + wheel, runs
-  `twine check`, and publishes via **Trusted Publishing (OIDC)** — no API token
-  in secrets. Smoke-test the built wheel in a clean env (`pip install`, run
-  `agentrec report` on the shipped corpus) before publish.
-  *Workflow written:* `.github/workflows/release.yml` — on a `v*` tag it builds
-  sdist+wheel, runs `twine check`, asserts the tag matches the packaged version,
-  smoke-tests the installed wheel, then publishes via OIDC. **Remaining (manual,
-  yours):** (1) on PyPI, register the Trusted Publisher for this repo +
-  workflow `release.yml` + environment `pypi`; (2) create the GitHub `pypi`
-  environment (Settings → Environments); (3) push tag `v1.0.0`. The in-CI smoke
-  test exercises `agentrec --help` / `profiles` / import (entry point + packaged
+- [x] **Release pipeline to PyPI.** *Done (2026-06-26):* `agentrec` 1.0.0 is
+  live on PyPI — `pip install agentrec` works. A tag-triggered workflow exists
+  (`.github/workflows/release.yml`): on a `v*` tag it builds sdist+wheel, runs
+  `twine check`, asserts the tag matches the packaged version, smoke-tests the
+  installed wheel, then publishes via **Trusted Publishing (OIDC)** — no API
+  token in secrets. **If this first release was published manually,** finish the
+  one-time setup so future releases go through the pipeline: (1) on PyPI,
+  register the Trusted Publisher for this repo + workflow `release.yml` +
+  environment `pypi`; (2) create the GitHub `pypi` environment (Settings →
+  Environments); (3) tag future releases `vX.Y.Z`. The in-CI smoke test
+  exercises `agentrec --help` / `profiles` / import (entry point + packaged
   `pricing_data/`), **not** the `--corpus` demo — the demo corpus isn't tracked
-  in the repo or in the wheel (see the dry-run note in P2).
+  in the wheel (see the dry-run note in P2).
 - [x] **Clean up `dist/`.** It holds stale `0.2.0`–`0.5.1` artifacts and is
   checked in. Add `dist/` to `.gitignore` and remove the committed wheels; build
   artifacts shouldn't live in the repo.
@@ -90,11 +84,13 @@ unfinished.
   (`.venv\Scripts\python.exe -m pytest -q`), the offline-by-default suite + how
   live tests opt in via `.env`, the changelog style, and the
   "new feature needs same-style tests" rule from `CLAUDE.md`.
-- [ ] **`SECURITY.md` + documented secret-hygiene threat model.** The tool's
-  entire scrubbing story is *"best-effort, not a guarantee — response bodies are
-  verbatim unless you opt in."* A 1.0 that records API traffic needs a
-  vulnerability-reporting channel and an explicit statement of what is and isn't
-  scrubbed, so users make an informed call before sharing a corpus.
+- [x] **`SECURITY.md` + documented secret-hygiene threat model.** *Done:*
+  `SECURITY.md` added — supported versions, a private vulnerability-reporting
+  channel (GitHub Security Advisories), and an explicit "what is / isn't
+  scrubbed" breakdown (auth/cookie headers + `DEFAULT_SECRET_PATTERNS` covered;
+  response bodies verbatim unless `scrub_response_body=True`; bare/custom tokens
+  pass through). **Manual:** enable *Private vulnerability reporting* in repo
+  Settings → Security so the report link resolves.
 - [ ] **Lint + format gate in CI.** No linter/formatter is configured. Add
   `ruff` (lint + format) with config in `pyproject.toml` and a CI step. *Why:* a
   consistency floor that survives contributors; cheap to add now, noisy to add
