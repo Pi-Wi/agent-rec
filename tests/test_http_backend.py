@@ -3,6 +3,7 @@
 A mismatch fails the moment a user passes ``http_client=`` to an SDK, so these
 pin the selection rule and that the public facade really uses the chosen library.
 """
+import os
 import subprocess
 import sys
 
@@ -12,7 +13,9 @@ from agentrec._http import BACKEND, httpx
 
 def _backend_with(env_value):
     code = "from agentrec._http import BACKEND; print(BACKEND)"
-    env = {"AGENTREC_HTTP_BACKEND": env_value, "PATH": ""}
+    # Extend the real environment: Windows needs SYSTEMROOT and friends just to
+    # initialise sockets, so a minimal env fails before the import under test.
+    env = {**os.environ, "AGENTREC_HTTP_BACKEND": env_value}
     return subprocess.run(
         [sys.executable, "-c", code], capture_output=True, text=True, env=env
     )
