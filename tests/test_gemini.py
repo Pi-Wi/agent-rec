@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-import httpx
+from agentrec._http import httpx
 import pytest
 
 from agentrec import FileStore, build_comparators, run_migration

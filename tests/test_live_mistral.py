@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import os
 
-import httpx
+from agentrec._http import httpx
 import pytest
 from dotenv import load_dotenv
 

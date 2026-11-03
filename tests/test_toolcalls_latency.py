@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 
-import httpx
+from agentrec._http import httpx
 import pytest
 
 from agentrec.capture import CapturedChunk, CapturedInteraction, CapturedRequest

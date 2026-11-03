@@ -42,7 +42,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple
 
-import httpx
+from agentrec._http import httpx
 
 from .capture import CapturedChunk, CapturedInteraction, CapturedRequest
 from .keying import _digest, _sanitize, fingerprint

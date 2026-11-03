@@ -18,7 +18,7 @@ import os
 from typing import Dict, List, Tuple
 from unittest import mock
 
-import httpx
+from agentrec._http import httpx
 import pytest
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionChunk

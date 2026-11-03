@@ -11,7 +11,8 @@ each recorded prompt against a target model, translate cross-provider
 (OpenAI ↔ Anthropic ↔ Gemini ↔ Mistral), score baseline vs. target with
 pluggable comparators, gate CI on pass rates, derive cost/latency. The corpus
 can instead be **imported** from an observability export (Langfuse/LangSmith/
-OTel). Sole runtime dep: `httpx`. Python ≥ 3.10. Version in `pyproject.toml`;
+OTel). Sole runtime dep: `httpx`; `httpx2` is used instead when installed, and
+modules must import it via `agentrec._http`, never directly. Python ≥ 3.10. Version in `pyproject.toml`;
 keep `CHANGELOG.md` in style (`## Dev (x.y.z)` / `### Added` / `### Changed`,
 bold lead-ins, *why* included).
 

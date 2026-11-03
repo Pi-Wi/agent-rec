@@ -122,7 +122,7 @@ baseline vs. target:
 
 ## How it works
 
-- **Records at the httpx transport layer**, below any SDK — the core depends on nothing but `httpx`. `mode="auto"` replays a recorded request else records it; streaming and sync SDKs use the same seam (`agentrec.sync_client()`, or `RecordingTransport`/`ReplayTransport` directly).
+- **Records at the httpx transport layer**, below any SDK — the core depends on nothing but `httpx`. Current OpenAI and Anthropic SDKs use `httpx2`, which agentrec picks up automatically when it's installed. `mode="auto"` replays a recorded request else records it; streaming and sync SDKs use the same seam (`agentrec.sync_client()`, or `RecordingTransport`/`ReplayTransport` directly).
 - **Raw bytes, no parsing** — cassettes store the original wire frames and the SDK parser re-runs on replay, so one codebase covers every provider. `ReplayTransport` has no inner transport, so it physically can't reach the network.
 - **Failures aren't cached** — non-2xx isn't recorded by default, so a transient 429 can't replay forever as the answer.
 - **Import instead of recording** — `agentrec import --source langfuse|langsmith|otel --input … --corpus corpus` synthesizes cassettes from an export (the real model id is preserved); a record it can't parse is skipped with a reason, never a failed run.
