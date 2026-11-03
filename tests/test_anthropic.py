@@ -17,7 +17,7 @@ import os
 from typing import List, Tuple
 from unittest import mock
 
-import httpx
+from agentrec._http import httpx
 import pytest
 
 anthropic = pytest.importorskip("anthropic")

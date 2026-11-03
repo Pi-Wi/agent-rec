@@ -14,7 +14,7 @@ import json
 from email.utils import format_datetime
 from pathlib import Path
 
-import httpx
+from agentrec._http import httpx
 import pytest
 
 from agentrec import (

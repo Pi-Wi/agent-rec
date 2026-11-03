@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentrec"
-version = "1.0.0"
+version = "1.1.0"
 description = "Replay recorded LLM API traffic against a candidate model: cross-provider migration & regression reports (OpenAI/Anthropic/Gemini/Mistral) with scoring, cost and latency, built on httpx record/replay"
 readme = "README.md"
 requires-python = ">=3.10"

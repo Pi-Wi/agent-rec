@@ -44,7 +44,7 @@ import datetime as _dt
 import time
 from typing import AsyncIterator, Callable, Coroutine, Dict, Iterator, List, Optional, Union
 
-import httpx
+from agentrec._http import httpx
 
 from .capture import CapturedChunk, CapturedInteraction, CapturedRequest
 from .keying import default_key, fingerprint

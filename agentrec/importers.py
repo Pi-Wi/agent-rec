@@ -43,7 +43,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import httpx
+from agentrec._http import httpx
 
 from .capture import CapturedChunk, CapturedInteraction, CapturedRequest
 from .keying import _sanitize, fingerprint, SEMANTIC_KEY_VERSION

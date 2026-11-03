@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import httpx
+from agentrec._http import httpx
 import pytest
 from openai import AsyncOpenAI
 

@@ -39,7 +39,7 @@ from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
 from typing import Callable, Dict, List, Optional, Tuple
 
-import httpx
+from agentrec._http import httpx
 
 from .comparators import JUDGE_PREFIX, Comparator, ComparisonResult
 from .keying import _sanitize, fingerprint_of, SEMANTIC_KEY_VERSION

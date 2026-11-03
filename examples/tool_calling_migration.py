@@ -33,7 +33,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-import httpx
+from agentrec._http import httpx
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 

@@ -495,7 +495,7 @@ def test_anthropic_tool_choice_none_round_trips(monkeypatch):
 
 def test_response_format_does_not_change_semantic_key():
     """JSON mode is a format knob: same prompt, with and without, must group."""
-    import httpx
+    from agentrec._http import httpx
 
     from agentrec.keying import fingerprint
 
@@ -522,7 +522,7 @@ def test_response_format_does_not_change_semantic_key():
 
 
 def _openai_fp(body: dict):
-    import httpx
+    from agentrec._http import httpx
 
     from agentrec.keying import fingerprint
 

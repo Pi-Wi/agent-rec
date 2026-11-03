@@ -40,7 +40,7 @@ import inspect
 from dataclasses import dataclass
 from typing import Callable, Optional, TypeVar
 
-import httpx
+from agentrec._http import httpx
 
 from .store import InteractionStore
 from .transport import (

@@ -33,7 +33,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-import httpx
+from agentrec._http import httpx
 
 from .capture import CapturedInteraction
 

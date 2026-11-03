@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.0 — 2026-11-03
+
+### Fixed
+- **Recording works with current OpenAI and Anthropic SDKs.** OpenAI 2.47+ and
+  Anthropic 1.0+ moved to `httpx2` and reject an `http_client` built from
+  `httpx`, so `AsyncOpenAI(http_client=agentrec.async_client())` raised a
+  `TypeError` before any recording happened. agentrec now resolves its HTTP
+  library once, in `agentrec/_http.py`: `httpx2` when installed, else `httpx`.
+  *Why:* an SDK that needs `httpx2` brings it along, so the choice follows the
+  SDK with no extra install, and older SDKs keep working unchanged. `httpx2` is
+  deliberately not a dependency, which keeps this a minor release under the
+  SemVer policy. An environment holding both generations of SDK can force one
+  with `AGENTREC_HTTP_BACKEND=httpx|httpx2`.
+
 ## 1.0.0 — 2026-06-25
 
 ### Added
